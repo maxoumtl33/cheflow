@@ -1,0 +1,244 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Éditer Livraison - {{ livraison.numero_livraison }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    
+    <!-- Header -->
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-900">Éditer la livraison</h2>
+            <p class="text-gray-600 mt-1">{{ livraison.numero_livraison }}</p>
+        </div>
+        <a href="/livraison/responsable/resume/?date={{ livraison.date_livraison|date:'Y-m-d' }}"
+           class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Retour
+        </a>
+    </div>
+    
+    <!-- Formulaire -->
+    <form method="POST" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Informations Client -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-user text-blue-600 mr-2"></i>
+                Informations Client
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nom du client *</label>
+                    <input type="text" name="client_nom" value="{{ livraison.client_nom }}" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+                    <input type="tel" name="client_telephone" value="{{ livraison.client_telephone }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" name="client_email" value="{{ livraison.client_email }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contact sur site</label>
+                    <input type="text" name="contact_sur_site" value="{{ livraison.contact_sur_site }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Adresse de livraison -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-map-marker-alt text-red-600 mr-2"></i>
+                Adresse de Livraison
+            </h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Adresse complète *</label>
+                    <textarea name="adresse_complete" rows="2" required
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">{{ livraison.adresse_complete }}</textarea>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Ville</label>
+                        <input type="text" name="ville" value="{{ livraison.ville }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Code postal</label>
+                        <input type="text" name="code_postal" value="{{ livraison.code_postal }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Appartement</label>
+                        <input type="text" name="app" value="{{ livraison.app }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Ligne adresse 2</label>
+                    <input type="text" name="ligne_adresse_2" value="{{ livraison.ligne_adresse_2 }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Détails de la livraison -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-box text-green-600 mr-2"></i>
+                Détails de la Livraison
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nom de l'événement</label>
+                    <input type="text" name="nom_evenement" value="{{ livraison.nom_evenement }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mode d'envoi</label>
+                    <select name="mode_envoi"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">Sélectionner</option>
+                        {% for mode in modes_envoi %}
+                        <option value="{{ mode.id }}" {% if livraison.mode_envoi.id == mode.id %}selected{% endif %}>
+                            {{ mode.nom }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Date de livraison *</label>
+                    <input type="date" name="date_livraison" value="{{ livraison.date_livraison|date:'Y-m-d' }}" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Heure souhaitée</label>
+                    <input type="time" name="heure_souhaitee" value="{{ livraison.heure_souhaitee|date:'H:i' }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de convives</label>
+                    <input type="number" name="nb_convives" value="{{ livraison.nb_convives }}" min="0"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Montant ($)</label>
+                    <input type="number" name="montant" value="{{ livraison.montant }}" step="0.01" min="0"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Besoins spéciaux -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-clipboard-list text-purple-600 mr-2"></i>
+                Besoins Spéciaux
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-amber-50 hover:border-amber-300">
+                    <input type="checkbox" name="besoin_cafe" {% if livraison.besoin_cafe %}checked{% endif %}
+                           class="w-5 h-5 text-amber-600 rounded">
+                    <span class="ml-3 font-medium text-gray-900">
+                        <i class="fas fa-coffee text-amber-600 mr-2"></i>
+                        Café
+                    </span>
+                </label>
+                
+                <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-green-50 hover:border-green-300">
+                    <input type="checkbox" name="besoin_the" {% if livraison.besoin_the %}checked{% endif %}
+                           class="w-5 h-5 text-green-600 rounded">
+                    <span class="ml-3 font-medium text-gray-900">
+                        <i class="fas fa-mug-hot text-green-600 mr-2"></i>
+                        Thé
+                    </span>
+                </label>
+                
+                <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-300">
+                    <input type="checkbox" name="besoin_sac_glace" {% if livraison.besoin_sac_glace %}checked{% endif %}
+                           class="w-5 h-5 text-blue-600 rounded">
+                    <span class="ml-3 font-medium text-gray-900">
+                        <i class="fas fa-snowflake text-blue-600 mr-2"></i>
+                        Sac de glace
+                    </span>
+                </label>
+                
+                <label class="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-red-50 hover:border-red-300">
+                    <input type="checkbox" name="besoin_part_chaud" {% if livraison.besoin_part_chaud %}checked{% endif %}
+                           class="w-5 h-5 text-red-600 rounded">
+                    <span class="ml-3 font-medium text-gray-900">
+                        <i class="fas fa-fire text-red-600 mr-2"></i>
+                        Part chaud
+                    </span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Notes et instructions -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-sticky-note text-yellow-600 mr-2"></i>
+                Notes et Instructions
+            </h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Informations supplémentaires</label>
+                    <textarea name="informations_supplementaires" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">{{ livraison.informations_supplementaires }}</textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Instructions spéciales</label>
+                    <textarea name="instructions_speciales" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">{{ livraison.instructions_speciales }}</textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes internes (non visibles par le client)</label>
+                    <textarea name="notes_internes" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">{{ livraison.notes_internes }}</textarea>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Boutons d'action -->
+        <div class="flex gap-4">
+            <button type="submit"
+                    class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-lg">
+                <i class="fas fa-save mr-2"></i>
+                Sauvegarder les modifications
+            </button>
+            
+            <a href="/livraison/responsable/resume/?date={{ livraison.date_livraison|date:'Y-m-d' }}"
+               class="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium text-lg">
+                Annuler
+            </a>
+        </div>
+    </form>
+    
+</div>
+{% endblock %}

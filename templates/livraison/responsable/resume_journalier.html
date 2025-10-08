@@ -1,0 +1,639 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Résumé Journalier{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #6366f1;
+        --primary-hover: #4f46e5;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --purple-color: #8b5cf6;
+        --orange-color: #f97316;
+        --bg-light: #f9fafb;
+        --border-color: #e5e7eb;
+        --text-dark: #1f2937;
+        --text-light: #6b7280;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .dashboard-container {
+        max-width: 1800px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    .header-section {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .header-title h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .header-subtitle {
+        color: var(--text-light);
+        font-size: 0.95rem;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 0.875rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+        color: white;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .form-input {
+        padding: 0.875rem 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        font-family: inherit;
+    }
+
+    .form-input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        outline: none;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+
+    .stat-value {
+        font-size: 1.875rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--text-light);
+    }
+
+    .progress-section {
+        background: white;
+        border-radius: 16px;
+        padding: 1.75rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .progress-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0;
+    }
+
+    .progress-percentage {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .progress-bar-container {
+        width: 100%;
+        height: 1.25rem;
+        background: var(--bg-light);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+        border-radius: 12px;
+        transition: width 0.5s ease;
+    }
+
+    .filter-section {
+        background: white;
+        border-radius: 16px;
+        padding: 1.25rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .filter-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+    }
+
+    .filter-btn {
+        padding: 0.75rem 1.25rem;
+        border-radius: 10px;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.875rem;
+    }
+
+    .filter-btn.active {
+        color: white;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+
+    .filter-btn:not(.active) {
+        background: var(--bg-light);
+        color: var(--text-dark);
+    }
+
+    .filter-btn:not(.active):hover {
+        background: var(--border-color);
+    }
+
+    .search-input {
+        flex: 1;
+        min-width: 250px;
+        padding: 0.75rem 1rem 0.75rem 2.5rem;
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        font-size: 0.875rem;
+        transition: all 0.3s ease;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E") no-repeat 0.75rem center;
+        background-size: 18px;
+    }
+
+    .search-input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        outline: none;
+    }
+
+    .table-section {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table thead {
+        background: var(--bg-light);
+    }
+
+    .data-table th {
+        padding: 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-light);
+        text-transform: uppercase;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .data-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.875rem;
+    }
+
+    .data-table tr:hover {
+        background: var(--bg-light);
+    }
+
+    .status-select {
+        padding: 0.5rem 0.75rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .status-select:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    .action-link {
+        color: var(--primary-color);
+        text-decoration: none;
+        margin-right: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .action-link:hover {
+        color: var(--primary-hover);
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 0.375rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .badge-blue {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 0 1rem;
+            margin: 1rem auto;
+        }
+
+        .header-section {
+            padding: 1.5rem;
+        }
+
+        .header-title h2 {
+            font-size: 1.5rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .filter-buttons {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .filter-btn {
+            width: 100%;
+        }
+
+        .search-input {
+            width: 100%;
+        }
+
+        .data-table {
+            font-size: 0.75rem;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem 0.5rem;
+        }
+
+        .data-table td.hide-mobile {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container" x-data="resumeJournalier()" x-init="init()">
+    
+    <!-- Header -->
+    <div class="header-section">
+        <div class="header-content">
+            <div class="header-title">
+                <h2>Résumé des Livraisons</h2>
+                <p class="header-subtitle">Suivez l'avancement de toutes vos livraisons</p>
+            </div>
+            
+            <div class="header-actions">
+                <input 
+                    type="date" 
+                    x-model="dateSelectionnee"
+                    @change="changerDate()"
+                    class="form-input">
+                
+                <a :href="`/livraison/responsable/dashboard/?date=${dateSelectionnee}`" class="btn btn-primary">
+                    <i class="fas fa-route"></i>
+                    Gérer les routes
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <p class="stat-value" style="color: var(--text-dark);">{{ stats.total }}</p>
+            <p class="stat-label">Total</p>
+        </div>
+        
+        <div class="stat-card">
+            <p class="stat-value" style="color: #f97316;">{{ stats.non_assignee }}</p>
+            <p class="stat-label">Non assignées</p>
+        </div>
+        
+        <div class="stat-card">
+            <p class="stat-value" style="color: #3b82f6;">{{ stats.assignee }}</p>
+            <p class="stat-label">Assignées</p>
+        </div>
+        
+        <div class="stat-card">
+            <p class="stat-value" style="color: #8b5cf6;">{{ stats.en_cours }}</p>
+            <p class="stat-label">En cours</p>
+        </div>
+        
+        <div class="stat-card">
+            <p class="stat-value" style="color: #10b981;">{{ stats.livree }}</p>
+            <p class="stat-label">Livrées</p>
+        </div>
+        
+        <div class="stat-card">
+            <p class="stat-value" style="color: #ef4444;">{{ stats.annulee }}</p>
+            <p class="stat-label">Annulées</p>
+        </div>
+    </div>
+    
+    <!-- Barre de progression -->
+    <div class="progress-section">
+        <div class="progress-header">
+            <h3 class="progress-title">Progression du jour</h3>
+            <span class="progress-percentage">{{ stats.progression }}%</span>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" style="width: {{ stats.progression }}%"></div>
+        </div>
+    </div>
+    
+    <!-- Filtres -->
+    <div class="filter-section">
+        <div class="filter-buttons">
+            <button @click="filtreStatus = 'tous'"
+                    :class="filtreStatus === 'tous' ? 'active' : ''"
+                    :style="filtreStatus === 'tous' ? 'background: linear-gradient(135deg, #3b82f6, #2563eb)' : ''"
+                    class="filter-btn">
+                Tous
+            </button>
+            <button @click="filtreStatus = 'non_assignee'"
+                    :class="filtreStatus === 'non_assignee' ? 'active' : ''"
+                    :style="filtreStatus === 'non_assignee' ? 'background: linear-gradient(135deg, #f97316, #ea580c)' : ''"
+                    class="filter-btn">
+                Non assignées
+            </button>
+            <button @click="filtreStatus = 'assignee'"
+                    :class="filtreStatus === 'assignee' ? 'active' : ''"
+                    :style="filtreStatus === 'assignee' ? 'background: linear-gradient(135deg, #3b82f6, #2563eb)' : ''"
+                    class="filter-btn">
+                Assignées
+            </button>
+            <button @click="filtreStatus = 'en_cours'"
+                    :class="filtreStatus === 'en_cours' ? 'active' : ''"
+                    :style="filtreStatus === 'en_cours' ? 'background: linear-gradient(135deg, #8b5cf6, #7c3aed)' : ''"
+                    class="filter-btn">
+                En cours
+            </button>
+            <button @click="filtreStatus = 'livree'"
+                    :class="filtreStatus === 'livree' ? 'active' : ''"
+                    :style="filtreStatus === 'livree' ? 'background: linear-gradient(135deg, #10b981, #059669)' : ''"
+                    class="filter-btn">
+                Livrées
+            </button>
+            
+            <input type="text" 
+                   x-model="recherche" 
+                   placeholder="Rechercher..."
+                   class="search-input">
+        </div>
+    </div>
+    
+    <!-- Tableau des livraisons -->
+    <div class="table-section">
+        <div style="overflow-x: auto;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>N°</th>
+                        <th>Événement</th>
+                        <th>Client</th>
+                        <th class="hide-mobile">Adresse</th>
+                        <th>Heure</th>
+                        <th class="hide-mobile">Route</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for livraison in livraisons %}
+                    <tr x-show="afficherLivraison('{{ livraison.id }}', '{{ livraison.status }}', '{{ livraison.nom_evenement|escapejs }} {{ livraison.client_nom|escapejs }} {{ livraison.adresse_complete|escapejs }}')"
+                        x-data="{ visible: true }">
+                        <td style="font-weight: 600; color: var(--text-dark);">
+                            {{ livraison.numero_livraison }}
+                        </td>
+                        <td>
+                            <div style="font-weight: 600; color: var(--text-dark);">{{ livraison.nom_evenement|default:"-" }}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-light);">{{ livraison.nb_convives }} convives</div>
+                        </td>
+                        <td>
+                            {{ livraison.client_nom }}
+                        </td>
+                        <td class="hide-mobile" style="max-width: 250px;">
+                            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-light);">
+                                {{ livraison.adresse_complete }}
+                            </div>
+                        </td>
+                        <td>
+                            <span style="font-weight: 600;">{{ livraison.heure_souhaitee|date:'H:i'|default:"-" }}</span>
+                            <div style="font-size: 0.75rem; color: var(--text-light);">{{ livraison.get_periode_display }}</div>
+                        </td>
+                        <td class="hide-mobile">
+                            {% with route=livraison.livraisonroute_set.first %}
+                            {% if route %}
+                                <div style="font-weight: 600; color: var(--primary-color);">{{ route.route.nom }}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-light);">
+                                    {% for livreur in route.route.livreurs.all %}
+                                        {{ livreur.get_full_name }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <span style="color: var(--text-light);">-</span>
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td x-data="{ currentStatus: '{{ livraison.status }}' }">
+                            <select x-model="currentStatus"
+                                    @change="changerStatus('{{ livraison.id }}', currentStatus)"
+                                    class="status-select"
+                                    :style="{
+                                        'background': currentStatus === 'non_assignee' ? '#fed7aa' : 
+                                                     currentStatus === 'assignee' ? '#dbeafe' :
+                                                     currentStatus === 'en_cours' ? '#ede9fe' :
+                                                     currentStatus === 'livree' ? '#d1fae5' : '#fee2e2',
+                                        'color': currentStatus === 'non_assignee' ? '#92400e' :
+                                                currentStatus === 'assignee' ? '#1e40af' :
+                                                currentStatus === 'en_cours' ? '#6b21a8' :
+                                                currentStatus === 'livree' ? '#065f46' : '#991b1b'
+                                    }">
+                                <option value="non_assignee">Non assignée</option>
+                                <option value="assignee">Assignée</option>
+                                <option value="en_cours">En cours</option>
+                                <option value="livree">Livrée</option>
+                                <option value="annulee">Annulée</option>
+                            </select>
+                        </td>
+                        <td style="white-space: nowrap;">
+                            <a href="{% url 'livraison:editer_livraison' livraison.id %}" class="action-link">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button @click="voirDetails('{{ livraison.id }}')" class="action-link" style="background: none; border: none; cursor: pointer;">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function resumeJournalier() {
+    return {
+        dateSelectionnee: '{{ date_selectionnee }}',
+        filtreStatus: 'tous',
+        recherche: '',
+        
+        init() {
+            console.log('Résumé journalier initialisé');
+        },
+        
+        changerDate() {
+            window.location.href = '?date=' + this.dateSelectionnee;
+        },
+        
+        afficherLivraison(id, status, contenu) {
+            // Filtre par statut
+            if (this.filtreStatus !== 'tous' && status !== this.filtreStatus) {
+                return false;
+            }
+            
+            // Filtre par recherche
+            if (this.recherche) {
+                const terme = this.recherche.toLowerCase();
+                return contenu.toLowerCase().includes(terme);
+            }
+            
+            return true;
+        },
+        
+        async changerStatus(livraisonId, nouveauStatus) {
+            try {
+                const response = await fetch(`/livraison/api/livraisons/${livraisonId}/status/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ status: nouveauStatus })
+                });
+                
+                if (response.ok) {
+                    // Recharger pour mettre à jour les stats
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                } else {
+                    alert('Erreur lors du changement de statut');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors du changement de statut');
+            }
+        },
+        
+        voirDetails(livraisonId) {
+            window.location.href = `/livraison/editer/${livraisonId}/`;
+        }
+    }
+}
+</script>
+{% endblock %}

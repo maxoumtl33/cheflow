@@ -1,0 +1,1461 @@
+<!-- maitre_hotel/templates/maitre_hotel/dashboard.html -->
+{% extends 'base/base.html' %}
+
+{% block title %}Dashboard Maître d'Hôtel{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #6366f1;
+        --primary-hover: #4f46e5;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --purple-color: #8b5cf6;
+        --orange-color: #f97316;
+        --bg-light: #f9fafb;
+        --border-color: #e5e7eb;
+        --text-dark: #1f2937;
+        --text-light: #6b7280;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .dashboard-container {
+        max-width: 1800px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    /* Header Section */
+    .header-section {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .header-title h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .header-subtitle {
+        color: var(--text-light);
+        font-size: 0.95rem;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.75rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .stat-card-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .stat-info h3 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-light);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .stat-value {
+        font-size: 2.25rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+    }
+
+    .stat-icon.blue {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.2));
+    }
+
+    .stat-icon.orange {
+        background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(249, 115, 22, 0.2));
+    }
+
+    .stat-icon.purple {
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.2));
+    }
+
+    .stat-icon.green {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.2));
+    }
+
+    /* Alert Cards */
+    .alert-section {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .alert-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border-left: 5px solid;
+    }
+
+    .alert-card.warning {
+        border-color: var(--warning-color);
+        background: linear-gradient(to right, #fffbeb, white);
+    }
+
+    .alert-card.success {
+        border-color: var(--success-color);
+        background: linear-gradient(to right, #ecfdf5, white);
+    }
+
+    .alert-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .alert-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .alert-card.warning .alert-icon {
+        background: #fef3c7;
+        color: #f59e0b;
+    }
+
+    .alert-card.success .alert-icon {
+        background: #d1fae5;
+        color: #10b981;
+    }
+
+    .alert-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0;
+    }
+
+    .alert-content {
+        margin-bottom: 1rem;
+    }
+
+    .alert-info {
+        font-size: 0.875rem;
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+    }
+
+    .alert-info strong {
+        color: var(--text-dark);
+        font-weight: 600;
+    }
+
+    .btn {
+        padding: 0.875rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+        color: white;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, var(--success-color), #059669);
+        color: white;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-sm {
+        padding: 0.625rem 1.125rem;
+        font-size: 0.875rem;
+    }
+
+    /* Main Layout - 2 colonnes */
+    .main-layout {
+        display: grid;
+        grid-template-columns: 1fr 1.2fr;
+        gap: 2rem;
+    }
+
+    /* Calendar Section */
+    .calendar-section {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        height: fit-content;
+    }
+
+    .calendar-header {
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .calendar-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .month-navigation {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .nav-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: white;
+        font-weight: 600;
+    }
+
+    .nav-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.05);
+    }
+
+    .current-month {
+        font-size: 1rem;
+        font-weight: 700;
+        min-width: 150px;
+        text-align: center;
+    }
+
+    .calendar-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        background: var(--bg-light);
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .weekday {
+        text-align: center;
+        padding: 0.75rem 0.5rem;
+        color: var(--text-light);
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background: var(--border-color);
+        padding: 1px;
+    }
+
+    .calendar-day {
+        background: white;
+        min-height: 80px;
+        padding: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .calendar-day:hover {
+        background: var(--bg-light);
+        transform: scale(1.02);
+        z-index: 10;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .calendar-day.other-month {
+        background: #fafafa;
+        opacity: 0.5;
+    }
+
+    .calendar-day.today {
+        background: #ede9fe;
+        border: 2px solid var(--primary-color);
+    }
+
+    .calendar-day.selected {
+        background: #dbeafe;
+        border: 2px solid var(--primary-color);
+    }
+
+    .day-number {
+        font-weight: 700;
+        font-size: 0.875rem;
+        color: var(--text-dark);
+        margin-bottom: 0.25rem;
+    }
+
+    .calendar-day.today .day-number {
+        color: var(--primary-color);
+        font-size: 1rem;
+    }
+
+    .day-events {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .event-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .event-dot.planifie {
+        background: #3b82f6;
+    }
+
+    .event-dot.en_cours {
+        background: #f59e0b;
+    }
+
+    .event-dot.termine {
+        background: #10b981;
+    }
+
+    .event-count-badge {
+        font-size: 0.65rem;
+        color: var(--text-light);
+        margin-top: 0.25rem;
+        text-align: center;
+    }
+
+    /* Contrats Section */
+    .contrats-section {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .section-header {
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .section-count {
+        background: white;
+        color: var(--purple-color);
+        padding: 0.375rem 0.875rem;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 700;
+    }
+
+    .section-body {
+        padding: 1.5rem;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    /* Contrat Cards */
+    .contrats-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .contrat-card {
+        background: white;
+        border: 2px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .contrat-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 5px;
+        background: var(--primary-color);
+    }
+
+    .contrat-card.status-en_cours::before {
+        background: var(--warning-color);
+    }
+
+    .contrat-card.status-termine::before {
+        background: var(--success-color);
+    }
+
+    .contrat-card:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
+        transform: translateY(-2px);
+    }
+
+    .contrat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+
+    .contrat-title {
+        flex: 1;
+    }
+
+    .contrat-title h3 {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0 0 0.25rem 0;
+    }
+
+    .contrat-numero {
+        font-size: 0.875rem;
+        color: var(--text-light);
+    }
+
+    .contrat-status {
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .contrat-status.planifie {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .contrat-status.en_cours {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .contrat-status.termine {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .contrat-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .info-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.875rem;
+    }
+
+    .info-icon.blue {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .info-icon.purple {
+        background: #ede9fe;
+        color: #6d28d9;
+    }
+
+    .info-icon.green {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .info-icon.red {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .info-text {
+        flex: 1;
+    }
+
+    .info-label {
+        font-size: 0.75rem;
+        color: var(--text-light);
+    }
+
+    .info-value {
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+
+    .contrat-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    .badge.checklist {
+        background: #ede9fe;
+        color: #6d28d9;
+    }
+
+    .badge.livraison {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .contrat-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text-light);
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Légende */
+    .calendar-legend {
+        padding: 1rem 1.5rem;
+        background: var(--bg-light);
+        border-top: 2px solid var(--border-color);
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--text-dark);
+        font-weight: 600;
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+        .main-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 0 0.5rem;
+            margin: 1rem auto;
+        }
+
+        .header-section {
+            padding: 1.25rem;
+        }
+
+        .header-title h2 {
+            font-size: 1.25rem;
+        }
+
+        .header-subtitle {
+            font-size: 0.85rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .stat-card {
+            padding: 1.25rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            font-size: 1.5rem;
+        }
+
+        .alert-section {
+            grid-template-columns: 1fr;
+        }
+
+        .alert-card {
+            padding: 1.25rem;
+        }
+
+        .calendar-header {
+            padding: 1rem;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: stretch;
+        }
+
+        .calendar-title {
+            font-size: 1rem;
+            justify-content: center;
+        }
+
+        .month-navigation {
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .current-month {
+            font-size: 0.875rem;
+            min-width: 120px;
+        }
+
+        .nav-btn {
+            padding: 0.625rem 1rem;
+        }
+
+        .calendar-weekdays {
+            padding: 0;
+        }
+
+        .weekday {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.65rem;
+        }
+
+        .calendar-day {
+            min-height: 60px;
+            padding: 0.375rem 0.25rem;
+        }
+
+        .day-number {
+            font-size: 0.75rem;
+            margin-bottom: 0.125rem;
+        }
+
+        .calendar-day.today .day-number {
+            font-size: 0.875rem;
+        }
+
+        .event-dot {
+            width: 4px;
+            height: 4px;
+        }
+
+        .event-count-badge {
+            font-size: 0.6rem;
+            margin-top: 0.125rem;
+        }
+
+        .calendar-legend {
+            padding: 0.75rem 1rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+        }
+
+        .legend-item {
+            font-size: 0.7rem;
+            gap: 0.375rem;
+        }
+
+        .section-header {
+            padding: 1rem;
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+
+        .section-title {
+            font-size: 1rem;
+        }
+
+        .section-body {
+            padding: 1rem;
+            max-height: 500px;
+        }
+
+        .contrat-card {
+            padding: 1rem;
+        }
+
+        .contrat-title h3 {
+            font-size: 1rem;
+        }
+
+        .contrat-status {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.7rem;
+        }
+
+        .contrat-info {
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+
+        .info-item {
+            font-size: 0.8rem;
+        }
+
+        .info-icon {
+            width: 28px;
+            height: 28px;
+            font-size: 0.75rem;
+        }
+
+        .contrat-badges {
+            gap: 0.375rem;
+        }
+
+        .badge {
+            padding: 0.25rem 0.625rem;
+            font-size: 0.7rem;
+        }
+
+        .contrat-actions {
+            flex-direction: column;
+        }
+
+        .contrat-actions .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .empty-state {
+            padding: 2rem 1rem;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+        }
+
+        .empty-state p {
+            font-size: 0.875rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.85rem;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+        }
+    }
+
+    @media (max-width: 380px) {
+        .calendar-day {
+            min-height: 50px;
+            padding: 0.25rem 0.125rem;
+        }
+
+        .day-number {
+            font-size: 0.7rem;
+        }
+
+        .weekday {
+            font-size: 0.6rem;
+            padding: 0.375rem 0.125rem;
+        }
+
+        .current-month {
+            font-size: 0.75rem;
+            min-width: 100px;
+        }
+
+        .nav-btn {
+            padding: 0.5rem 0.75rem;
+        }
+
+        .event-count-badge {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container" x-data="dashboardData()">
+    
+    <!-- Header -->
+    <div class="header-section">
+        <div class="header-content">
+            <div class="header-title">
+                <h2>Tableau de bord Maître d'Hôtel</h2>
+                <p class="header-subtitle">Gérez vos contrats et événements</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistiques -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-card-content">
+                <div class="stat-info">
+                    <h3>Total Mois</h3>
+                    <p class="stat-value" style="color: #3b82f6;" x-text="statsGlobales.total"></p>
+                </div>
+                <div class="stat-icon blue">
+                    <i class="fas fa-file-contract" style="color: #3b82f6;"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-content">
+                <div class="stat-info">
+                    <h3>Planifiés</h3>
+                    <p class="stat-value" style="color: #6366f1;" x-text="statsGlobales.planifies"></p>
+                </div>
+                <div class="stat-icon blue">
+                    <i class="fas fa-clock" style="color: #6366f1;"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-content">
+                <div class="stat-info">
+                    <h3>En cours</h3>
+                    <p class="stat-value" style="color: #f59e0b;" x-text="statsGlobales.en_cours"></p>
+                </div>
+                <div class="stat-icon orange">
+                    <i class="fas fa-play-circle" style="color: #f59e0b;"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-content">
+                <div class="stat-info">
+                    <h3>Terminés</h3>
+                    <p class="stat-value" style="color: #10b981;" x-text="statsGlobales.termines"></p>
+                </div>
+                <div class="stat-icon green">
+                    <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alertes -->
+    {% if prochain or en_cours %}
+    <div class="alert-section">
+        {% if en_cours %}
+        <div class="alert-card warning">
+            <div class="alert-card-header">
+                <div class="alert-icon">
+                    <i class="fas fa-play-circle"></i>
+                </div>
+                <h3 class="alert-title">Contrat en cours</h3>
+            </div>
+            <div class="alert-content">
+                <p class="alert-info"><strong>{{ en_cours.nom_evenement }}</strong></p>
+                <p class="alert-info">
+                    <i class="fas fa-user"></i> {{ en_cours.client_nom }}
+                </p>
+                <p class="alert-info">
+                    <i class="fas fa-clock"></i> Démarré à {{ en_cours.heure_debut_reelle|date:"H:i" }}
+                </p>
+            </div>
+            <a href="{% url 'maitre_hotel:detail_contrat' en_cours.id %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-eye"></i>
+                Voir le contrat
+            </a>
+        </div>
+        {% endif %}
+        
+        {% if prochain %}
+        <div class="alert-card success">
+            <div class="alert-card-header">
+                <div class="alert-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h3 class="alert-title">Prochain contrat</h3>
+            </div>
+            <div class="alert-content">
+                <p class="alert-info"><strong>{{ prochain.nom_evenement }}</strong></p>
+                <p class="alert-info">
+                    <i class="fas fa-user"></i> {{ prochain.client_nom }}
+                </p>
+                <p class="alert-info">
+                    <i class="fas fa-clock"></i> {{ prochain.heure_debut_prevue|date:"H:i" }}
+                </p>
+            </div>
+            <a href="{% url 'maitre_hotel:detail_contrat' prochain.id %}" class="btn btn-success btn-sm">
+                <i class="fas fa-eye"></i>
+                Voir le contrat
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- Layout Principal : Calendrier + Liste -->
+    <div class="main-layout">
+        
+        <!-- Calendrier -->
+        <div class="calendar-section">
+            <div class="calendar-header">
+                <h3 class="calendar-title">
+                    <i class="fas fa-calendar-alt"></i>
+                    Calendrier
+                </h3>
+                <div class="month-navigation">
+                    <button @click="moisPrecedent()" class="nav-btn">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="current-month" x-text="moisActuelTexte"></div>
+                    <button @click="moisSuivant()" class="nav-btn">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="calendar-weekdays">
+                <div class="weekday">Lun</div>
+                <div class="weekday">Mar</div>
+                <div class="weekday">Mer</div>
+                <div class="weekday">Jeu</div>
+                <div class="weekday">Ven</div>
+                <div class="weekday">Sam</div>
+                <div class="weekday">Dim</div>
+            </div>
+            
+            <div class="calendar-grid">
+                <template x-for="jour in joursCalendrier" :key="jour.date">
+                    <div 
+                        class="calendar-day"
+                        :class="{
+                            'other-month': jour.autreMois,
+                            'today': jour.estAujourdhui,
+                            'selected': jourSelectionne && formatDateISO(jour.date) === formatDateISO(jourSelectionne.date)
+                        }"
+                        @click="selectionnerJour(jour)">
+                        
+                        <div class="day-number" x-text="jour.numero"></div>
+                        
+                        <div class="day-events" x-show="jour.events.length > 0">
+                            <template x-for="event in jour.events.slice(0, 3)" :key="event.id">
+                                <span class="event-dot" :class="event.status"></span>
+                            </template>
+                            
+                            <div x-show="jour.events.length > 0" 
+                                 x-text="jour.events.length + ' event(s)'"
+                                 class="event-count-badge">
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            
+            <div class="calendar-legend">
+                <div class="legend-item">
+                    <span class="event-dot planifie"></span>
+                    <span>Planifié</span>
+                </div>
+                <div class="legend-item">
+                    <span class="event-dot en_cours"></span>
+                    <span>En cours</span>
+                </div>
+                <div class="legend-item">
+                    <span class="event-dot termine"></span>
+                    <span>Terminé</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Liste des contrats du jour sélectionné -->
+        <div class="contrats-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-list"></i>
+                    <span x-text="jourSelectionne ? 'Contrats du ' + formatDateShort(jourSelectionne.date) : 'Sélectionnez un jour'"></span>
+                </h2>
+                <span class="section-count" x-text="contratsJourSelectionne.length"></span>
+            </div>
+            
+            <div class="section-body">
+                <template x-if="contratsJourSelectionne.length > 0">
+                    <div class="contrats-list">
+                        <template x-for="contrat in contratsJourSelectionne" :key="contrat.id">
+                            <div class="contrat-card" :class="'status-' + contrat.status">
+                                <div class="contrat-header">
+                                    <div class="contrat-title">
+                                        <h3 x-text="contrat.nom"></h3>
+                                        <span class="contrat-numero" x-text="'#' + contrat.numero"></span>
+                                    </div>
+                                    <span class="contrat-status" :class="contrat.status">
+                                        <template x-if="contrat.status === 'planifie'">
+                                            <span><i class="fas fa-clock"></i> Planifié</span>
+                                        </template>
+                                        <template x-if="contrat.status === 'en_cours'">
+                                            <span><i class="fas fa-play-circle"></i> En cours</span>
+                                        </template>
+                                        <template x-if="contrat.status === 'termine'">
+                                            <span><i class="fas fa-check-circle"></i> Terminé</span>
+                                        </template>
+                                    </span>
+                                </div>
+                                
+                                <div class="contrat-info">
+                                    <div class="info-item">
+                                        <div class="info-icon blue">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                        <div class="info-text">
+                                            <div class="info-label">Client</div>
+                                            <div class="info-value" x-text="contrat.client"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="info-item">
+                                        <div class="info-icon purple">
+                                            <i class="fas fa-clock"></i>
+                                        </div>
+                                        <div class="info-text">
+                                            <div class="info-label">Horaire</div>
+                                            <div class="info-value" x-text="contrat.heure"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="info-item">
+                                        <div class="info-icon green">
+                                            <i class="fas fa-users"></i>
+                                        </div>
+                                        <div class="info-text">
+                                            <div class="info-label">Convives</div>
+                                            <div class="info-value" x-text="contrat.nb_convives + ' pers.'"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="contrat-badges">
+                                    <template x-if="contrat.a_checklist">
+                                        <span class="badge checklist">
+                                            <i class="fas fa-list-check"></i>
+                                            Checklist
+                                        </span>
+                                    </template>
+                                    
+                                    <template x-if="contrat.a_livraison">
+                                        <span class="badge livraison">
+                                            <i class="fas fa-truck"></i>
+                                            Livraison
+                                        </span>
+                                    </template>
+                                </div>
+                                
+                                <div class="contrat-actions">
+                                    <a :href="`/maitre_hotel/contrat/${contrat.id}/`" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-eye"></i>
+                                        Voir détails
+                                    </a>
+                                    
+                                    <template x-if="contrat.status === 'planifie'">
+                                        <button @click="commencerContrat(contrat.id)" class="btn btn-success btn-sm">
+                                            <i class="fas fa-play"></i>
+                                            Commencer
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                
+                <template x-if="!jourSelectionne">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📅</div>
+                        <p>Sélectionnez un jour dans le calendrier</p>
+                    </div>
+                </template>
+                
+                <template x-if="jourSelectionne && contratsJourSelectionne.length === 0">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>Aucun contrat prévu ce jour</p>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function dashboardData() {
+    return {
+        // ✅ CORRECTION : Parser correctement la date depuis Django
+        moisActuel: new Date('{{ mois_actuel }}T00:00:00'),  // Ajouter T00:00:00 pour forcer le format local
+        contratsData: {{ contrats_json|safe }},
+        joursCalendrier: [],
+        jourSelectionne: null,
+        today: '{{ today }}',  // Stocker la date du jour
+        statsGlobales: {
+            total: {{ stats.total }},
+            planifies: {{ stats.planifies }},
+            en_cours: {{ stats.en_cours }},
+            termines: {{ stats.termines }}
+        },
+        
+        get moisActuelTexte() {
+            const mois = [
+                'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+            ];
+            return mois[this.moisActuel.getMonth()] + ' ' + this.moisActuel.getFullYear();
+        },
+        
+        get contratsJourSelectionne() {
+            if (!this.jourSelectionne) return [];
+            return this.jourSelectionne.events;
+        },
+        
+        init() {
+            console.log('=== INIT DASHBOARD ===');
+            console.log('Mois actuel:', this.moisActuel);
+            console.log('Today:', this.today);
+            console.log('Contrats data:', this.contratsData);
+            
+            this.genererCalendrier();
+            
+            console.log('Calendrier généré:', this.joursCalendrier.length, 'jours');
+            
+            // Sélectionner aujourd'hui par défaut
+            const aujourdhui = this.joursCalendrier.find(j => j.estAujourdhui && !j.autreMois);
+            console.log('Aujourd\'hui trouvé:', aujourdhui);
+            
+            if (aujourdhui) {
+                this.selectionnerJour(aujourdhui);
+            }
+        },
+        
+        genererCalendrier() {
+            const year = this.moisActuel.getFullYear();
+            const month = this.moisActuel.getMonth();
+            
+            console.log('=== GÉNÉRATION CALENDRIER ===');
+            console.log('Année:', year, 'Mois:', month);
+            
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            
+            // Lundi = 0, Dimanche = 6
+            const startingDayOfWeek = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+            
+            console.log('Premier jour du mois:', firstDay.toDateString());
+            console.log('Jour de la semaine:', startingDayOfWeek, '(0=Lun, 6=Dim)');
+            console.log('Nombre de jours:', daysInMonth);
+            
+            const prevMonthLastDay = new Date(year, month, 0).getDate();
+            
+            this.joursCalendrier = [];
+            
+            // 1. Jours du mois précédent
+            for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+                const day = prevMonthLastDay - i;
+                const date = new Date(year, month - 1, day);
+                this.joursCalendrier.push(this.creerJour(date, true));
+            }
+            
+            console.log('Jours mois précédent ajoutés:', startingDayOfWeek);
+            
+            // 2. Jours du mois actuel
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const jourObj = this.creerJour(date, false);
+                this.joursCalendrier.push(jourObj);
+                
+                if (day === 1 || day === daysInMonth) {
+                    console.log(`Jour ${day}:`, jourObj.date.toDateString(), 'Numéro:', jourObj.numero, 'estAujourdhui:', jourObj.estAujourdhui);
+                }
+            }
+            
+            // 3. Jours du mois suivant
+            const totalCells = this.joursCalendrier.length;
+            const remainingCells = 42 - totalCells;
+            
+            console.log('Jours mois suivant à ajouter:', remainingCells);
+            
+            for (let day = 1; day <= remainingCells; day++) {
+                const date = new Date(year, month + 1, day);
+                this.joursCalendrier.push(this.creerJour(date, true));
+            }
+            
+            console.log('=== RÉSUMÉ ===');
+            console.log('Total jours générés:', this.joursCalendrier.length);
+            
+            const joursActuels = this.joursCalendrier.filter(j => !j.autreMois);
+            console.log('Jours mois actuel:', joursActuels.length);
+            console.log('Numéros:', joursActuels.map(j => j.numero).join(', '));
+        },
+        
+        creerJour(date, autreMois) {
+            const dateStr = this.formatDateISO(date);
+            
+            // ✅ CORRECTION : Comparer uniquement les dates ISO (sans heure)
+            const estAujourdhui = dateStr === this.today;
+            
+            return {
+                date: new Date(date),
+                numero: date.getDate(),
+                autreMois: autreMois,
+                estAujourdhui: estAujourdhui,
+                events: this.contratsData[dateStr] || []
+            };
+        },
+        
+        formatDateISO(date) {
+            const annee = date.getFullYear();
+            const mois = String(date.getMonth() + 1).padStart(2, '0');
+            const jour = String(date.getDate()).padStart(2, '0');
+            return `${annee}-${mois}-${jour}`;
+        },
+        
+        formatDateShort(date) {
+            const jours = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+            const moisNoms = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+            return `${jours[date.getDay()]} ${date.getDate()} ${moisNoms[date.getMonth()]}`;
+        },
+        
+        async moisPrecedent() {
+            const year = this.moisActuel.getFullYear();
+            const month = this.moisActuel.getMonth();
+            
+            if (month === 0) {
+                this.moisActuel = new Date(year - 1, 11, 1);
+            } else {
+                this.moisActuel = new Date(year, month - 1, 1);
+            }
+            
+            await this.chargerContrats();
+            this.jourSelectionne = null;
+        },
+        
+        async moisSuivant() {
+            const year = this.moisActuel.getFullYear();
+            const month = this.moisActuel.getMonth();
+            
+            if (month === 11) {
+                this.moisActuel = new Date(year + 1, 0, 1);
+            } else {
+                this.moisActuel = new Date(year, month + 1, 1);
+            }
+            
+            await this.chargerContrats();
+            this.jourSelectionne = null;
+        },
+        
+        async chargerContrats() {
+            try {
+                const annee = this.moisActuel.getFullYear();
+                const mois = String(this.moisActuel.getMonth() + 1).padStart(2, '0');
+                const moisStr = `${annee}-${mois}`;
+                
+                console.log('Chargement contrats pour:', moisStr);
+                
+                const response = await fetch(`/maitre-hotel/api/contrats-mois/?mois=${moisStr}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                console.log('Contrats reçus:', data);
+                
+                this.contratsData = data.contrats_par_date || {};
+                this.statsGlobales = data.stats || {
+                    total: 0,
+                    planifies: 0,
+                    en_cours: 0,
+                    termines: 0
+                };
+                
+                this.genererCalendrier();
+            } catch (error) {
+                console.error('Erreur chargement contrats:', error);
+                this.contratsData = {};
+                this.genererCalendrier();
+            }
+        },
+        
+        selectionnerJour(jour) {
+            console.log('Jour sélectionné:', jour.date.toDateString(), 'Numéro:', jour.numero);
+            this.jourSelectionne = jour;
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+        
+        async commencerContrat(contratId) {
+            if (!confirm('Démarrer ce contrat maintenant ?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/maitre-hotel/contrat/${contratId}/commencer/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Contrat démarré avec succès !');
+                    window.location.reload();
+                } else {
+                    alert('Erreur : ' + data.error);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors du démarrage du contrat');
+            }
+        }
+    }
+}
+
+document.addEventListener('alpine:init', () => {
+    console.log('Alpine.js initialized!');
+});
+</script>
+
+{% endblock %}

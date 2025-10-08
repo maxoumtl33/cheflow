@@ -1,0 +1,2026 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Dashboard Livraisons - Responsable{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #6366f1;
+        --primary-hover: #4f46e5;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --purple-color: #8b5cf6;
+        --orange-color: #f97316;
+        --bg-light: #f9fafb;
+        --border-color: #e5e7eb;
+        --text-dark: #1f2937;
+        --text-light: #6b7280;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .dashboard-container {
+        max-width: 1800px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    /* Header Section */
+    .header-section {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .header-title h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .header-subtitle {
+        color: var(--text-light);
+        font-size: 0.95rem;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    /* Buttons */
+    .btn {
+        padding: 0.875rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+        color: white;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, var(--success-color), #059669);
+        color: white;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-orange {
+        background: linear-gradient(135deg, var(--orange-color), #ea580c);
+        color: white;
+        box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+    }
+
+    .btn-orange:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
+    }
+
+    .btn-purple {
+        background: linear-gradient(135deg, var(--purple-color), #7c3aed);
+        color: white;
+        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    }
+
+    .btn-purple:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+    }
+
+    .btn-indigo {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: white;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-indigo:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    /* Date Picker */
+    .date-picker-container {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .date-picker-container input[type="date"] {
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        font-family: inherit;
+    }
+
+    .date-picker-container input[type="date"]:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        outline: none;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.75rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .stat-card-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .stat-info h3 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-light);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .stat-value {
+        font-size: 2.25rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+    }
+
+    .stat-icon.blue {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.2));
+    }
+
+    .stat-icon.orange {
+        background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(249, 115, 22, 0.2));
+    }
+
+    .stat-icon.purple {
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.2));
+    }
+
+    .stat-icon.green {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.2));
+    }
+
+    /* Tabs */
+    .tabs-container {
+        background: white;
+        border-radius: 20px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .tabs-nav {
+        display: flex;
+        gap: 0.5rem;
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 0;
+        margin-bottom: 2rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-button {
+        padding: 1rem 1.5rem;
+        background: transparent;
+        border: none;
+        font-weight: 600;
+        color: var(--text-light);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .tab-button.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+    }
+
+    .tab-button:hover:not(.active) {
+        color: var(--text-dark);
+        background: var(--bg-light);
+    }
+
+    .tab-badge {
+        background: #e0e7ff;
+        color: #3730a3;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .tab-button.active .tab-badge {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    /* Main Layout */
+    .main-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+
+    /* Card Sections */
+    .card-section {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .card-header {
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .card-header.gradient-blue {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        border-bottom: none;
+    }
+
+    .card-header.gradient-orange {
+        background: linear-gradient(135deg, #f97316, #ea580c);
+        color: white;
+        border-bottom: none;
+    }
+
+    .card-header.gradient-gray {
+        background: var(--bg-light);
+    }
+
+    .card-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-count {
+        background: white;
+        color: var(--orange-color);
+        padding: 0.375rem 0.875rem;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 700;
+    }
+
+    .card-header.gradient-blue .card-count {
+        color: #2563eb;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    /* Map */
+    #map {
+        height: 400px;
+        border-radius: 0 0 16px 16px;
+    }
+
+    /* Livraison Cards */
+    .livraisons-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .livraison-card {
+        background: white;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.25rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .livraison-card:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
+        transform: translateY(-2px);
+    }
+
+    .livraison-card.selected {
+        border-color: var(--success-color);
+        background: #ecfdf5;
+    }
+
+    .livraison-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 0.75rem;
+    }
+
+    .livraison-title {
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0 0 0.25rem 0;
+        font-size: 1rem;
+    }
+
+    .livraison-client {
+        font-size: 0.875rem;
+        color: var(--text-light);
+    }
+
+    .livraison-time {
+        background: #dbeafe;
+        color: #1e40af;
+        padding: 0.375rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .livraison-address {
+        font-size: 0.875rem;
+        color: var(--text-dark);
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .livraison-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .tag {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    .tag.cafe {
+        background: #fef3c7;
+        color: #78350f;
+    }
+
+    .tag.the {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .tag.glace {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .tag.chaud {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    /* Route Cards */
+    .routes-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .route-card {
+        background: white;
+        border-radius: 16px;
+        border-left: 5px solid var(--primary-color);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .route-header {
+        background: var(--bg-light);
+        padding: 1.25rem;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .route-header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 0.75rem;
+    }
+
+    .route-name {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0;
+    }
+
+    .route-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .route-actions button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .route-actions button:hover {
+        background: white;
+    }
+
+    .route-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        font-size: 0.875rem;
+        color: var(--text-light);
+    }
+
+    .route-info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    .route-comment {
+        margin-top: 0.75rem;
+        font-size: 0.875rem;
+        color: var(--text-light);
+        font-style: italic;
+    }
+
+    .route-zone {
+        padding: 1.25rem;
+        min-height: 120px;
+    }
+
+    .route-zone.empty {
+        background: var(--bg-light);
+        border: 2px dashed var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: var(--text-light);
+    }
+
+    .route-deliveries {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        min-height: 50px;
+    }
+
+    .route-delivery-item {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .route-delivery-item:hover {
+        background: var(--bg-light);
+        border-color: var(--primary-color);
+    }
+
+    .delivery-number {
+        width: 36px;
+        height: 36px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    .delivery-content {
+        flex: 1;
+    }
+
+    .delivery-name {
+        font-weight: 700;
+        font-size: 0.875rem;
+        color: var(--text-dark);
+        margin: 0 0 0.25rem 0;
+    }
+
+    .delivery-client {
+        font-size: 0.75rem;
+        color: var(--text-light);
+    }
+
+    .delivery-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-shrink: 0;
+    }
+
+    .delivery-time {
+        font-size: 0.75rem;
+        color: var(--text-light);
+    }
+
+    .delivery-icons {
+        display: flex;
+        gap: 0.375rem;
+    }
+
+    /* Empty States */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text-light);
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Modals */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        z-index: 200;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        max-width: 500px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 2rem;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--text-light);
+        cursor: pointer;
+        padding: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .modal-close:hover {
+        color: var(--text-dark);
+    }
+
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        font-family: inherit;
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        outline: none;
+    }
+
+    .form-hint {
+        font-size: 0.75rem;
+        color: var(--text-light);
+        margin-top: 0.375rem;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn-cancel {
+        flex: 1;
+        background: white;
+        color: var(--text-dark);
+        border: 2px solid var(--border-color);
+    }
+
+    .btn-cancel:hover {
+        border-color: var(--text-dark);
+    }
+
+    .btn-submit {
+        flex: 1;
+    }
+
+    /* Checkbox */
+    .checkbox-container {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        z-index: 10;
+    }
+
+    .checkbox-container input[type="checkbox"] {
+        width: 1.25rem;
+        height: 1.25rem;
+        cursor: pointer;
+        accent-color: var(--success-color);
+    }
+
+    /* Sortable */
+    .sortable-ghost {
+        opacity: 0.4;
+        background: var(--bg-light);
+    }
+
+    .sortable-drag {
+        opacity: 0.8;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+        .main-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .header-actions {
+            width: 100%;
+        }
+
+        .header-actions .btn {
+            flex: 1;
+            justify-content: center;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 0 1rem;
+            margin: 1rem auto;
+        }
+
+        .header-section {
+            padding: 1.5rem;
+        }
+
+        .header-title h2 {
+            font-size: 1.5rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .btn {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.875rem;
+        }
+
+        .modal-content {
+            padding: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="dashboardData()" x-init="init()">
+    
+    <!-- Header -->
+    <div class="dashboard-container">
+        <div class="header-section">
+            <div class="header-content">
+                <div class="header-title">
+                    <h2>Gestion des Livraisons</h2>
+                    <p class="header-subtitle">Organisez vos routes et assignez vos livreurs</p>
+                </div>
+                
+                <div class="header-actions">
+                    <button @click="toggleModeFusion()"
+                            :class="modeFusion ? 'btn-orange' : 'btn-purple'"
+                            class="btn">
+                        <i class="fas fa-object-group"></i>
+                        <span x-text="modeFusion ? 'Annuler fusion' : 'Fusionner livraisons'"></span>
+                    </button>
+                    
+                    <button x-show="modeFusion && livraisonsSelectionnees.length >= 2"
+                            x-cloak
+                            @click="fusionnerLivraisons()"
+                            class="btn btn-success">
+                        <i class="fas fa-compress-arrows-alt"></i>
+                        Fusionner (<span x-text="livraisonsSelectionnees.length"></span>)
+                    </button>
+                    
+                    <a href="{% url 'livraison:import_excel' %}" class="btn btn-success">
+                        <i class="fas fa-file-excel"></i>
+                        Importer Excel
+                    </a>
+
+                    <a href="{% url 'livraison:gestion_livreurs' %}" class="btn btn-primary">
+                        <i class="fas fa-users"></i>
+                        Planning Livreurs
+                    </a>
+                    
+                    <a href="{% url 'livraison:resume_journalier' %}" class="btn btn-indigo">
+                        <i class="fas fa-chart-line"></i>
+                        Feuille de route
+                    </a>
+                    
+                    <a href="{% url 'livraison:gestion_recuperations' %}" class="btn btn-purple">
+                        <i class="fas fa-redo"></i>
+                        Récupérations
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        
+        
+        <!-- Statistiques -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-card-content">
+                    <div class="stat-info">
+                        <h3>Total</h3>
+                        <p class="stat-value" style="color: #3b82f6;">{{ stats.total }}</p>
+                    </div>
+                    <div class="stat-icon blue">
+                        <i class="fas fa-box" style="color: #3b82f6;"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card-content">
+                    <div class="stat-info">
+                        <h3>Non assignées</h3>
+                        <p class="stat-value" style="color: #f97316;" x-text="livraisonsNonAssignees.length">{{ stats.non_assignees }}</p>
+                    </div>
+                    <div class="stat-icon orange">
+                        <i class="fas fa-clock" style="color: #f97316;"></i>
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <div class="stat-card">
+                <div class="stat-card-content">
+                    <div class="stat-info">
+                        <h3>En cours</h3>
+                        <p class="stat-value" style="color: #8b5cf6;">{{ stats.en_cours }}</p>
+                    </div>
+                    <div class="stat-icon purple">
+                        <i class="fas fa-truck" style="color: #8b5cf6;"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card-content">
+                    <div class="stat-info">
+                        <h3>Livrées</h3>
+                        <p class="stat-value" style="color: #10b981;">{{ stats.livrees }}</p>
+                    </div>
+                    <div class="stat-icon green">
+                        <i class="fas fa-check-circle" style="color: #10b981;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Date Picker -->
+        <div class="date-picker-container">
+            <input 
+                type="date" 
+                x-model="dateSelectionnee"
+                @change="changerDate()"
+                class="form-input">
+        </div>
+        <!-- Onglets périodes -->
+        <div class="tabs-container">
+            <div class="tabs-nav">
+                <button 
+                    @click="changerPeriode('matin')"
+                    :class="periodeActive === 'matin' ? 'active' : ''"
+                    class="tab-button">
+                    <i class="fas fa-sunrise"></i>
+                    Matin (5h-9h)
+                    <span class="tab-badge">{{ livraisons_matin.count }}</span>
+                </button>
+                
+                <button 
+                    @click="changerPeriode('midi')"
+                    :class="periodeActive === 'midi' ? 'active' : ''"
+                    class="tab-button">
+                    <i class="fas fa-sun"></i>
+                    Midi (9h30-12h30)
+                    <span class="tab-badge">{{ livraisons_midi.count }}</span>
+                </button>
+                
+                <button 
+                    @click="changerPeriode('apres_midi')"
+                    :class="periodeActive === 'apres_midi' ? 'active' : ''"
+                    class="tab-button">
+                    <i class="fas fa-cloud-sun"></i>
+                    Après-midi (13h-20h)
+                    <span class="tab-badge">{{ livraisons_apres_midi.count }}</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Layout principal -->
+        <div class="main-layout">
+            
+            <!-- Colonne Gauche : Carte + Livraisons -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                
+                <!-- Carte -->
+                <div class="card-section">
+                    <div class="card-header gradient-blue">
+                        <h3 class="card-title">
+                            <i class="fas fa-map-marked-alt"></i>
+                            Carte des livraisons
+                        </h3>
+                    </div>
+                    <div id="map"></div>
+                </div>
+                
+                <!-- Pool de livraisons -->
+                <div class="card-section">
+                    <div class="card-header gradient-orange">
+                        <h3 class="card-title">
+                            <i class="fas fa-box-open"></i>
+                            Livraisons à assigner
+                        </h3>
+                        <span class="card-count" x-text="livraisonsNonAssignees.length"></span>
+                    </div>
+                    
+                    <div id="livraisons-pool" class="card-body">
+                        <template x-if="livraisonsNonAssignees.length === 0">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">✅</div>
+                                <p>Toutes les livraisons sont assignées !</p>
+                            </div>
+                        </template>
+                        
+                        <div class="livraisons-list">
+                            <template x-for="livraison in livraisonsNonAssignees" :key="livraison.id">
+                                <div :data-id="livraison.id" 
+                                     :class="livraisonsSelectionnees.includes(livraison.id) ? 'selected' : ''"
+                                     class="livraison-card">
+                                    
+                                    <div x-show="modeFusion" 
+                                         x-cloak
+                                         @click.stop="toggleSelection(livraison.id)"
+                                         class="checkbox-container">
+                                        <input type="checkbox" 
+                                               :checked="livraisonsSelectionnees.includes(livraison.id)"
+                                               class="pointer-events-none">
+                                    </div>
+                                    
+                                    <div @click="modeFusion ? toggleSelection(livraison.id) : ouvrirDetailLivraison(livraison)">
+                                        <div class="livraison-header">
+                                            <div style="flex: 1;">
+                                                <h4 class="livraison-title" x-text="livraison.nom_evenement || livraison.numero"></h4>
+                                                <p class="livraison-client" x-text="livraison.client"></p>
+                                            </div>
+                                            <span class="livraison-time" x-text="livraison.heure"></span>
+                                        </div>
+                                        
+                                        <p class="livraison-address">
+                                            <i class="fas fa-map-marker-alt" style="color: #ef4444;"></i>
+                                            <span x-text="livraison.adresse"></span>
+                                        </p>
+                                        
+                                        <div class="livraison-tags">
+                                            <template x-if="livraison.cafe">
+                                                <span class="tag cafe">
+                                                    <i class="fas fa-coffee"></i> Café
+                                                </span>
+                                            </template>
+                                            <template x-if="livraison.the">
+                                                <span class="tag the">
+                                                    <i class="fas fa-mug-hot"></i> Thé
+                                                </span>
+                                            </template>
+                                            <template x-if="livraison.glace">
+                                                <span class="tag glace">
+                                                    <i class="fas fa-snowflake"></i> Glace
+                                                </span>
+                                            </template>
+                                            <template x-if="livraison.chaud">
+                                                <span class="tag chaud">
+                                                    <i class="fas fa-fire"></i> Chaud
+                                                </span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Colonne Droite : Routes -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                
+                <button 
+                    @click="ouvrirModalRoute()"
+                    class="btn btn-success"
+                    style="padding: 1.25rem; font-size: 1rem; justify-content: center;">
+                    <i class="fas fa-plus-circle"></i>
+                    Créer une nouvelle route
+                </button>
+                
+                <div class="routes-list">
+                    <template x-if="routes.length === 0">
+                        <div class="card-section">
+                            <div class="card-body">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">🚚</div>
+                                    <p>Aucune route créée pour cette période</p>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    
+                    <template x-for="route in routes" :key="route.id">
+                        <div class="route-card">
+                            
+                            <div class="route-header">
+                                <div class="route-header-top">
+                                    <h4 class="route-name" x-text="route.nom"></h4>
+                                    <div class="route-actions">
+                                        <button @click="modifierRoute(route)" style="color: #3b82f6;">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button @click="supprimerRoute(route.id)" style="color: #ef4444;">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="route-info">
+                                    <div class="route-info-item">
+                                        <i class="fas fa-clock" style="color: #3b82f6;"></i>
+                                        <strong x-text="route.heure_depart"></strong>
+                                    </div>
+                                    <div class="route-info-item">
+                                        <i class="fas fa-user" style="color: #8b5cf6;"></i>
+                                        <strong x-text="route.livreurs.join(', ')"></strong>
+                                    </div>
+                                </div>
+                                
+                                <template x-if="route.commentaire">
+                                    <p class="route-comment" x-text="route.commentaire"></p>
+                                </template>
+                            </div>
+                            
+                            <div :data-route-id="route.id" 
+                                 :class="route.livraisons.length === 0 ? 'empty' : ''"
+                                 class="route-zone">
+                                
+                                <template x-if="route.livraisons.length === 0">
+                                    <div style="text-align: center;">
+                                        <i class="fas fa-hand-pointer" style="font-size: 2.5rem; opacity: 0.3; margin-bottom: 0.5rem;"></i>
+                                        <p style="font-size: 0.875rem;">Glissez des livraisons ici</p>
+                                    </div>
+                                </template>
+                                
+                                <div class="route-deliveries">
+                                    <template x-for="(livraison, index) in route.livraisons" :key="livraison.id">
+                                        <div :data-id="livraison.id" 
+                                             @click="ouvrirDetailLivraison(livraison)"
+                                             class="route-delivery-item">
+                                            
+                                            <div class="delivery-number" x-text="index + 1"></div>
+                                            
+                                            <div class="delivery-content">
+                                                <h5 class="delivery-name" x-text="livraison.nom_evenement || livraison.numero"></h5>
+                                                <p class="delivery-client" x-text="livraison.client"></p>
+                                            </div>
+                                            
+                                            <div class="delivery-meta">
+                                                <span class="delivery-time" x-text="livraison.heure"></span>
+                                                
+                                                <div class="delivery-icons">
+                                                    <template x-if="livraison.cafe">
+                                                        <i class="fas fa-coffee" style="color: #f59e0b; font-size: 0.75rem;" title="Café"></i>
+                                                    </template>
+                                                    <template x-if="livraison.the">
+                                                        <i class="fas fa-mug-hot" style="color: #10b981; font-size: 0.75rem;" title="Thé"></i>
+                                                    </template>
+                                                    <template x-if="livraison.glace">
+                                                        <i class="fas fa-snowflake" style="color: #3b82f6; font-size: 0.75rem;" title="Glace"></i>
+                                                    </template>
+                                                    <template x-if="livraison.chaud">
+                                                        <i class="fas fa-fire" style="color: #ef4444; font-size: 0.75rem;" title="Chaud"></i>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Créer Route -->
+    <div x-show="modalRoute" 
+         x-cloak
+         class="modal-overlay"
+         @click.self="modalRoute = false">
+        
+        <div class="modal-content" @click.stop>
+            <div class="modal-header">
+                <h3 class="modal-title">Créer une nouvelle route</h3>
+                <button @click="modalRoute = false" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form @submit.prevent="creerRoute()">
+                <div class="form-group">
+                    <label class="form-label">Nom de la route</label>
+                    <input type="text" x-model="nouvelleRoute.nom" required class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Heure de départ</label>
+                    <input type="time" x-model="nouvelleRoute.heure_depart" required class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Livreur(s)</label>
+                    <select x-model="nouvelleRoute.livreurs" multiple size="4" class="form-select">
+                        <template x-for="livreur in livreursDisponibles" :key="livreur.id">
+                            <option :value="livreur.id" x-text="livreur.nom"></option>
+                        </template>
+                    </select>
+                    <p class="form-hint">Maintenez Ctrl/Cmd pour sélectionner plusieurs</p>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Commentaire</label>
+                    <textarea x-model="nouvelleRoute.commentaire" rows="3" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" @click="modalRoute = false" class="btn btn-cancel">
+                        Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-submit">
+                        Créer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Modifier Route -->
+    <div x-show="modalModifierRoute" 
+         x-cloak
+         class="modal-overlay"
+         @click.self="modalModifierRoute = false">
+        
+        <div class="modal-content" @click.stop>
+            <div class="modal-header">
+                <h3 class="modal-title">Modifier la route</h3>
+                <button @click="modalModifierRoute = false" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form @submit.prevent="sauvegarderModificationRoute()">
+                <div class="form-group">
+                    <label class="form-label">Nom de la route</label>
+                    <input type="text" x-model="routeEnEdition.nom" required class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Heure de départ</label>
+                    <input type="time" x-model="routeEnEdition.heure_depart" required class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Livreur(s)</label>
+                    <select x-model="routeEnEdition.livreurs" multiple size="4" class="form-select">
+                        <template x-for="livreur in livreursDisponibles" :key="livreur.id">
+                            <option :value="livreur.id" x-text="livreur.nom"></option>
+                        </template>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Commentaire</label>
+                    <textarea x-model="routeEnEdition.commentaire" rows="3" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" @click="modalModifierRoute = false" class="btn btn-cancel">
+                        Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-submit">
+                        Sauvegarder
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modal Détails Livraison -->
+    <div x-show="modalDetailLivraison" 
+         x-cloak
+         class="modal-overlay"
+         @click.self="modalDetailLivraison = false">
+        
+        <div class="modal-content" style="max-width: 700px;" @click.stop>
+            <template x-if="livraisonSelectionnee">
+                <div>
+                    <div class="modal-header">
+                        <div>
+                            <h3 class="modal-title" x-text="livraisonSelectionnee.nom_evenement || livraisonSelectionnee.numero"></h3>
+                            <p style="color: var(--text-light); margin: 0.5rem 0 0 0;" x-text="livraisonSelectionnee.client"></p>
+                        </div>
+                        <button @click="modalDetailLivraison = false" class="modal-close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <form @submit.prevent="sauvegarderBesoins()">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-clock" style="color: #3b82f6;"></i>
+                                Heure de livraison
+                            </label>
+                            <input type="time" x-model="besoins.heure" class="form-input">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-map-marker-alt" style="color: #ef4444;"></i>
+                                Adresse
+                            </label>
+                            <p style="padding: 0.75rem; background: var(--bg-light); border-radius: 10px; color: var(--text-dark);" x-text="livraisonSelectionnee.adresse"></p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-info-circle" style="color: #6b7280;"></i>
+                                Informations supplémentaires
+                            </label>
+                            <textarea x-model="besoins.informations_supplementaires" 
+                                      rows="3" 
+                                      placeholder="Notes, instructions spéciales..."
+                                      class="form-textarea"></textarea>
+                        </div>
+                        
+                        <!-- Café -->
+                        <div class="form-group" style="background: #fef3c7; padding: 1rem; border-radius: 12px;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                <input type="checkbox" x-model="besoins.cafe" style="width: 1.25rem; height: 1.25rem; accent-color: #f59e0b;">
+                                <span class="form-label" style="margin: 0;">
+                                    <i class="fas fa-coffee" style="color: #f59e0b;"></i> Café
+                                </span>
+                            </label>
+                            <div x-show="besoins.cafe" style="margin-left: 2rem;">
+                                <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="radio" x-model="besoins.cafe_type" value="thermos" style="accent-color: #f59e0b;">
+                                        <span>Thermos</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="radio" x-model="besoins.cafe_type" value="jetable" style="accent-color: #f59e0b;">
+                                        <span>Jetable</span>
+                                    </label>
+                                </div>
+                                <input type="number" x-model="besoins.cafe_quantite" min="1" placeholder="Quantité" class="form-input" style="width: 120px;">
+                            </div>
+                        </div>
+                        
+                        <!-- Thé -->
+                        <div class="form-group" style="background: #d1fae5; padding: 1rem; border-radius: 12px;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                <input type="checkbox" x-model="besoins.the" style="width: 1.25rem; height: 1.25rem; accent-color: #10b981;">
+                                <span class="form-label" style="margin: 0;">
+                                    <i class="fas fa-mug-hot" style="color: #10b981;"></i> Thé
+                                </span>
+                            </label>
+                            <div x-show="besoins.the" style="margin-left: 2rem;">
+                                <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="radio" x-model="besoins.the_type" value="thermos" style="accent-color: #10b981;">
+                                        <span>Thermos</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="radio" x-model="besoins.the_type" value="jetable" style="accent-color: #10b981;">
+                                        <span>Jetable</span>
+                                    </label>
+                                </div>
+                                <input type="number" x-model="besoins.the_quantite" min="1" placeholder="Quantité" class="form-input" style="width: 120px;">
+                            </div>
+                        </div>
+                        
+                        <!-- Sac de glace -->
+                        <div class="form-group" style="background: #dbeafe; padding: 1rem; border-radius: 12px;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                <input type="checkbox" x-model="besoins.glace" style="width: 1.25rem; height: 1.25rem; accent-color: #3b82f6;">
+                                <span class="form-label" style="margin: 0;">
+                                    <i class="fas fa-snowflake" style="color: #3b82f6;"></i> Sac de glace
+                                </span>
+                            </label>
+                            <div x-show="besoins.glace" style="margin-left: 2rem;">
+                                <input type="number" x-model="besoins.glace_quantite" min="1" placeholder="Quantité" class="form-input" style="width: 120px;">
+                            </div>
+                        </div>
+                        
+                        <!-- Part chaud -->
+                        <div class="form-group" style="background: #fee2e2; padding: 1rem; border-radius: 12px;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" x-model="besoins.chaud" style="width: 1.25rem; height: 1.25rem; accent-color: #ef4444;">
+                                <span class="form-label" style="margin: 0;">
+                                    <i class="fas fa-fire" style="color: #ef4444;"></i> Part chaud
+                                </span>
+                            </label>
+                        </div>
+                        
+                        <!-- Checklist -->
+                        <div class="form-group" style="background: #ede9fe; padding: 1rem; border-radius: 12px;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                <input type="checkbox" x-model="besoins.checklist" style="width: 1.25rem; height: 1.25rem; accent-color: #8b5cf6;">
+                                <span class="form-label" style="margin: 0;">
+                                    <i class="fas fa-list-check" style="color: #8b5cf6;"></i> Checklist
+                                </span>
+                            </label>
+                            <div x-show="besoins.checklist" style="margin-left: 2rem;">
+                                <textarea x-model="besoins.checklist_notes" rows="3" placeholder="Notes pour la checklist..." class="form-textarea"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button type="button" @click="modalDetailLivraison = false" class="btn btn-cancel">
+                                Annuler
+                            </button>
+                            <button type="submit" class="btn btn-primary btn-submit">
+                                <i class="fas fa-save"></i>
+                                Sauvegarder
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+</div>
+
+<!-- Google Maps -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC2GqoZLMIMuAihXl8271sJN3kJ_57smdM&libraries=places,geometry"></script>
+
+<script>
+function dashboardData() {
+    return {
+        dateSelectionnee: '{{ date_selectionnee }}',
+        periodeActive: 'matin',
+        modalRoute: false,
+        modalDetailLivraison: false,
+        modalModifierRoute: false,
+        livraisonSelectionnee: null,
+        routeEnEdition: {
+            id: '',
+            nom: '',
+            heure_depart: '',
+            livreurs: [],
+            commentaire: ''
+        },
+        map: null,
+        markers: [],
+        infoWindow: null,
+        
+        livraisonsNonAssignees: [],
+        routes: [],
+        livreursDisponibles: [],
+        
+        livraisonsSelectionnees: [],
+        modeFusion: false,
+        
+        besoins: {
+            heure: '',
+            informations_supplementaires: '',
+            cafe: false,
+            cafe_type: 'thermos',
+            cafe_quantite: 1,
+            the: false,
+            the_type: 'thermos',
+            the_quantite: 1,
+            glace: false,
+            glace_quantite: 1,
+            chaud: false,
+            checklist: false,
+            checklist_notes: ''
+        },
+        
+        nouvelleRoute: {
+            nom: '',
+            heure_depart: '',
+            livreurs: [],
+            commentaire: ''
+        },
+        
+        sortableInstances: {},
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+        
+        async init() {
+            this.initMap();
+            await this.chargerLivreurs();
+            await this.chargerLivraisons();
+            await this.chargerRoutes();
+            this.$nextTick(() => {
+                this.initDragAndDrop();
+            });
+        },
+        
+        changerDate() {
+            window.location.href = '?date=' + this.dateSelectionnee;
+        },
+        
+        async changerPeriode(periode) {
+            this.periodeActive = periode;
+            await this.chargerLivraisons();
+            await this.chargerRoutes();
+            this.$nextTick(() => {
+                this.initDragAndDrop();
+                setTimeout(() => {
+                    this.updateMap();
+                }, 100);
+            });
+        },
+        
+        async chargerLivraisons() {
+            try {
+                const response = await fetch(`/livraison/api/livraisons/?date=${this.dateSelectionnee}&periode=${this.periodeActive}`);
+                const data = await response.json();
+                this.livraisonsNonAssignees = data.livraisons;
+                this.updateMap();
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        },
+        
+        async chargerRoutes() {
+            try {
+                const response = await fetch(`/livraison/api/routes/?date=${this.dateSelectionnee}&periode=${this.periodeActive}`);
+                const data = await response.json();
+                this.routes = data.routes;
+                
+                this.$nextTick(() => {
+                    this.initDragAndDrop();
+                });
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        },
+        
+        async chargerLivreurs() {
+            try {
+                const response = await fetch('/livraison/api/livreurs/');
+                const data = await response.json();
+                this.livreursDisponibles = data.livreurs;
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        },
+        
+        initMap() {
+            this.map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 45.5017, lng: -73.5673 },
+                zoom: 12,
+                mapTypeControl: true,
+                streetViewControl: false
+            });
+            
+            this.markers = [];
+            this.infoWindow = new google.maps.InfoWindow();
+        },
+
+        updateMap() {
+            if (!this.map) {
+                console.warn('Map pas encore initialisée');
+                return;
+            }
+            
+            this.markers.forEach(marker => marker.setMap(null));
+            this.markers = [];
+            
+            if (this.livraisonsNonAssignees.length === 0) return;
+            
+            const bounds = new google.maps.LatLngBounds();
+            const livraisonsParCoordonnees = {};
+            
+            this.livraisonsNonAssignees.forEach(liv => {
+                if (liv.latitude && liv.longitude) {
+                    const key = `${liv.latitude},${liv.longitude}`;
+                    if (!livraisonsParCoordonnees[key]) {
+                        livraisonsParCoordonnees[key] = [];
+                    }
+                    livraisonsParCoordonnees[key].push(liv);
+                }
+            });
+            
+            const couleursPeriode = {
+                'matin': '#F59E0B',
+                'midi': '#EF4444',
+                'apres_midi': '#8B5CF6'
+            };
+            
+            Object.entries(livraisonsParCoordonnees).forEach(([coords, livraisons]) => {
+                const [lat, lng] = coords.split(',').map(parseFloat);
+                const position = { lat, lng };
+                
+                const periodesCount = {};
+                livraisons.forEach(liv => {
+                    const heure = parseInt(liv.heure.split(':')[0]);
+                    let periode = 'apres_midi';
+                    if (heure < 10) periode = 'matin';
+                    else if (heure < 13) periode = 'midi';
+                    periodesCount[periode] = (periodesCount[periode] || 0) + 1;
+                });
+                const periodeDominante = Object.keys(periodesCount).reduce((a, b) => 
+                    periodesCount[a] > periodesCount[b] ? a : b
+                );
+                
+                const couleur = couleursPeriode[periodeDominante] || '#3B82F6';
+                
+                const marker = new google.maps.Marker({
+                    position: position,
+                    map: this.map,
+                    title: livraisons.length > 1 ? `${livraisons.length} livraisons` : livraisons[0].nom_evenement,
+                    label: livraisons.length > 1 ? {
+                        text: livraisons.length.toString(),
+                        color: 'white',
+                        fontSize: '14px',
+                        fontWeight: 'bold'
+                    } : null,
+                    icon: livraisons.length > 1 ? {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 18,
+                        fillColor: couleur,
+                        fillOpacity: 1,
+                        strokeColor: 'white',
+                        strokeWeight: 3
+                    } : {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 10,
+                        fillColor: couleur,
+                        fillOpacity: 1,
+                        strokeColor: 'white',
+                        strokeWeight: 2
+                    }
+                });
+                
+                let content = '';
+                if (livraisons.length > 1) {
+                    livraisons.sort((a, b) => a.heure.localeCompare(b.heure));
+                    
+                    content = `<div style="max-height: 300px; overflow-y: auto; min-width: 250px;">
+                        <div style="background: ${couleur}; color: white; padding: 8px; margin: -8px -8px 8px -8px; font-weight: bold;">
+                            ${livraisons.length} livraisons
+                        </div>`;
+                    
+                    livraisons.forEach((liv, i) => {
+                        const heureInt = parseInt(liv.heure.split(':')[0]);
+                        let iconePeriode = '🌅';
+                        if (heureInt >= 10 && heureInt < 13) iconePeriode = '☀️';
+                        else if (heureInt >= 13) iconePeriode = '🌤️';
+                        
+                        content += `<div style="padding: 8px; ${i % 2 === 0 ? 'background: #f9fafb' : ''}; border-left: 3px solid ${couleur};">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <strong style="color: #1f2937; font-size: 13px;">${liv.nom_evenement || liv.numero}</strong>
+                                <span style="background: ${couleur}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; white-space: nowrap; margin-left: 8px;">
+                                    ${iconePeriode} ${liv.heure}
+                                </span>
+                            </div>
+                            <span style="color: #6b7280; font-size: 12px;">${liv.client}</span>
+                        </div>`;
+                    });
+                    content += '</div>';
+                } else {
+                    const liv = livraisons[0];
+                    const heureInt = parseInt(liv.heure.split(':')[0]);
+                    let iconePeriode = '🌅';
+                    let textePeriode = 'Matin';
+                    if (heureInt >= 10 && heureInt < 13) {
+                        iconePeriode = '☀️';
+                        textePeriode = 'Midi';
+                    } else if (heureInt >= 13) {
+                        iconePeriode = '🌤️';
+                        textePeriode = 'Après-midi';
+                    }
+                    
+                    content = `<div style="padding: 10px; min-width: 200px;">
+                        <div style="background: ${couleur}; color: white; padding: 6px 10px; margin: -10px -10px 10px -10px; border-radius: 4px 4px 0 0;">
+                            <strong style="font-size: 14px;">${liv.nom_evenement || liv.numero}</strong>
+                        </div>
+                        <div style="margin-bottom: 6px;">
+                            <span style="color: #6b7280; font-size: 12px;">${liv.client}</span>
+                        </div>
+                        <div style="background: #f3f4f6; padding: 6px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: bold; color: ${couleur};">${iconePeriode} ${liv.heure}</span>
+                            <span style="font-size: 11px; color: #6b7280;">${textePeriode}</span>
+                        </div>
+                    </div>`;
+                }
+                
+                marker.addListener('click', () => {
+                    this.infoWindow.setContent(content);
+                    this.infoWindow.open(this.map, marker);
+                });
+                
+                this.markers.push(marker);
+                bounds.extend(position);
+            });
+            
+            if (this.markers.length > 0) {
+                this.map.fitBounds(bounds);
+            }
+        },
+
+        initDragAndDrop() {
+            // Détruire les instances existantes
+            Object.values(this.sortableInstances).forEach(instance => {
+                if (instance) instance.destroy();
+            });
+            this.sortableInstances = {};
+            
+            // Pool de livraisons - Configuration CORRIGÉE
+            const poolContainer = document.querySelector('#livraisons-pool .livraisons-list');
+            if (poolContainer) {
+                this.sortableInstances['pool'] = new Sortable(poolContainer, {
+                    group: {
+                        name: 'livraisons',
+                        pull: 'clone',
+                        put: false
+                    },
+                    animation: 150,
+                    sort: false,
+                    draggable: '.livraison-card',
+                    onEnd: (evt) => {
+                        // Supprimer le clone qui reste dans le pool
+                        if (evt.clone) {
+                            evt.clone.remove();
+                        }
+                        this.chargerLivraisons();
+                    }
+                });
+            }
+            
+            // Routes - Configuration pour les zones de dépôt
+            document.querySelectorAll('.route-zone').forEach(zone => {
+                const routeId = zone.dataset.routeId;
+                const deliveriesContainer = zone.querySelector('.route-deliveries');
+                
+                if (!deliveriesContainer) return;
+                
+                this.sortableInstances[routeId] = new Sortable(deliveriesContainer, {
+                    group: 'livraisons',
+                    animation: 150,
+                    draggable: '.livraison-card, .route-delivery-item',
+                    onAdd: async (evt) => {
+                        const livraisonId = evt.item.dataset.id;
+                        
+                        // Supprimer visuellement l'élément ajouté temporairement
+                        evt.item.remove();
+                        
+                        // Ajouter via API
+                        await this.ajouterLivraisonRoute(routeId, livraisonId);
+                    },
+                    onUpdate: async (evt) => {
+                        await this.reordonnerRoute(routeId);
+                    }
+                });
+            });
+        },
+        
+        async reordonnerRoute(routeId) {
+            try {
+                const zone = document.querySelector(`[data-route-id="${routeId}"]`);
+                const deliveriesContainer = zone.querySelector('.route-deliveries');
+                
+                if (!deliveriesContainer) return;
+                
+                const cards = deliveriesContainer.querySelectorAll('.route-delivery-item[data-id]');
+                const ordre = Array.from(cards).map(card => card.dataset.id);
+                
+                const response = await fetch(`/livraison/api/routes/${routeId}/reordonner/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ ordre: ordre })
+                });
+                
+                if (response.ok) {
+                    await this.chargerRoutes();
+                    this.$nextTick(() => {
+                        this.initDragAndDrop();
+                    });
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        },
+        
+        toggleSelection(livraisonId) {
+            const index = this.livraisonsSelectionnees.indexOf(livraisonId);
+            if (index > -1) {
+                this.livraisonsSelectionnees.splice(index, 1);
+            } else {
+                this.livraisonsSelectionnees.push(livraisonId);
+            }
+        },
+        
+        toggleModeFusion() {
+            this.modeFusion = !this.modeFusion;
+            this.livraisonsSelectionnees = [];
+        },
+        
+        async fusionnerLivraisons() {
+            if (this.livraisonsSelectionnees.length < 2) {
+                alert('Sélectionnez au moins 2 livraisons à fusionner');
+                return;
+            }
+            
+            if (!confirm(`Fusionner ${this.livraisonsSelectionnees.length} livraisons en une seule ?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/livraison/api/fusionner-livraisons/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        livraison_ids: this.livraisonsSelectionnees
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Livraisons fusionnées avec succès!');
+                    this.modeFusion = false;
+                    this.livraisonsSelectionnees = [];
+                    await this.chargerLivraisons();
+                } else {
+                    alert('Erreur: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la fusion');
+            }
+        },
+        
+        async supprimerRoute(routeId) {
+            if (!confirm('Supprimer cette route ? Les livraisons redeviendront non assignées.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/livraison/api/routes/supprimer/${routeId}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                if (response.ok) {
+                    alert('Route supprimée');
+                    await this.chargerLivraisons();
+                    await this.chargerRoutes();
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        },
+        
+        async ajouterLivraisonRoute(routeId, livraisonId) {
+            try {
+                const response = await fetch('/livraison/api/routes/ajouter-livraison/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        route_id: routeId,
+                        livraison_id: livraisonId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Recharger les données
+                    await this.chargerLivraisons();
+                    await this.chargerRoutes();
+                    
+                    // Réinitialiser le drag and drop après le rechargement
+                    this.$nextTick(() => {
+                        this.initDragAndDrop();
+                    });
+                } else {
+                    alert('Erreur: ' + (data.error || 'Impossible d\'ajouter la livraison'));
+                    // Recharger en cas d'erreur
+                    await this.chargerLivraisons();
+                    await this.chargerRoutes();
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de l\'ajout de la livraison');
+                await this.chargerLivraisons();
+                await this.chargerRoutes();
+            }
+        },
+        
+        ouvrirModalRoute() {
+            this.nouvelleRoute = {
+                nom: `Route ${this.routes.length + 1}`,
+                heure_depart: '',
+                livreurs: [],
+                commentaire: ''
+            };
+            this.modalRoute = true;
+        },
+        
+        modifierRoute(route) {
+            this.routeEnEdition = {
+                id: route.id,
+                nom: route.nom,
+                heure_depart: route.heure_depart,
+                livreurs: route.livreurs_ids || [],
+                commentaire: route.commentaire || ''
+            };
+            this.modalModifierRoute = true;
+        },
+
+        async sauvegarderModificationRoute() {
+            try {
+                const response = await fetch(`/livraison/api/routes/${this.routeEnEdition.id}/modifier/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.routeEnEdition)
+                });
+                
+                if (response.ok) {
+                    alert('Route modifiée!');
+                    this.modalModifierRoute = false;
+                    await this.chargerRoutes();
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la modification');
+            }
+        },
+        
+        ouvrirDetailLivraison(livraison) {
+            if (!this.modeFusion) {
+                this.livraisonSelectionnee = livraison;
+                
+                this.besoins = {
+                    heure: livraison.heure || '',
+                    informations_supplementaires: livraison.informations_supplementaires || '',
+                    cafe: livraison.cafe || false,
+                    cafe_type: 'thermos',
+                    cafe_quantite: 1,
+                    the: livraison.the || false,
+                    the_type: 'thermos',
+                    the_quantite: 1,
+                    glace: livraison.glace || false,
+                    glace_quantite: 1,
+                    chaud: livraison.chaud || false,
+                    checklist: false,
+                    checklist_notes: ''
+                };
+                
+                this.modalDetailLivraison = true;
+            }
+        },
+
+        async sauvegarderBesoins() {
+            try {
+                const response = await fetch(`/livraison/api/livraisons/${this.livraisonSelectionnee.id}/besoins/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.besoins)
+                });
+                
+                if (response.ok) {
+                    alert('Informations sauvegardées!');
+                    this.modalDetailLivraison = false;
+                    await this.chargerLivraisons();
+                    await this.chargerRoutes();
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la sauvegarde');
+            }
+        },
+        
+        async creerRoute() {
+            try {
+                console.log('Création de route...');
+                console.log('CSRF Token:', this.getCookie('csrftoken'));
+                
+                const response = await fetch('/livraison/api/routes/creer/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        nom: this.nouvelleRoute.nom,
+                        date: this.dateSelectionnee,
+                        periode: this.periodeActive,
+                        heure_depart: this.nouvelleRoute.heure_depart,
+                        livreurs: this.nouvelleRoute.livreurs,
+                        commentaire: this.nouvelleRoute.commentaire
+                    })
+                });
+                
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (response.ok && data.success) {
+                    alert('Route créée avec succès!');
+                    this.modalRoute = false;
+                    await this.chargerRoutes();
+                } else {
+                    alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+                }
+            } catch (error) {
+                console.error('Erreur complète:', error);
+                alert('Erreur: ' + error.message);
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,120 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CHEFLOW{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js pour l'interactivité -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SortableJS pour le drag & drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .livraison-card {
+            cursor: grab;
+            transition: all 0.2s;
+        }
+        .livraison-card:active {
+            cursor: grabbing;
+            opacity: 0.7;
+        }
+        .livraison-card.sortable-ghost {
+            opacity: 0.4;
+            background: #e5e7eb;
+        }
+        
+        .route-zone {
+            min-height: 100px;
+            transition: background-color 0.2s;
+        }
+        .route-zone.sortable-drag-over {
+            background-color: #dbeafe !important;
+            border: 2px dashed #3b82f6;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+    
+    <!-- Navigation -->
+  <nav class="bg-white shadow-sm border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex items-center">
+                <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                    <!-- ✨ Logo personnalisé -->
+                    <img src="{% static 'images/logo.jpeg' %}" 
+                         alt="Cheflow Logo" 
+                         class="h-16 w-auto">
+                    <span>Cheflow</span>
+                </h1>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                {% if user.is_authenticated %}
+                    <div class="flex items-center space-x-3">
+                        <span class="text-sm text-gray-700">
+                            <i class="fas fa-user-circle"></i>
+                            {{ user.get_full_name|default:user.username }}
+                        </span>
+                        <span class="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {{ user.get_role_display }}
+                        </span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>
+    
+    <!-- Messages Flash -->
+    {% if messages %}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+            {% for message in messages %}
+                <div class="mb-4 p-4 rounded-lg {% if message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% elif message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}" 
+                     x-data="{ show: true }" 
+                     x-show="show" 
+                     x-transition>
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-start">
+                            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} mt-0.5 mr-3"></i>
+                            <p>{{ message }}</p>
+                        </div>
+                        <button @click="show = false" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    <!-- Contenu principal -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

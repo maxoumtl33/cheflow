@@ -1,0 +1,276 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .wizard-container {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    .wizard-header {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .wizard-steps {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+
+    .wizard-steps::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e5e7eb;
+        z-index: 0;
+    }
+
+    .wizard-step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .step-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e5e7eb;
+        color: #6b7280;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 0.5rem;
+        font-weight: 700;
+        transition: all 0.3s;
+    }
+
+    .wizard-step.active .step-circle {
+        background: #6366f1;
+        color: white;
+    }
+
+    .wizard-step.completed .step-circle {
+        background: #10b981;
+        color: white;
+    }
+
+    .step-label {
+        font-size: 0.85rem;
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    .wizard-step.active .step-label {
+        color: #6366f1;
+    }
+
+    .form-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #1f2937;
+    }
+
+    .form-label.required::after {
+        content: ' *';
+        color: #ef4444;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        transition: all 0.3s;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #6366f1;
+    }
+
+    .input-group {
+        display: flex;
+        align-items: center;
+        gap: 0;
+    }
+
+    .input-prefix {
+        padding: 0.75rem 1rem;
+        background: #f3f4f6;
+        border: 2px solid #e5e7eb;
+        border-right: none;
+        border-radius: 10px 0 0 10px;
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+    .input-group .form-input {
+        border-radius: 0 10px 10px 0;
+        flex: 1;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        margin-top: 2rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary {
+        background: #6366f1;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #4f46e5;
+    }
+
+    .btn-secondary {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .btn-secondary:hover {
+        background: #e5e7eb;
+    }
+
+    .help-text {
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wizard-container">
+    <div class="wizard-header">
+        <h1 style="margin: 0 0 2rem 0;">🎉 Nouveau Contrat</h1>
+        
+        <div class="wizard-steps">
+            <div class="wizard-step active">
+                <div class="step-circle">1</div>
+                <div class="step-label">Identifiants</div>
+            </div>
+            <div class="wizard-step">
+                <div class="step-circle">2</div>
+                <div class="step-label">Informations</div>
+            </div>
+            <div class="wizard-step">
+                <div class="step-circle">3</div>
+                <div class="step-label">Déroulé & Confirmation</div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" class="form-card">
+        {% csrf_token %}
+        
+        <h2 style="margin-bottom: 1.5rem;">📝 Étape 1 : Identifiants & Associations</h2>
+
+        <div class="form-group">
+            <label class="form-label required">Numéro de contrat</label>
+            <div class="input-group">
+                <span class="input-prefix">CMD-</span>
+                <input 
+                    type="text" 
+                    name="numero_contrat" 
+                    class="form-input" 
+                    placeholder="ex: 2025-001"
+                    required
+                    pattern="[0-9\-]+"
+                    title="Seuls les chiffres et tirets sont autorisés"
+                >
+            </div>
+            <div class="help-text">Entrez uniquement les chiffres (ex: 2025-001)</div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label required">Nom de l'événement</label>
+            <input 
+                type="text" 
+                name="nom_evenement" 
+                class="form-input" 
+                placeholder="ex: Mariage Dupont"
+                required
+            >
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Maître d'hôtel assigné</label>
+            <select name="maitre_hotel" class="form-input">
+                <option value="">-- Aucun pour le moment --</option>
+                {% for mh in maitres_hotel %}
+                <option value="{{ mh.id }}">{{ mh.get_full_name }} ({{ mh.email }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        
+
+        {% if livraisons %}
+        <div class="form-group">
+            <label class="form-label">Livraison associée (optionnel)</label>
+            <select name="livraison" class="form-input">
+                <option value="">-- Aucune --</option>
+                {% for livraison in livraisons %}
+                <option value="{{ livraison.id }}">
+                    {{ livraison.numero_livraison }} - {{ livraison.date_livraison|date:"d/m/Y" }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        <div class="form-actions">
+            <a href="{% url 'ventes:dashboard_responsable' %}" class="btn btn-secondary">
+                Annuler
+            </a>
+            <button type="submit" class="btn btn-primary">
+                Suivant
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,320 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+
+    .form-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    .form-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .form-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .form-header h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0 0 0.5rem 0;
+    }
+
+    .form-subtitle {
+        color: #6b7280;
+        font-size: 0.95rem;
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6366f1;
+        text-decoration: none;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .back-link:hover {
+        color: #4f46e5;
+        transform: translateX(-3px);
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .form-group label .required {
+        color: #ef4444;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.875rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    textarea.form-control {
+        resize: vertical;
+        min-height: 100px;
+    }
+
+    select.form-control {
+        cursor: pointer;
+    }
+
+    .form-help {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 0.5rem;
+    }
+
+    .checkbox-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .checkbox-wrapper input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+
+    .checkbox-wrapper label {
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid #e5e7eb;
+    }
+
+    .btn {
+        padding: 0.875rem 2rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: white;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-secondary {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .btn-secondary:hover {
+        background: #e5e7eb;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1.5rem;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border-left: 4px solid #ef4444;
+    }
+
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0 0 0;
+    }
+
+    .errorlist li {
+        color: #ef4444;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .form-control.error {
+        border-color: #ef4444;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <a href="{% url 'ventes:dashboard_responsable' %}" class="back-link">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Retour au dashboard
+        </a>
+
+        <div class="form-header">
+            <h1>{% if objet %}Modifier l'item{% else %}Nouvel item{% endif %}</h1>
+            <p class="form-subtitle">{% if objet %}Modifiez les informations de l'item{% else %}Ajoutez un nouvel item à la bibliothèque{% endif %}</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="nom">Nom de l'item <span class="required">*</span></label>
+                <input type="text" 
+                       id="nom" 
+                       name="nom" 
+                       class="form-control {% if form.nom.errors %}error{% endif %}" 
+                       value="{{ form.nom.value|default:'' }}" 
+                       required>
+                {% if form.nom.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.nom.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="categorie">Catégorie <span class="required">*</span></label>
+                <select id="categorie" 
+                        name="categorie" 
+                        class="form-control {% if form.categorie.errors %}error{% endif %}" 
+                        required>
+                    <option value="">-- Sélectionnez une catégorie --</option>
+                    {% for categorie in categories %}
+                    <option value="{{ categorie.id }}" {% if form.categorie.value == categorie.id|stringformat:"s" %}selected{% endif %}>
+                        {{ categorie.nom }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if form.categorie.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.categorie.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="unite">Unité <span class="required">*</span></label>
+                <input type="text" 
+                       id="unite" 
+                       name="unite" 
+                       class="form-control {% if form.unite.errors %}error{% endif %}" 
+                       value="{{ form.unite.value|default:'unité' }}" 
+                       placeholder="Ex: unité, kg, L, paire" 
+                       required>
+                <div class="form-help">Unité de mesure pour cet item</div>
+                {% if form.unite.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.unite.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description (optionnel)</label>
+                <textarea id="description" 
+                          name="description" 
+                          class="form-control"
+                          placeholder="Ajoutez une description ou des notes">{{ form.description.value|default:'' }}</textarea>
+                <div class="form-help">Informations supplémentaires sur cet item</div>
+            </div>
+
+            <div class="form-group">
+                <label for="ordre">Ordre d'affichage</label>
+                <input type="number" 
+                       id="ordre" 
+                       name="ordre" 
+                       class="form-control" 
+                       value="{{ form.ordre.value|default:'0' }}" 
+                       min="0">
+                <div class="form-help">Ordre d'affichage dans la liste (0 = premier)</div>
+            </div>
+
+            <div class="form-group">
+                <div class="checkbox-wrapper">
+                    <input type="checkbox" 
+                           id="actif" 
+                           name="actif" 
+                           {% if form.actif.value or form.actif.value is None %}checked{% endif %}>
+                    <label for="actif">Item actif (visible dans les checklists)</label>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'ventes:dashboard_responsable' %}" class="btn btn-secondary">Annuler</a>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    {% if objet %}Enregistrer les modifications{% else %}Créer l'item{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

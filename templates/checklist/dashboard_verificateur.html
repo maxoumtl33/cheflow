@@ -1,0 +1,1304 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #6366f1;
+        --primary-hover: #4f46e5;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --bg-light: #f9fafb;
+        --border-color: #e5e7eb;
+        --text-dark: #1f2937;
+        --text-light: #6b7280;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .dashboard-container {
+        max-width: 1600px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    .header-section {
+        background: white;
+        border-radius: 20px;
+        padding: 1.5rem 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .header-title h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0;
+    }
+
+    .stats-row {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--text-light);
+        margin-top: 0.25rem;
+    }
+
+    .main-grid {
+        display: grid;
+        grid-template-columns: 450px 1fr;
+        gap: 2rem;
+        align-items: start;
+    }
+
+    .calendar-card {
+        background: white;
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        position: sticky;
+        top: 2rem;
+    }
+
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .calendar-nav {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .calendar-nav button {
+        background: var(--bg-light);
+        border: 1px solid var(--border-color);
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .calendar-nav button:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .calendar-month-year {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        min-width: 160px;
+        text-align: center;
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.35rem;
+    }
+
+    .calendar-day-header {
+        text-align: center;
+        font-weight: 600;
+        color: var(--text-light);
+        padding: 0.5rem;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+
+    .calendar-day {
+        aspect-ratio: 1;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.35rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .calendar-day:hover {
+        border-color: var(--primary-color);
+        transform: scale(1.05);
+    }
+
+    .calendar-day.other-month {
+        background: var(--bg-light);
+        color: var(--text-light);
+    }
+
+    .calendar-day.today {
+        border-color: var(--primary-color);
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--primary-color);
+    }
+
+    .calendar-day.has-checklists {
+        border-color: var(--success-color);
+        background: rgba(16, 185, 129, 0.1);
+    }
+
+    .calendar-day.selected {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .checklist-indicator {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        width: 6px;
+        height: 6px;
+        background: var(--success-color);
+        border-radius: 50%;
+    }
+
+    .content-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        min-height: 500px;
+    }
+
+    .tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .tab {
+        padding: 0.75rem 1.5rem;
+        background: transparent;
+        border: none;
+        font-weight: 600;
+        color: var(--text-light);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+    }
+
+    .tab.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+    }
+
+    .content-section {
+        display: none;
+    }
+
+    .content-section.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .checklist-list {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .checklist-card {
+        border: 2px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .checklist-card:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    .checklist-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+
+    .checklist-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .checklist-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.875rem;
+        color: var(--text-light);
+    }
+
+    .status-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+
+    .status-badge.validee {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-badge.en_attente {
+        background: #fef3c7;
+        color: #78350f;
+    }
+
+    .status-badge.en_cours {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .status-badge.incomplete {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-light);
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .print-section {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .date-picker {
+        margin-bottom: 2rem;
+    }
+
+    .date-picker label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-dark);
+    }
+
+    .date-picker input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .date-picker input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    .print-buttons {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .print-btn {
+        padding: 1.5rem;
+        border: 2px solid var(--border-color);
+        border-radius: 16px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .print-btn:hover {
+        border-color: var(--primary-color);
+        background: rgba(99, 102, 241, 0.05);
+    }
+
+    .print-icon {
+        width: 48px;
+        height: 48px;
+        background: var(--primary-color);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+    }
+
+    .print-info h3 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1.1rem;
+        color: var(--text-dark);
+    }
+
+    .print-info p {
+        margin: 0;
+        font-size: 0.875rem;
+        color: var(--text-light);
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        max-width: 800px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .modal-header h2 {
+        font-size: 1.5rem;
+        color: var(--text-dark);
+        margin: 0;
+    }
+
+    .modal-close {
+        background: var(--bg-light);
+        border: none;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .modal-close:hover {
+        background: var(--danger-color);
+        color: white;
+    }
+
+    .search-box {
+        margin-bottom: 1.5rem;
+        position: relative;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 0.875rem 1rem 0.875rem 3rem;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .search-box input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-light);
+        pointer-events: none;
+    }
+
+    .objects-list {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .object-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .object-item:hover {
+        border-color: var(--primary-color);
+        background: rgba(99, 102, 241, 0.02);
+    }
+
+    .object-name {
+        font-weight: 600;
+        color: var(--text-dark);
+        font-size: 1.1rem;
+    }
+
+    .object-quantity {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .inventory-item {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 1rem;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .inventory-item:hover {
+        border-color: var(--primary-color);
+        background: rgba(99, 102, 241, 0.02);
+    }
+
+    .inventory-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .inventory-name {
+        font-weight: 600;
+        color: var(--text-dark);
+        font-size: 1.1rem;
+    }
+
+    .inventory-category {
+        font-size: 0.875rem;
+        color: var(--text-light);
+    }
+
+    .inventory-quantity {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+
+    .quantity-controls {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .quantity-btn {
+        width: 36px;
+        height: 36px;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        font-size: 1.2rem;
+    }
+
+    .quantity-btn:hover {
+        border-color: var(--primary-color);
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .quantity-input {
+        width: 80px;
+        text-align: center;
+        padding: 0.5rem;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
+    .quantity-input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    @media (max-width: 1200px) {
+        .main-grid {
+            grid-template-columns: 1fr;
+        }
+        .calendar-card {
+            position: relative;
+            top: 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header avec stats -->
+    <div class="header-section">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Tableau de bord - Checklist</h1>
+            </div>
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-value" style="color: var(--text-dark);">{{ stats.total_checklists }}</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" style="color: var(--warning-color);">{{ stats.en_cours }}</div>
+                    <div class="stat-label">En attente</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" style="color: var(--success-color);">{{ stats.validees }}</div>
+                    <div class="stat-label">Validées</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-grid">
+        <!-- Calendrier -->
+        <div class="calendar-card">
+            <div class="calendar-header">
+                <div class="calendar-nav">
+                    <button id="prevMonth">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <div class="calendar-month-year" id="monthYear"></div>
+                    <button id="nextMonth">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+                <button class="btn-primary" id="todayBtn" style="padding: 0.5rem 1rem; font-size: 0.8rem;">Aujourd'hui</button>
+            </div>
+
+            <div class="calendar-grid" id="calendar">
+                <div class="calendar-day-header">L</div>
+                <div class="calendar-day-header">M</div>
+                <div class="calendar-day-header">M</div>
+                <div class="calendar-day-header">J</div>
+                <div class="calendar-day-header">V</div>
+                <div class="calendar-day-header">S</div>
+                <div class="calendar-day-header">D</div>
+            </div>
+        </div>
+
+        <!-- Contenu principal -->
+        <div class="content-card">
+            <div class="tabs">
+                <button class="tab active" data-tab="checklists" onclick="switchTab('checklists')">Checklists</button>
+                <button class="tab" data-tab="impressions" onclick="switchTab('impressions')">Impressions</button>
+                <button class="tab" data-tab="total" onclick="switchTab('total')">Total</button>
+                <button class="tab" data-tab="inventaire" onclick="switchTab('inventaire')">Inventaire</button>
+            </div>
+
+            <!-- Onglet Checklists -->
+            <div class="content-section active" id="section-checklists">
+                <h2 id="dateTitle" style="margin-bottom: 1.5rem;">Sélectionnez une date</h2>
+                <div id="checklistsContent">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📅</div>
+                        <p>Cliquez sur une date du calendrier pour voir les checklists</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onglet Impressions -->
+            <div class="content-section" id="section-impressions">
+                <div class="print-section">
+                    <div class="date-picker">
+                        <label>Sélectionnez une date</label>
+                        <input type="date" id="printDate" value="{{ selected_date|date:'Y-m-d' }}">
+                    </div>
+
+                    <div class="print-buttons">
+                        <button class="print-btn" onclick="imprimerLivraisons()">
+                            <div class="print-icon">🚚</div>
+                            <div class="print-info">
+                                <h3>Imprimer les livraisons</h3>
+                                <p>Une livraison par page avec nom, date et heure</p>
+                            </div>
+                        </button>
+
+                        <button class="print-btn" onclick="imprimerChecklists()">
+                            <div class="print-icon">📋</div>
+                            <div class="print-info">
+                                <h3>Imprimer les checklists</h3>
+                                <p>Une checklist par page avec tous les items</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onglet Total -->
+            <div class="content-section" id="section-total">
+                <div class="print-section">
+                    <div class="date-picker">
+                        <label>Sélectionnez une date</label>
+                        <input type="date" id="totalDate" value="{{ selected_date|date:'Y-m-d' }}">
+                    </div>
+
+                    <button class="btn-primary" onclick="afficherTotalObjets()" style="width: 100%; justify-content: center;">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                        Voir le total des objets
+                    </button>
+                </div>
+            </div>
+
+            <!-- Onglet Inventaire -->
+            <div class="content-section" id="section-inventaire">
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <div class="search-box" style="flex: 1; min-width: 250px; margin-bottom: 0;">
+                            <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <input type="text" id="searchInventaire" placeholder="Rechercher un objet..." oninput="filtrerInventaire()">
+                        </div>
+                        
+                        <select id="categorieFilter" onchange="filtrerInventaire()" style="padding: 0.875rem 1rem; border: 2px solid var(--border-color); border-radius: 12px; font-size: 1rem; min-width: 200px;">
+                            <option value="">Toutes les catégories</option>
+                            {% for categorie in categories %}
+                            <option value="{{ categorie.id }}">{{ categorie.nom }}</option>
+                            {% endfor %}
+                        </select>
+                        
+                        <select id="sortInventaire" onchange="trierInventaire()" style="padding: 0.875rem 1rem; border: 2px solid var(--border-color); border-radius: 12px; font-size: 1rem; min-width: 200px;">
+                            <option value="nom-asc">Nom (A-Z)</option>
+                            <option value="nom-desc">Nom (Z-A)</option>
+                            <option value="quantite-asc">Quantité (croissant)</option>
+                            <option value="quantite-desc">Quantité (décroissant)</option>
+                            <option value="categorie">Catégorie</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="inventaireContent" class="objects-list">
+                    <!-- Items seront insérés ici dynamiquement -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Total Objets -->
+<div class="modal-overlay" id="modalTotal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="modalTitle">Total des objets</h2>
+            <button class="modal-close" onclick="fermerModal()">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="search-box">
+            <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" id="searchObjects" placeholder="Rechercher un objet..." oninput="filtrerObjets()">
+        </div>
+        
+        <div class="objects-list" id="objectsList">
+            <!-- Items seront insérés ici dynamiquement -->
+        </div>
+    </div>
+</div>
+
+<script>
+    const allChecklists = [
+        {% for checklist in checklists %}
+        {
+            id: "{{ checklist.pk }}",
+            nom: "{{ checklist.nom|escapejs }}",
+            numero: "{{ checklist.numero_commande|escapejs }}",
+            date: "{{ checklist.date_evenement|date:'Y-m-d' }}",
+            dateFormatted: "{{ checklist.date_evenement|date:'d/m/Y' }}",
+            status: "{{ checklist.status }}",
+            statusDisplay: "{{ checklist.get_status_display|escapejs }}",
+            progression: {{ checklist.progression }},
+            creePar: "{{ checklist.creee_par.get_full_name|default:checklist.creee_par.username|escapejs }}",
+            totalItems: {{ checklist.total_items|default:0 }},
+            itemsVerifies: {{ checklist.items_verifies|default:0 }}
+        },
+        {% endfor %}
+    ];
+
+    let allInventory = [
+        {% for objet in objets %}
+        {
+            id: {{ objet.id }},
+            nom: "{{ objet.nom|escapejs }}",
+            categorie: "{{ objet.categorie.nom|escapejs }}",
+            categorieId: {{ objet.categorie.id }},
+            quantite: {{ objet.quantite|default:0 }},
+            unite: "{{ objet.unite|escapejs }}"
+        },
+        {% endfor %}
+    ];
+    
+    console.log('Checklists chargées:', allChecklists.length);
+    console.log('Objets inventaire chargés:', allInventory.length);
+
+    const today = new Date().toISOString().split('T')[0];
+    let currentDate = new Date();
+    let selectedDate = null;
+    let currentTab = 'checklists';
+    let allObjects = []; // Stocker tous les objets pour le filtrage
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+        
+        document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+        document.getElementById(`section-${tab}`).classList.add('active');
+        
+        // Charger l'inventaire si on switch vers cet onglet
+        if (tab === 'inventaire') {
+            afficherInventaire(allInventory);
+        }
+    }
+
+    function loadDateChecklists(dateStr) {
+        selectedDate = dateStr;
+        const checklists = allChecklists.filter(c => c.date === dateStr);
+        
+        const date = new Date(dateStr + 'T00:00:00');
+        const formatted = date.toLocaleDateString('fr-FR', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        
+        document.getElementById('dateTitle').textContent = `Checklists du ${formatted}`;
+        const content = document.getElementById('checklistsContent');
+        
+        if (checklists.length === 0) {
+            content.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <p>Aucune checklist pour cette date</p>
+                </div>
+            `;
+            return;
+        }
+
+        content.innerHTML = `
+            <div class="checklist-list">
+                ${checklists.map(c => `
+                    <div class="checklist-card">
+                        <div class="checklist-header">
+                            <div>
+                                <div class="checklist-title">${c.nom}</div>
+                                <div class="checklist-meta">
+                                    <span>#${c.numero}</span>
+                                    <span>${c.creePar}</span>
+                                </div>
+                            </div>
+                            <span class="status-badge ${c.status}">${c.statusDisplay}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-size: 0.875rem; color: var(--text-light);">
+                                ${c.itemsVerifies} / ${c.totalItems} items vérifiés (${c.progression}%)
+                            </div>
+                            <a href="/checklist/verification/${c.id}/" 
+                               class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                                Vérifier
+                            </a>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    function imprimerLivraisons() {
+        const date = document.getElementById('printDate').value;
+        if (!date) {
+            alert('Veuillez sélectionner une date');
+            return;
+        }
+        window.open(`{% url 'checklist:imprimer_livraisons' %}?date=${date}`, '_blank');
+    }
+
+    function imprimerChecklists() {
+        const date = document.getElementById('printDate').value;
+        if (!date) {
+            alert('Veuillez sélectionner une date');
+            return;
+        }
+        window.open(`{% url 'checklist:imprimer_checklists' %}?date=${date}`, '_blank');
+    }
+
+    async function afficherTotalObjets() {
+        const date = document.getElementById('totalDate').value;
+        if (!date) {
+            alert('Veuillez sélectionner une date');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/checklist/api/total-objets/?date=${date}`);
+            if (!response.ok) throw new Error('Erreur réseau');
+            
+            const data = await response.json();
+            
+            const dateFormatted = new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            document.getElementById('modalTitle').textContent = `Total des objets - ${dateFormatted}`;
+            
+            // Stocker les objets pour le filtrage
+            allObjects = data.objets || [];
+            
+            // Réinitialiser la recherche
+            document.getElementById('searchObjects').value = '';
+            
+            // Afficher tous les objets
+            afficherObjets(allObjects);
+            
+            document.getElementById('modalTotal').classList.add('active');
+        } catch (error) {
+            console.error('Erreur:', error);
+            alert('Erreur lors du chargement des données');
+        }
+    }
+
+    function afficherObjets(objets) {
+        const objectsList = document.getElementById('objectsList');
+        
+        if (objets && objets.length > 0) {
+            objectsList.innerHTML = objets.map(obj => `
+                <div class="object-item">
+                    <div class="object-name">${obj.nom}</div>
+                    <div class="object-quantity">${obj.total}</div>
+                </div>
+            `).join('');
+        } else {
+            objectsList.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📦</div>
+                    <p>Aucun objet trouvé</p>
+                </div>
+            `;
+        }
+    }
+
+    function filtrerObjets() {
+        const searchTerm = document.getElementById('searchObjects').value.toLowerCase().trim();
+        
+        if (searchTerm === '') {
+            afficherObjets(allObjects);
+        } else {
+            const objetsFiltres = allObjects.filter(obj => 
+                obj.nom.toLowerCase().includes(searchTerm)
+            );
+            afficherObjets(objetsFiltres);
+        }
+    }
+
+    function fermerModal() {
+        document.getElementById('modalTotal').classList.remove('active');
+        // Réinitialiser la recherche lors de la fermeture
+        document.getElementById('searchObjects').value = '';
+    }
+
+    // Fonctions Inventaire
+    function afficherInventaire(objets) {
+        const content = document.getElementById('inventaireContent');
+        
+        if (objets && objets.length > 0) {
+            content.innerHTML = objets.map(obj => `
+                <div class="inventory-item">
+                    <div class="inventory-info">
+                        <div class="inventory-name">${obj.nom}</div>
+                        <div class="inventory-category">${obj.categorie}</div>
+                    </div>
+                    <div class="inventory-quantity">
+                        <span>${obj.quantite}</span>
+                        <span style="font-size: 0.9rem; color: var(--text-light);">${obj.unite}</span>
+                    </div>
+                    <div class="quantity-controls">
+                        <button class="quantity-btn" onclick="modifierQuantite(${obj.id}, -1)">-</button>
+                        <input type="number" 
+                               class="quantity-input" 
+                               value="${obj.quantite}" 
+                               onchange="modifierQuantiteDirecte(${obj.id}, this.value)"
+                               min="0">
+                        <button class="quantity-btn" onclick="modifierQuantite(${obj.id}, 1)">+</button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            content.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📦</div>
+                    <p>Aucun objet trouvé</p>
+                </div>
+            `;
+        }
+    }
+
+    function filtrerInventaire() {
+        const searchTerm = document.getElementById('searchInventaire').value.toLowerCase().trim();
+        const categorieId = document.getElementById('categorieFilter').value;
+        
+        let objetsFiltres = allInventory;
+        
+        // Filtrer par recherche
+        if (searchTerm !== '') {
+            objetsFiltres = objetsFiltres.filter(obj => 
+                obj.nom.toLowerCase().includes(searchTerm)
+            );
+        }
+        
+        // Filtrer par catégorie
+        if (categorieId !== '') {
+            objetsFiltres = objetsFiltres.filter(obj => 
+                obj.categorieId == categorieId
+            );
+        }
+        
+        trierInventaire(objetsFiltres);
+    }
+
+    function trierInventaire(objets = null) {
+        const sortValue = document.getElementById('sortInventaire').value;
+        let objetsTries = objets || allInventory;
+        
+        // Si on n'a pas d'objets passés, refiltrer d'abord
+        if (!objets) {
+            const searchTerm = document.getElementById('searchInventaire').value.toLowerCase().trim();
+            const categorieId = document.getElementById('categorieFilter').value;
+            
+            if (searchTerm !== '') {
+                objetsTries = objetsTries.filter(obj => 
+                    obj.nom.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (categorieId !== '') {
+                objetsTries = objetsTries.filter(obj => 
+                    obj.categorieId == categorieId
+                );
+            }
+        }
+        
+        // Créer une copie pour ne pas modifier l'original
+        objetsTries = [...objetsTries];
+        
+        switch(sortValue) {
+            case 'nom-asc':
+                objetsTries.sort((a, b) => a.nom.localeCompare(b.nom));
+                break;
+            case 'nom-desc':
+                objetsTries.sort((a, b) => b.nom.localeCompare(a.nom));
+                break;
+            case 'quantite-asc':
+                objetsTries.sort((a, b) => a.quantite - b.quantite);
+                break;
+            case 'quantite-desc':
+                objetsTries.sort((a, b) => b.quantite - a.quantite);
+                break;
+            case 'categorie':
+                objetsTries.sort((a, b) => {
+                    const catCompare = a.categorie.localeCompare(b.categorie);
+                    if (catCompare !== 0) return catCompare;
+                    return a.nom.localeCompare(b.nom);
+                });
+                break;
+        }
+        
+        afficherInventaire(objetsTries);
+    }
+
+    async function modifierQuantite(objetId, delta) {
+        const objet = allInventory.find(o => o.id === objetId);
+        if (!objet) return;
+        
+        const nouvelleQuantite = Math.max(0, objet.quantite + delta);
+        await sauvegarderQuantite(objetId, nouvelleQuantite);
+    }
+
+    async function modifierQuantiteDirecte(objetId, nouvelleQuantite) {
+        const quantite = Math.max(0, parseInt(nouvelleQuantite) || 0);
+        await sauvegarderQuantite(objetId, quantite);
+    }
+
+    async function sauvegarderQuantite(objetId, quantite) {
+        try {
+            const response = await fetch(`/checklist/api/update-quantite/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    objet_id: objetId,
+                    quantite: quantite
+                })
+            });
+            
+            if (!response.ok) throw new Error('Erreur réseau');
+            
+            const data = await response.json();
+            
+            // Mettre à jour localement
+            const objet = allInventory.find(o => o.id === objetId);
+            if (objet) {
+                objet.quantite = quantite;
+            }
+            
+            // Réafficher avec les filtres/tris actuels
+            filtrerInventaire();
+            
+        } catch (error) {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la mise à jour de la quantité');
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Fermer la modal en cliquant sur l'overlay
+    document.getElementById('modalTotal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            fermerModal();
+        }
+    });
+
+    // Fermer la modal avec la touche Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            fermerModal();
+        }
+    });
+
+    document.getElementById('prevMonth').addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar();
+    });
+
+    document.getElementById('nextMonth').addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar();
+    });
+
+    document.getElementById('todayBtn').addEventListener('click', () => {
+        currentDate = new Date();
+        renderCalendar();
+    });
+
+    function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        
+        const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                           'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+        document.getElementById('monthYear').textContent = `${monthNames[month]} ${year}`;
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDayOfWeek = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+        const prevMonthLastDay = new Date(year, month, 0).getDate();
+
+        const calendar = document.getElementById('calendar');
+        while (calendar.children.length > 7) {
+            calendar.removeChild(calendar.lastChild);
+        }
+
+        for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+            const day = prevMonthLastDay - i;
+            calendar.appendChild(createDayElement(day, true, year, month - 1));
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            calendar.appendChild(createDayElement(day, false, year, month));
+        }
+
+        const totalCells = calendar.children.length - 7;
+        const remainingCells = 42 - totalCells;
+        for (let day = 1; day <= remainingCells; day++) {
+            calendar.appendChild(createDayElement(day, true, year, month + 1));
+        }
+    }
+
+    function createDayElement(day, isOtherMonth, year, month) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'calendar-day';
+        
+        if (isOtherMonth) dayDiv.classList.add('other-month');
+
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+        if (dateStr === today) dayDiv.classList.add('today');
+        if (dateStr === selectedDate) dayDiv.classList.add('selected');
+
+        const hasChecklists = allChecklists.some(c => c.date === dateStr);
+        if (hasChecklists) {
+            dayDiv.classList.add('has-checklists');
+            dayDiv.innerHTML = `${day}<div class="checklist-indicator"></div>`;
+        } else {
+            dayDiv.textContent = day;
+        }
+
+        dayDiv.addEventListener('click', () => {
+            if (currentTab !== 'checklists') {
+                switchTab('checklists');
+            }
+            document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('selected'));
+            dayDiv.classList.add('selected');
+            loadDateChecklists(dateStr);
+        });
+
+        return dayDiv;
+    }
+
+    renderCalendar();
+</script>
+{% endblock %}

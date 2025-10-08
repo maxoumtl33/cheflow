@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checklists - {{ date|date:"d/m/Y" }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+        }
+
+        .page {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            page-break-after: always;
+            padding: 2rem;
+        }
+
+        .page:last-child {
+            page-break-after: auto;
+        }
+
+        .date {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: #1f2937;
+            text-transform: capitalize;
+        }
+
+        .nom {
+            font-size: 4.5rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: #1f2937;
+        }
+
+        .numero {
+            font-size: 2rem;
+            margin-bottom: 3rem;
+            text-align: center;
+            color: #6b7280;
+        }
+
+        .status {
+            font-size: 2rem;
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 2rem;
+        }
+
+        .status.validee {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status.en_attente {
+            background: #fef3c7;
+            color: #78350f;
+        }
+
+        .status.en_cours {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status.incomplete {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        @media print {
+            body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% for checklist in checklists %}
+    <div class="page">
+        <div class="date">{{ checklist.date_evenement|date:"l j F Y" }}</div>
+        <div class="nom">{{ checklist.nom }}</div>
+        <div class="numero">#{{ checklist.heure }}</div>
+    </div>
+    {% empty %}
+    <div class="page">
+        <div class="nom">Aucune checklist</div>
+        <div class="numero">Aucune checklist prévue pour cette date</div>
+    </div>
+    {% endfor %}
+
+    <script>
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        };
+    </script>
+</body>
+</html>

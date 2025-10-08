@@ -1,0 +1,202 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .delete-container {
+        max-width: 600px;
+        margin: 4rem auto;
+        padding: 0 1.5rem;
+    }
+
+    .delete-card {
+        background: white;
+        border-radius: 20px;
+        padding: 3rem;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        text-align: center;
+    }
+
+    .warning-icon {
+        width: 80px;
+        height: 80px;
+        background: #fee2e2;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 2rem;
+    }
+
+    .warning-icon svg {
+        color: #dc2626;
+    }
+
+    .delete-card h1 {
+        font-size: 1.75rem;
+        color: #1f2937;
+        margin: 0 0 1rem 0;
+    }
+
+    .delete-card .subtitle {
+        color: #6b7280;
+        font-size: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .contrat-info {
+        background: #f9fafb;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin: 2rem 0;
+        text-align: left;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+    .info-value {
+        color: #1f2937;
+        font-weight: 500;
+    }
+
+    .warning-message {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        margin: 2rem 0;
+        text-align: left;
+    }
+
+    .warning-message p {
+        margin: 0;
+        color: #78350f;
+        font-size: 0.9rem;
+        line-height: 1.6;
+    }
+
+    .warning-message strong {
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+
+    .btn {
+        padding: 0.75rem 2rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+    }
+
+    .btn-danger {
+        background: #dc2626;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #b91c1c;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(220, 38, 38, 0.3);
+    }
+
+    .btn-secondary {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .btn-secondary:hover {
+        background: #e5e7eb;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="delete-container">
+    <div class="delete-card">
+        <div class="warning-icon">
+            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+        </div>
+
+        <h1>⚠️ Confirmer la suppression</h1>
+        <p class="subtitle">Cette action est irréversible</p>
+
+        <div class="contrat-info">
+            <div class="info-row">
+                <span class="info-label">Numéro de contrat:</span>
+                <span class="info-value">{{ contrat.numero_contrat }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Événement:</span>
+                <span class="info-value">{{ contrat.nom_evenement }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Date:</span>
+                <span class="info-value">{{ contrat.date_evenement|date:"d/m/Y" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Client:</span>
+                <span class="info-value">{{ contrat.client_nom }}</span>
+            </div>
+        </div>
+
+        <div class="warning-message">
+            <p>
+                <strong>⚠️ Attention !</strong>
+                La suppression de ce contrat entraînera :
+            </p>
+            <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
+                <li>La perte de toutes les informations du contrat</li>
+                <li>La suppression de toutes les photos associées</li>
+                <li>La suppression de l'historique complet</li>
+            </ul>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-actions">
+                <a href="{% url 'ventes:contrat_detail' contrat.pk %}" class="btn btn-secondary">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    Annuler
+                </a>
+                <button type="submit" class="btn btn-danger">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    Oui, supprimer définitivement
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

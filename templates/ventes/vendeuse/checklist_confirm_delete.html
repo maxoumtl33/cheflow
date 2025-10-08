@@ -1,0 +1,151 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+
+    .delete-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(100vh - 80px);
+        padding: 2rem 1rem;
+    }
+
+    .delete-card {
+        background: white;
+        border-radius: 20px;
+        padding: 3rem;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        text-align: center;
+    }
+
+    .delete-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 2rem;
+        color: white;
+        font-size: 2.5rem;
+    }
+
+    h1 {
+        color: #1f2937;
+        margin-bottom: 1rem;
+        font-size: 1.75rem;
+    }
+
+    .warning-text {
+        color: #6b7280;
+        margin-bottom: 0.5rem;
+        font-size: 1.125rem;
+    }
+
+    .checklist-name {
+        font-weight: 700;
+        color: #ef4444;
+        font-size: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .alert-box {
+        background: #fef2f2;
+        border-left: 4px solid #ef4444;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        text-align: left;
+    }
+
+    .alert-box p {
+        color: #991b1b;
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 0.875rem 2rem;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+    }
+
+    .btn-danger {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+    }
+
+    .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-cancel {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .btn-cancel:hover {
+        background: #e5e7eb;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="delete-wrapper">
+    <div class="delete-card">
+        <div class="delete-icon">⚠️</div>
+        
+        <h1>Supprimer la checklist ?</h1>
+        
+        <p class="warning-text">Vous êtes sur le point de supprimer :</p>
+        <p class="checklist-name">{{ checklist.nom }} - {{ checklist.numero_commande }}</p>
+        
+        <div class="alert-box">
+            <p>⚠️ Cette action est irréversible. Tous les items et validations seront perdus.</p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="actions">
+                <a href="{% url 'ventes:dashboard_responsable' %}" class="btn btn-cancel">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    Annuler
+                </a>
+                <button type="submit" class="btn btn-danger">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    Oui, supprimer définitivement
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

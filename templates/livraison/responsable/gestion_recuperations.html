@@ -1,0 +1,1259 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Gestion des Récupérations{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #6366f1;
+        --primary-hover: #4f46e5;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --purple-color: #8b5cf6;
+        --orange-color: #f97316;
+        --bg-light: #f9fafb;
+        --border-color: #e5e7eb;
+        --text-dark: #1f2937;
+        --text-light: #6b7280;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .dashboard-container {
+        max-width: 1800px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    .header-section {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .header-title h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .header-subtitle {
+        color: var(--text-light);
+        font-size: 0.95rem;
+    }
+
+    .btn {
+        padding: 0.875rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .btn-secondary {
+        background: linear-gradient(135deg, #6b7280, #4b5563);
+        color: white;
+        box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3);
+    }
+
+    .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(107, 114, 128, 0.4);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, var(--success-color), #059669);
+        color: white;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+        color: white;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-edit {
+        background: #dbeafe;
+        color: #1e40af;
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    .btn-edit:hover {
+        background: #bfdbfe;
+    }
+
+    .btn-delete {
+        background: #fee2e2;
+        color: #991b1b;
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    .btn-delete:hover {
+        background: #fecaca;
+    }
+
+    .tabs-container {
+        background: white;
+        border-radius: 20px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .tabs-nav {
+        display: flex;
+        gap: 0.5rem;
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 0;
+        margin-bottom: 2rem;
+        overflow-x: auto;
+    }
+
+    .tab-button {
+        padding: 1rem 1.5rem;
+        background: transparent;
+        border: none;
+        font-weight: 600;
+        color: var(--text-light);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .tab-button.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+    }
+
+    .tab-button:hover:not(.active) {
+        color: var(--text-dark);
+        background: var(--bg-light);
+    }
+
+    .tab-badge {
+        background: #fed7aa;
+        color: #92400e;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .tab-button.active .tab-badge {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .mode-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .mode-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border-left: 5px solid;
+        transition: all 0.3s ease;
+    }
+
+    .mode-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .mode-card-header {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+    }
+
+    .mode-card-icon-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .mode-card-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .mode-card-title h3 {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0 0 0.25rem 0;
+    }
+
+    .mode-card-title p {
+        font-size: 0.875rem;
+        color: var(--text-light);
+        margin: 0;
+    }
+
+    .mode-card-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 1.25rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .mode-detail-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.875rem;
+    }
+
+    .mode-card-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .card-section {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+
+    .card-header {
+        padding: 1.5rem;
+        background: var(--bg-light);
+        border-bottom: 2px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0;
+    }
+
+    .selector-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 0;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .form-input,
+    .form-select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-input:focus,
+    .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        outline: none;
+    }
+
+    .action-banner {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .action-banner-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .action-banner-icon {
+        font-size: 2rem;
+        color: var(--success-color);
+    }
+
+    .livraison-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .livraison-item {
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.25rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .livraison-item:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
+    }
+
+    .livraison-item.selected {
+        border-color: var(--success-color);
+        background: #ecfdf5;
+    }
+
+    .livraison-item-header {
+        display: flex;
+        align-items: start;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 1rem;
+        color: var(--text-light);
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .stat-value {
+        font-size: 1.875rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--text-light);
+    }
+
+    .recuperation-card {
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.25rem;
+        transition: all 0.3s ease;
+        margin-bottom: 1.25rem;
+    }
+
+    .recuperation-card:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 0.375rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .badge-purple {
+        background: #ede9fe;
+        color: #6b21a8;
+    }
+
+    .badge-orange {
+        background: #fed7aa;
+        color: #92400e;
+    }
+
+    .badge-blue {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .info-box {
+        padding: 1rem;
+        border-radius: 10px;
+        border: 1px solid;
+        font-size: 0.875rem;
+    }
+
+    .info-box.blue {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1e40af;
+    }
+
+    .info-box.green {
+        background: #ecfdf5;
+        border-color: #a7f3d0;
+        color: #065f46;
+    }
+
+    .info-box.orange {
+        background: #fff7ed;
+        border-color: #fed7aa;
+        color: #92400e;
+    }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        z-index: 200;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        max-width: 500px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 2rem;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--text-light);
+        cursor: pointer;
+        padding: 0.5rem;
+    }
+
+    .modal-close:hover {
+        color: var(--text-dark);
+    }
+
+    .form-textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        font-family: inherit;
+    }
+
+    .form-textarea:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        outline: none;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn-cancel {
+        flex: 1;
+        background: white;
+        color: var(--text-dark);
+        border: 2px solid var(--border-color);
+    }
+
+    .btn-cancel:hover {
+        border-color: var(--text-dark);
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 0 1rem;
+            margin: 1rem auto;
+        }
+
+        .header-section {
+            padding: 1.5rem;
+        }
+
+        .header-title h2 {
+            font-size: 1.5rem;
+        }
+
+        .mode-cards-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .selector-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .action-banner {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container" x-data="gestionRecuperations()" x-init="init()">
+    
+    <!-- Header -->
+    <div class="header-section">
+        <div class="header-content">
+            <div class="header-title">
+                <h2>Gestion des Récupérations</h2>
+                <p class="header-subtitle">Gérez les modes d'envoi et créez les récupérations</p>
+            </div>
+            
+            <a href="{% url 'livraison:dashboard_responsable' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i>
+                Retour Dashboard
+            </a>
+        </div>
+    </div>
+    
+    <!-- Onglets -->
+    <div class="tabs-container">
+        <div class="tabs-nav">
+            <button 
+                @click="ongletActif = 'modes'"
+                :class="ongletActif === 'modes' ? 'active' : ''"
+                class="tab-button">
+                <i class="fas fa-truck"></i>
+                Modes d'envoi
+            </button>
+            
+            <button 
+                @click="ongletActif = 'recuperations'"
+                :class="ongletActif === 'recuperations' ? 'active' : ''"
+                class="tab-button">
+                <i class="fas fa-redo"></i>
+                Créer récupérations
+            </button>
+            
+            <button 
+                @click="ongletActif = 'en_cours'; chargerRecuperationsEnCours()"
+                :class="ongletActif === 'en_cours' ? 'active' : ''"
+                class="tab-button">
+                <i class="fas fa-list-check"></i>
+                Récupérations en cours
+                <span x-show="recuperationsEnCours.length > 0" class="tab-badge" x-text="recuperationsEnCours.length"></span>
+            </button>
+        </div>
+
+        <!-- Onglet Modes d'envoi -->
+        <div x-show="ongletActif === 'modes'" x-cloak>
+            <div style="margin-bottom: 1.5rem; display: flex; justify-content: flex-end;">
+                <button @click="ouvrirModalMode()" class="btn btn-success">
+                    <i class="fas fa-plus"></i>
+                    Nouveau mode d'envoi
+                </button>
+            </div>
+            
+            <div class="mode-cards-grid">
+                <template x-for="mode in modes" :key="mode.id">
+                    <div class="mode-card" :style="`border-left-color: ${mode.couleur}`">
+                        <div class="mode-card-header">
+                            <div class="mode-card-icon-wrapper">
+                                <div class="mode-card-icon" :style="`background-color: ${mode.couleur}20; color: ${mode.couleur}`">
+                                    <i class="fas fa-truck"></i>
+                                </div>
+                                <div class="mode-card-title">
+                                    <h3 x-text="mode.nom"></h3>
+                                    <p x-text="mode.description || 'Aucune description'"></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mode-card-details">
+                            <div class="mode-detail-item">
+                                <i class="fas fa-palette" style="color: var(--text-light); width: 20px;"></i>
+                                <span>Couleur:</span>
+                                <div style="width: 24px; height: 24px; border-radius: 6px; border: 2px solid var(--border-color);"
+                                     :style="`background-color: ${mode.couleur}`"></div>
+                            </div>
+                            
+                            <div class="mode-detail-item">
+                                <i class="fas fa-redo" style="width: 20px;" :style="`color: ${mode.permet_recuperation ? '#10b981' : 'var(--text-light)'}`"></i>
+                                <span x-text="mode.permet_recuperation ? '✓ Permet récupération' : '✗ Pas de récupération'"
+                                      :style="`color: ${mode.permet_recuperation ? '#10b981' : 'var(--text-light)'}; font-weight: ${mode.permet_recuperation ? '600' : '400'}`"></span>
+                            </div>
+                            
+                            <div class="mode-detail-item">
+                                <i class="fas fa-toggle-on" style="width: 20px;" :style="`color: ${mode.actif ? '#3b82f6' : '#ef4444'}`"></i>
+                                <span x-text="mode.actif ? '✓ Actif' : '✗ Inactif'"
+                                      :style="`color: ${mode.actif ? '#3b82f6' : '#ef4444'}; font-weight: 600`"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="mode-card-actions">
+                            <button @click="editerMode(mode)" class="btn btn-edit" style="flex: 1;">
+                                <i class="fas fa-edit"></i>
+                                Modifier
+                            </button>
+                            <button @click="supprimerMode(mode.id, mode.nom)" class="btn btn-delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+        
+        <!-- Onglet Créer récupérations -->
+        <div x-show="ongletActif === 'recuperations'" x-cloak>
+            
+            <!-- Sélecteurs -->
+            <div class="card-section">
+                <div class="card-header">
+                    <h3 class="card-title">Critères de sélection</h3>
+                </div>
+                <div style="padding: 1.5rem;">
+                    <div class="selector-grid">
+                        <div class="form-group">
+                            <label class="form-label">Date de livraison originale</label>
+                            <input type="date" 
+                                   x-model="dateOriginale"
+                                   @change="chargerLivraisonsRecuperables()"
+                                   class="form-input">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Mode d'envoi récupérable</label>
+                            <select x-model="modeSelectionne"
+                                    @change="chargerLivraisonsRecuperables()"
+                                    class="form-select">
+                                <option value="">Sélectionner un mode</option>
+                                {% for mode in modes_recuperables %}
+                                <option value="{{ mode.id }}">{{ mode.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Date de récupération</label>
+                            <input type="date" 
+                                   x-model="dateRecuperation"
+                                   class="form-input">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div x-show="livraisonsSelectionnees.length > 0" x-cloak class="action-banner">
+                <div class="action-banner-content">
+                    <i class="fas fa-check-circle action-banner-icon"></i>
+                    <div>
+                        <p style="font-weight: 600; color: var(--text-dark); margin: 0;">
+                            <span x-text="livraisonsSelectionnees.length"></span> livraison(s) sélectionnée(s)
+                        </p>
+                        <p style="font-size: 0.875rem; color: var(--text-light); margin: 0;">Prêtes à être transformées en récupérations</p>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 0.75rem;">
+                    <button @click="livraisonsSelectionnees = []" class="btn btn-secondary">
+                        Annuler sélection
+                    </button>
+                    <button @click="transformerEnRecuperations()" class="btn btn-success">
+                        <i class="fas fa-redo"></i>
+                        Transformer en récupérations
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Liste des livraisons -->
+            <div class="card-section">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        Livraisons livrées disponibles
+                        <span style="font-weight: 400; font-size: 0.875rem; color: var(--text-light);" x-show="livraisonsRecuperables.length > 0">
+                            (<span x-text="livraisonsRecuperables.length"></span> trouvée(s))
+                        </span>
+                    </h3>
+                </div>
+                
+                <div style="padding: 1.5rem;">
+                    <template x-if="!dateOriginale || !modeSelectionne">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">ℹ️</div>
+                            <p>Sélectionnez une date et un mode d'envoi pour voir les livraisons</p>
+                        </div>
+                    </template>
+                    
+                    <template x-if="dateOriginale && modeSelectionne && livraisonsRecuperables.length === 0">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <p>Aucune livraison livrée trouvée pour ces critères</p>
+                        </div>
+                    </template>
+                    
+                    <div class="livraison-list">
+                        <template x-for="livraison in livraisonsRecuperables" :key="livraison.id">
+                            <div class="livraison-item"
+                                 :class="livraisonsSelectionnees.includes(livraison.id) ? 'selected' : ''"
+                                 @click="toggleSelection(livraison.id)">
+                                
+                                <div class="livraison-item-header">
+                                    <input type="checkbox" 
+                                           :checked="livraisonsSelectionnees.includes(livraison.id)"
+                                           style="width: 1.25rem; height: 1.25rem; accent-color: var(--success-color); cursor: pointer;"
+                                           class="pointer-events-none">
+                                    
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                                            <div>
+                                                <h4 style="font-weight: 700; color: var(--text-dark); margin: 0;" x-text="livraison.nom_evenement || livraison.numero"></h4>
+                                                <p style="font-size: 0.875rem; color: var(--text-light); margin: 0;" x-text="livraison.client"></p>
+                                            </div>
+                                            <span class="badge badge-blue" x-text="livraison.heure"></span>
+                                        </div>
+                                        
+                                        <p style="font-size: 0.875rem; color: var(--text-dark); margin-bottom: 0.75rem;">
+                                            <i class="fas fa-map-marker-alt" style="color: #ef4444; margin-right: 0.5rem;"></i>
+                                            <span x-text="livraison.adresse"></span>
+                                        </p>
+                                        
+                                        <div style="display: flex; align-items: center; gap: 1rem;">
+                                            <span style="font-size: 0.75rem; color: var(--text-light);">
+                                                <i class="fas fa-users" style="margin-right: 0.25rem;"></i>
+                                                <span x-text="livraison.nb_convives"></span> convives
+                                            </span>
+                                            
+                                            <span x-show="livraison.recuperation_existe" class="badge badge-orange">
+                                                <i class="fas fa-exclamation-triangle" style="margin-right: 0.25rem;"></i>
+                                                Récupération déjà créée
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Onglet Récupérations en cours -->
+        <div x-show="ongletActif === 'en_cours'" x-cloak>
+            
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <p class="stat-value" style="color: var(--text-dark);" x-text="recuperationsEnCours.length"></p>
+                    <p class="stat-label">Total</p>
+                </div>
+                
+                <div class="stat-card">
+                    <p class="stat-value" style="color: #f97316;" x-text="recuperationsEnCours.filter(r => r.status === 'non_assignee').length"></p>
+                    <p class="stat-label">Non assignées</p>
+                </div>
+                
+                <div class="stat-card">
+                    <p class="stat-value" style="color: #3b82f6;" x-text="recuperationsEnCours.filter(r => r.status === 'assignee').length"></p>
+                    <p class="stat-label">Assignées</p>
+                </div>
+                
+                <div class="stat-card">
+                    <p class="stat-value" style="color: #8b5cf6;" x-text="recuperationsEnCours.filter(r => r.status === 'en_cours').length"></p>
+                    <p class="stat-label">En cours</p>
+                </div>
+            </div>
+            
+            <!-- Liste des récupérations -->
+            <div class="card-section">
+                <div class="card-header">
+                    <h3 class="card-title">Toutes les récupérations en attente</h3>
+                    <button @click="chargerRecuperationsEnCours()" class="btn btn-primary" style="padding: 0.625rem 1rem; font-size: 0.875rem;">
+                        <i class="fas fa-sync-alt"></i>
+                        Actualiser
+                    </button>
+                </div>
+                
+                <div style="padding: 1.5rem;">
+                    <template x-if="recuperationsEnCours.length === 0">
+                        <div class="empty-state">
+                            <div class="empty-state-icon" style="color: var(--success-color);">✅</div>
+                            <p style="font-weight: 600;">Aucune récupération en cours!</p>
+                            <p style="font-size: 0.875rem; margin-top: 0.5rem;">Toutes les récupérations ont été effectuées</p>
+                        </div>
+                    </template>
+                    
+                    <template x-for="recup in recuperationsEnCours" :key="recup.id">
+                        <div class="recuperation-card">
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <span class="badge badge-purple">
+                                            <i class="fas fa-redo" style="margin-right: 0.25rem;"></i>
+                                            RÉCUPÉRATION
+                                        </span>
+                                        <span class="badge"
+                                              :class="{
+                                                  'badge-orange': recup.status === 'non_assignee',
+                                                  'badge-blue': recup.status === 'assignee' || recup.status === 'en_cours'
+                                              }"
+                                              x-text="recup.status_display"></span>
+                                    </div>
+                                    <h4 style="font-weight: 700; font-size: 1.125rem; color: var(--text-dark); margin: 0 0 0.25rem 0;" x-text="recup.nom_evenement"></h4>
+                                    <p style="font-size: 0.875rem; color: var(--text-light); margin: 0;" x-text="recup.client"></p>
+                                </div>
+                                
+                                <div style="text-align: right;">
+                                    <p style="font-weight: 600; color: var(--text-dark); margin: 0;" x-text="recup.date_livraison"></p>
+                                    <p style="font-size: 0.75rem; color: var(--text-light); margin: 0;" x-text="recup.periode"></p>
+                                    <p style="font-size: 0.75rem; font-weight: 600; color: #3b82f6; margin: 0;" x-text="recup.heure"></p>
+                                </div>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                    <i class="fas fa-map-marker-alt" style="color: #ef4444; margin-top: 0.25rem;"></i>
+                                    <div>
+                                        <p style="font-size: 0.75rem; color: var(--text-light); margin: 0;">Adresse</p>
+                                        <p style="font-size: 0.875rem; color: var(--text-dark); margin: 0;" x-text="recup.adresse"></p>
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                    <i class="fas fa-truck" style="color: #3b82f6; margin-top: 0.25rem;"></i>
+                                    <div>
+                                        <p style="font-size: 0.75rem; color: var(--text-light); margin: 0;">Mode d'envoi</p>
+                                        <p style="font-size: 0.875rem; font-weight: 600; color: var(--text-dark); margin: 0;" x-text="recup.mode_envoi"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <template x-if="recup.livraison_origine">
+                                <div class="info-box blue" style="margin-bottom: 1rem;">
+                                    <p style="font-weight: 600; margin: 0 0 0.25rem 0;">
+                                        <i class="fas fa-info-circle" style="margin-right: 0.25rem;"></i>
+                                        Livraison d'origine
+                                    </p>
+                                    <p style="margin: 0;">
+                                        <strong x-text="recup.livraison_origine.numero"></strong>
+                                        du <span x-text="recup.livraison_origine.date"></span>
+                                    </p>
+                                </div>
+                            </template>
+                            
+                            <template x-if="recup.route">
+                                <div class="info-box green" style="margin-bottom: 1rem;">
+                                    <p style="font-weight: 600; margin: 0 0 0.25rem 0;">
+                                        <i class="fas fa-route" style="margin-right: 0.25rem;"></i>
+                                        Assignée à la route
+                                    </p>
+                                    <p style="margin: 0 0 0.5rem 0;">
+                                        <strong x-text="recup.route.nom"></strong>
+                                        - Départ: <span x-text="recup.route.heure_depart"></span>
+                                    </p>
+                                    <p style="font-size: 0.75rem; margin: 0;">
+                                        Livreur(s): <span x-text="recup.route.livreurs.join(', ')"></span>
+                                    </p>
+                                </div>
+                            </template>
+                            
+                            <template x-if="!recup.route && recup.status === 'non_assignee'">
+                                <div class="info-box orange" style="margin-bottom: 1rem;">
+                                    <p style="font-weight: 600; margin: 0;">
+                                        <i class="fas fa-exclamation-triangle" style="margin-right: 0.25rem;"></i>
+                                        À assigner à une route
+                                    </p>
+                                </div>
+                            </template>
+                            
+                            <div style="display: flex; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                                <a :href="`/livraison/editer/${recup.id}/`" class="btn btn-edit" style="flex: 1; justify-content: center;">
+                                    <i class="fas fa-edit"></i>
+                                    Modifier
+                                </a>
+                                <a :href="`/livraison/responsable/dashboard/?date=${recup.date_livraison}`" class="btn btn-primary" style="flex: 1; justify-content: center; padding: 0.625rem 1rem; font-size: 0.875rem;">
+                                    <i class="fas fa-route"></i>
+                                    Voir routes
+                                </a>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Créer/Modifier Mode -->
+    <div x-show="modalMode" x-cloak class="modal-overlay" @click.self="modalMode = false">
+        <div class="modal-content" @click.stop>
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i :class="modeEnEdition.id ? 'fas fa-edit' : 'fas fa-plus'" :style="`color: ${modeEnEdition.id ? '#3b82f6' : '#10b981'}`"></i>
+                    <span x-text="modeEnEdition.id ? 'Modifier le mode d\'envoi' : 'Nouveau mode d\'envoi'"></span>
+                </h3>
+                <button @click="modalMode = false" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form @submit.prevent="sauvegarderMode()">
+                <div class="form-group">
+                    <label class="form-label">Nom *</label>
+                    <input type="text" x-model="modeEnEdition.nom" required class="form-input">
+                </div>
+                
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label class="form-label">Description</label>
+                    <textarea x-model="modeEnEdition.description" rows="3" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label class="form-label">Couleur</label>
+                    <input type="color" x-model="modeEnEdition.couleur"
+                           style="width: 100%; height: 50px; padding: 0.25rem; border: 2px solid var(--border-color); border-radius: 10px; cursor: pointer;">
+                </div>
+                
+                <div class="info-box blue" style="margin-top: 1rem;">
+                    <label style="display: flex; align-items: center; margin: 0; cursor: pointer;">
+                        <input type="checkbox" x-model="modeEnEdition.permet_recuperation"
+                               style="width: 1rem; height: 1rem; margin-right: 0.5rem; accent-color: #3b82f6;">
+                        <span>
+                            <i class="fas fa-redo" style="margin-right: 0.25rem;"></i>
+                            Permet la récupération
+                        </span>
+                    </label>
+                    <p style="font-size: 0.75rem; margin: 0.5rem 0 0 1.5rem;">Les livraisons avec ce mode pourront être récupérées</p>
+                </div>
+                
+                <div class="info-box green" style="margin-top: 1rem;">
+                    <label style="display: flex; align-items: center; margin: 0; cursor: pointer;">
+                        <input type="checkbox" x-model="modeEnEdition.actif"
+                               style="width: 1rem; height: 1rem; margin-right: 0.5rem; accent-color: #10b981;">
+                        <span>
+                            <i class="fas fa-toggle-on" style="margin-right: 0.25rem;"></i>
+                            Mode actif
+                        </span>
+                    </label>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" @click="modalMode = false" class="btn btn-cancel">
+                        Annuler
+                    </button>
+                    <button type="submit" class="btn"
+                            :class="modeEnEdition.id ? 'btn-primary' : 'btn-success'">
+                        <i class="fas fa-save"></i>
+                        <span x-text="modeEnEdition.id ? 'Sauvegarder' : 'Créer'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+</div>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Le JavaScript reste identique
+function gestionRecuperations() {
+    return {
+        ongletActif: 'modes',
+        modalMode: false,
+        
+        modes: [],
+        modeEnEdition: {
+            id: null,
+            nom: '',
+            description: '',
+            couleur: '#3B82F6',
+            permet_recuperation: false,
+            actif: true
+        },
+        
+        dateOriginale: '{{ date_selectionnee }}',
+        dateRecuperation: '',
+        modeSelectionne: '',
+        livraisonsRecuperables: [],
+        livraisonsSelectionnees: [],
+        
+        recuperationsEnCours: [],
+        
+        async init() {
+            await this.chargerModes();
+        },
+        
+        async chargerModes() {
+            try {
+                const response = await fetch('/livraison/api/modes-envoi/');
+                const data = await response.json();
+                this.modes = data.modes;
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        },
+        
+        ouvrirModalMode() {
+            this.modeEnEdition = {
+                id: null,
+                nom: '',
+                description: '',
+                couleur: '#3B82F6',
+                permet_recuperation: false,
+                actif: true
+            };
+            this.modalMode = true;
+        },
+        
+        editerMode(mode) {
+            this.modeEnEdition = { ...mode };
+            this.modalMode = true;
+        },
+        
+        async sauvegarderMode() {
+            try {
+                const url = this.modeEnEdition.id 
+                    ? `/livraison/api/modes-envoi/${this.modeEnEdition.id}/modifier/`
+                    : '/livraison/api/modes-envoi/creer/';
+                
+                const method = this.modeEnEdition.id ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.modeEnEdition)
+                });
+                
+                if (response.ok) {
+                    alert(this.modeEnEdition.id ? 'Mode modifié!' : 'Mode créé!');
+                    this.modalMode = false;
+                    await this.chargerModes();
+                    window.location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + (error.error || 'Erreur lors de la sauvegarde'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la sauvegarde');
+            }
+        },
+        
+        async supprimerMode(modeId, modeNom) {
+            if (!confirm(`Supprimer le mode "${modeNom}"?\n\nCette action est irréversible!`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/livraison/api/modes-envoi/${modeId}/supprimer/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+                
+                if (response.ok) {
+                    alert('Mode supprimé!');
+                    await this.chargerModes();
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + (error.error || 'Erreur lors de la suppression'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la suppression');
+            }
+        },
+        
+        async chargerLivraisonsRecuperables() {
+            if (!this.dateOriginale || !this.modeSelectionne) {
+                this.livraisonsRecuperables = [];
+                return;
+            }
+            
+            try {
+                const response = await fetch(
+                    `/livraison/api/livraisons-recuperables/?date=${this.dateOriginale}&mode_id=${this.modeSelectionne}`
+                );
+                const data = await response.json();
+                this.livraisonsRecuperables = data.livraisons;
+                this.livraisonsSelectionnees = [];
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        },
+        
+        toggleSelection(livraisonId) {
+            const index = this.livraisonsSelectionnees.indexOf(livraisonId);
+            if (index > -1) {
+                this.livraisonsSelectionnees.splice(index, 1);
+            } else {
+                this.livraisonsSelectionnees.push(livraisonId);
+            }
+        },
+        
+        async transformerEnRecuperations() {
+            if (!this.dateRecuperation) {
+                alert('Veuillez sélectionner une date de récupération');
+                return;
+            }
+            
+            if (this.livraisonsSelectionnees.length === 0) {
+                alert('Veuillez sélectionner au moins une livraison');
+                return;
+            }
+            
+            if (!confirm(`Créer ${this.livraisonsSelectionnees.length} récupération(s) pour le ${this.dateRecuperation}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/livraison/api/transformer-recuperations/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        livraison_ids: this.livraisonsSelectionnees,
+                        date_recuperation: this.dateRecuperation
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.message);
+                    this.livraisonsSelectionnees = [];
+                    await this.chargerLivraisonsRecuperables();
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + (error.error || 'Erreur lors de la transformation'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la transformation');
+            }
+        },
+        
+        async chargerRecuperationsEnCours() {
+            try {
+                const response = await fetch('/livraison/api/recuperations-en-cours/');
+                const data = await response.json();
+                this.recuperationsEnCours = data.recuperations;
+                console.log(`${this.recuperationsEnCours.length} récupérations en cours chargées`);
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors du chargement des récupérations');
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,138 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - CHEFLOW</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-white to-blue-50 min-h-screen">
+    
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="w-full max-w-md">
+            
+            <!-- Logo / Titre -->
+            <div class="text-center mb-8">
+                <div class="inline-block p-4 bg-blue-600 rounded-full mb-4">
+                    <img src="{% static 'images/logo.jpeg' %}" 
+                         alt="Cheflow Logo" 
+                         class="h-16 w-auto">
+                </div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">CHEFLOW</h1>
+                <p class="text-gray-600">Connectez-vous pour accéder à votre espace</p>
+            </div>
+            
+            <!-- Formulaire de connexion -->
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+                
+                <!-- Messages Django -->
+                {% if messages %}
+                <div class="m-6 mb-0">
+                    {% for message in messages %}
+                    <div class="{% if message.tags == 'success' %}bg-green-50 border-green-500{% elif message.tags == 'error' %}bg-red-50 border-red-500{% else %}bg-blue-50 border-blue-500{% endif %} border-l-4 p-4 mb-4 rounded">
+                        <div class="flex items-start">
+                            <i class="fas {% if message.tags == 'success' %}fa-check-circle text-green-500{% elif message.tags == 'error' %}fa-exclamation-circle text-red-500{% else %}fa-info-circle text-blue-500{% endif %} mt-1 mr-3"></i>
+                            <p class="{% if message.tags == 'success' %}text-green-800{% elif message.tags == 'error' %}text-red-800{% else %}text-blue-800{% endif %}">{{ message }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <form method="post" class="p-8">
+                    {% csrf_token %}
+                    
+                    <!-- Username -->
+                    <div class="mb-6">
+                        <label for="id_username" class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-user mr-2 text-gray-400"></i>
+                            Nom d'utilisateur
+                        </label>
+                        <input 
+                            type="text" 
+                            name="username" 
+                            id="id_username"
+                            required
+                            autofocus
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                            placeholder="Entrez votre nom d'utilisateur">
+                    </div>
+                    
+                    <!-- Password -->
+                    <div class="mb-6">
+                        <label for="id_password" class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-lock mr-2 text-gray-400"></i>
+                            Mot de passe
+                        </label>
+                        <div class="relative">
+                            <input 
+                                type="password" 
+                                name="password" 
+                                id="id_password"
+                                required
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition pr-12"
+                                placeholder="Entrez votre mot de passe">
+                            <button 
+                                type="button"
+                                onclick="togglePassword()"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-eye" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Remember me -->
+                    <div class="flex items-center mb-6">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" name="remember" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">Se souvenir de moi</span>
+                        </label>
+                    </div>
+                    
+                    <!-- Submit button -->
+                    <button 
+                        type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Se connecter
+                    </button>
+                    
+                    <!-- Hidden field for next -->
+                    {% if request.GET.next %}
+                    <input type="hidden" name="next" value="{{ request.GET.next }}">
+                    {% endif %}
+                </form>
+            </div>
+            
+            <!-- Footer info -->
+            <div class="text-center mt-6 text-sm text-gray-600">
+                <p>
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Besoin d'aide? Contactez votre administrateur
+                </p>
+            </div>
+            
+        </div>
+    </div>
+    
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById('id_password');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
+    </script>
+    
+</body>
+</html>

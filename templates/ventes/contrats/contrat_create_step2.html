@@ -1,0 +1,191 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    /* Réutiliser les styles de step1 */
+    .wizard-container { max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; }
+    .wizard-header { background: white; border-radius: 20px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+    .wizard-steps { display: flex; justify-content: space-between; margin-bottom: 2rem; position: relative; }
+    .wizard-steps::before { content: ''; position: absolute; top: 20px; left: 0; right: 0; height: 2px; background: #e5e7eb; z-index: 0; }
+    .wizard-step { flex: 1; text-align: center; position: relative; z-index: 1; }
+    .step-circle { width: 40px; height: 40px; border-radius: 50%; background: #e5e7eb; color: #6b7280; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 700; transition: all 0.3s; }
+    .wizard-step.active .step-circle { background: #6366f1; color: white; }
+    .wizard-step.completed .step-circle { background: #10b981; color: white; }
+    .step-label { font-size: 0.85rem; color: #6b7280; font-weight: 600; }
+    .wizard-step.active .step-label { color: #6366f1; }
+    .form-card { background: white; border-radius: 20px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+    .form-group { margin-bottom: 1.5rem; }
+    .form-label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: #1f2937; }
+    .form-label.required::after { content: ' *'; color: #ef4444; }
+    .form-input { width: 100%; padding: 0.75rem 1rem; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 0.95rem; transition: all 0.3s; }
+    .form-input:focus { outline: none; border-color: #6366f1; }
+    .form-actions { display: flex; gap: 1rem; justify-content: space-between; margin-top: 2rem; }
+    .btn { padding: 0.75rem 1.5rem; border-radius: 10px; font-weight: 600; cursor: pointer; border: none; transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; }
+    .btn-primary { background: #6366f1; color: white; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-secondary { background: #f3f4f6; color: #374151; }
+    .btn-secondary:hover { background: #e5e7eb; }
+    
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-section { margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 2px solid #e5e7eb; }
+    .form-section:last-child { border-bottom: none; }
+    .section-title { font-size: 1.1rem; font-weight: 700; color: #1f2937; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wizard-container">
+    <div class="wizard-header">
+        <h1 style="margin: 0 0 2rem 0;">🎉 Nouveau Contrat</h1>
+        
+        <div class="wizard-steps">
+            <div class="wizard-step completed">
+                <div class="step-circle">✓</div>
+                <div class="step-label">Identifiants</div>
+            </div>
+            <div class="wizard-step active">
+                <div class="step-circle">2</div>
+                <div class="step-label">Informations</div>
+            </div>
+            <div class="wizard-step">
+                <div class="step-circle">3</div>
+                <div class="step-label">Déroulé & Confirmation</div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" class="form-card">
+        {% csrf_token %}
+        
+        <h2 style="margin-bottom: 1.5rem;">📋 Étape 2 : Informations détaillées</h2>
+
+        <!-- Section Client -->
+        <div class="form-section">
+            <div class="section-title">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                Informations Client
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label required">Nom du client</label>
+                <input type="text" name="client_nom" class="form-input" placeholder="ex: Jean Dupont" required value="{{ form_data.client_nom }}">
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label required">Téléphone</label>
+                    <input type="tel" name="client_telephone" class="form-input" placeholder="ex: 514-123-4567" required value="{{ form_data.client_telephone }}">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="client_email" class="form-input" placeholder="ex: client@email.com" value="{{ form_data.client_email }}">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Contact sur site (si différent)</label>
+                <input type="text" name="contact_sur_site" class="form-input" placeholder="ex: Marie Martin" value="{{ form_data.contact_sur_site }}">
+            </div>
+        </div>
+
+        <!-- Section Adresse -->
+        <div class="form-section">
+            <div class="section-title">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Adresse de l'événement
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label required">Adresse complète</label>
+                <textarea name="adresse_complete" class="form-input" rows="2" placeholder="ex: 123 Rue Saint-Laurent" required>{{ form_data.adresse_complete }}</textarea>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Ville</label>
+                    <input type="text" name="ville" class="form-input" value="{{ form_data.ville|default:'Montréal' }}">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Code postal</label>
+                    <input type="text" name="code_postal" class="form-input" placeholder="ex: H2X 1Y5" value="{{ form_data.code_postal }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Date/Heure -->
+        <div class="form-section">
+            <div class="section-title">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Date et horaires
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label required">Date de l'événement</label>
+                <input type="date" name="date_evenement" class="form-input" required value="{{ form_data.date_evenement }}">
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label required">Heure de début prévue</label>
+                    <input type="time" name="heure_debut_prevue" class="form-input" required value="{{ form_data.heure_debut_prevue }}">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required">Heure de fin prévue</label>
+                    <input type="time" name="heure_fin_prevue" class="form-input" required value="{{ form_data.heure_fin_prevue }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Infos supplémentaires -->
+        <div class="form-section">
+            <div class="section-title">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Informations supplémentaires
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Nombre de convives</label>
+                <input type="number" name="nb_convives" class="form-input" placeholder="ex: 150" min="0" value="{{ form_data.nb_convives|default:0 }}">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Informations supplémentaires</label>
+                <textarea name="informations_supplementaires" class="form-input" rows="3" placeholder="ex: Thème de la soirée, particularités...">{{ form_data.informations_supplementaires }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Instructions spéciales</label>
+                <textarea name="instructions_speciales" class="form-input" rows="3" placeholder="ex: Allergies alimentaires, restrictions d'accès...">{{ form_data.instructions_speciales }}</textarea>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'ventes:contrat_create_step1' %}" class="btn btn-secondary">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Précédent
+            </a>
+            <button type="submit" class="btn btn-primary">
+                Suivant
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

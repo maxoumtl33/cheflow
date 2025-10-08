@@ -1,0 +1,168 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Sélection du véhicule{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-6" x-data="selectionVehicule()">
+    
+    <!-- Étapes -->
+    <div class="mb-8">
+        <div class="flex items-center justify-center">
+            <div class="flex items-center">
+                <div class="flex items-center justify-center w-10 h-10 bg-green-500 text-white rounded-full">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div class="w-24 h-1 bg-green-500"></div>
+            </div>
+            <div class="flex items-center">
+                <div class="flex items-center justify-center w-10 h-10 bg-blue-500 text-white rounded-full animate-pulse">
+                    <i class="fas fa-car"></i>
+                </div>
+                <div class="w-24 h-1 bg-gray-300"></div>
+            </div>
+            <div class="flex items-center justify-center w-10 h-10 bg-gray-300 text-gray-500 rounded-full">
+                <i class="fas fa-list"></i>
+            </div>
+        </div>
+        <div class="flex justify-between mt-2 text-xs font-medium">
+            <span class="text-green-600">Route démarrée</span>
+            <span class="text-blue-600">Choix véhicule</span>
+            <span class="text-gray-500">Livraisons</span>
+        </div>
+    </div>
+    
+    <!-- Header -->
+    <div class="mb-6 text-center">
+        <h1 class="text-3xl font-bold text-gray-900">Sélectionnez votre véhicule</h1>
+        <p class="text-gray-600 mt-2">{{ route.nom }}</p>
+    </div>
+    
+    <!-- Liste des véhicules -->
+    <div class="space-y-4">
+        {% for vehicule in vehicules %}
+        <div @click="selectionnerVehicule('{{ vehicule.id }}')"
+             :class="vehiculeSelectionne === '{{ vehicule.id }}' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-300'"
+             class="border-2 rounded-lg p-6 cursor-pointer transition">
+            
+            <div class="flex items-center gap-4">
+                <div class="flex-shrink-0">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                        {% if vehicule.type_vehicule == 'camionnette' %}
+                            <i class="fas fa-truck text-3xl text-blue-600"></i>
+                        {% elif vehicule.type_vehicule == 'camion' %}
+                            <i class="fas fa-truck-moving text-3xl text-blue-600"></i>
+                        {% elif vehicule.type_vehicule == 'moto' %}
+                            <i class="fas fa-motorcycle text-3xl text-blue-600"></i>
+                        {% elif vehicule.type_vehicule == 'velo' %}
+                            <i class="fas fa-bicycle text-3xl text-blue-600"></i>
+                        {% else %}
+                            <i class="fas fa-car text-3xl text-blue-600"></i>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="flex-1">
+                    <h3 class="text-xl font-bold text-gray-900">{{ vehicule.nom }}</h3>
+                    <p class="text-gray-600">{{ vehicule.get_type_vehicule_display }}</p>
+                    <p class="text-sm text-gray-500 mt-1">
+                        <i class="fas fa-id-card mr-1"></i>
+                        {{ vehicule.immatriculation }}
+                    </p>
+                </div>
+                
+                <div class="flex-shrink-0">
+                    <div class="text-right">
+                        <p class="text-sm text-gray-600">Capacité</p>
+                        <p class="text-2xl font-bold text-blue-600">{{ vehicule.capacite }}</p>
+                    </div>
+                </div>
+                
+                <div class="flex-shrink-0">
+                    <div x-show="vehiculeSelectionne === '{{ vehicule.id }}'"
+                         class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center">
+                        <i class="fas fa-check"></i>
+                    </div>
+                </div>
+            </div>
+            
+            {% if vehicule.notes %}
+            <div class="mt-3 pt-3 border-t">
+                <p class="text-sm text-gray-600">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    {{ vehicule.notes }}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Bouton de confirmation -->
+    <div class="mt-8">
+        <button @click="confirmerVehicule()"
+                :disabled="!vehiculeSelectionne"
+                :class="vehiculeSelectionne ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'"
+                class="w-full py-4 text-white rounded-lg font-bold text-lg transition shadow-lg">
+            <i class="fas fa-arrow-right mr-2"></i>
+            CONTINUER
+        </button>
+    </div>
+</div>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function selectionVehicule() {
+    return {
+        vehiculeSelectionne: '',
+        
+        selectionnerVehicule(vehiculeId) {
+            this.vehiculeSelectionne = vehiculeId;
+        },
+        
+        async confirmerVehicule() {
+            if (!this.vehiculeSelectionne) {
+                alert('Veuillez sélectionner un véhicule');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/livraison/livreur/route/{{ route.id }}/assigner-vehicule/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        vehicule_id: this.vehiculeSelectionne
+                    })
+                });
+                
+                if (response.ok) {
+                    window.location.href = '/livraison/livreur/route/{{ route.id }}/livraisons/';
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + (error.error || 'Impossible d\'assigner le véhicule'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de l\'assignation du véhicule');
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

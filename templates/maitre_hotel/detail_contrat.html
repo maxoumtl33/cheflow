@@ -1,0 +1,1759 @@
+<!-- maitre_hotel/templates/maitre_hotel/detail_contrat.html -->
+{% extends 'base/base.html' %}
+
+{% block title %}{{ contrat.nom_evenement }} - Détail Contrat{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #6366f1;
+        --primary-hover: #4f46e5;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --purple-color: #8b5cf6;
+        --orange-color: #f97316;
+        --bg-light: #f9fafb;
+        --border-color: #e5e7eb;
+        --text-dark: #1f2937;
+        --text-light: #6b7280;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .detail-container {
+        max-width: 1400px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    /* Back Button */
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: white;
+        text-decoration: none;
+        font-weight: 600;
+        padding: 0.75rem 1.25rem;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+    }
+
+    .back-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateX(-5px);
+    }
+
+    /* Header Card */
+    .header-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .header-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 8px;
+    }
+
+    .header-card.status-planifie::before {
+        background: var(--primary-color);
+    }
+
+    .header-card.status-en_cours::before {
+        background: var(--warning-color);
+    }
+
+    .header-card.status-termine::before {
+        background: var(--success-color);
+    }
+
+    .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .header-title {
+        flex: 1;
+    }
+
+    .header-title h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .header-numero {
+        font-size: 0.95rem;
+        color: var(--text-light);
+        font-weight: 600;
+    }
+
+    .status-badge {
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .status-badge.planifie {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .status-badge.en_cours {
+        background: #fef3c7;
+        color: #92400e;
+        animation: pulse 2s infinite;
+    }
+
+    .status-badge.termine {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    .header-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .info-box {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .info-icon-large {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+
+    .info-icon-large.blue {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .info-icon-large.purple {
+        background: #ede9fe;
+        color: #6d28d9;
+    }
+
+    .info-icon-large.green {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .info-icon-large.red {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .info-content h4 {
+        font-size: 0.75rem;
+        color: var(--text-light);
+        margin: 0 0 0.25rem 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .info-content p {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid var(--border-color);
+    }
+
+    .btn {
+        padding: 0.875rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, var(--success-color), #059669);
+        color: white;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-danger {
+        background: linear-gradient(135deg, var(--danger-color), #dc2626);
+        color: white;
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+        color: white;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-outline {
+        background: white;
+        color: var(--text-dark);
+        border: 2px solid var(--border-color);
+    }
+
+    .btn-outline:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+
+    /* Tabs */
+    .tabs-container {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .tabs-nav {
+        display: flex;
+        border-bottom: 2px solid var(--border-color);
+        background: var(--bg-light);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-button {
+        padding: 1.25rem 2rem;
+        background: transparent;
+        border: none;
+        font-weight: 600;
+        color: var(--text-light);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .tab-button.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+        background: white;
+    }
+
+    .tab-content {
+        padding: 2rem;
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    /* Info Section */
+    .info-section {
+        margin-bottom: 2rem;
+    }
+
+    .info-section h3 {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0 0 1rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .info-field {
+        background: var(--bg-light);
+        padding: 1.25rem;
+        border-radius: 12px;
+    }
+
+    .info-field label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-light);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+
+    .info-field p {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin: 0;
+    }
+
+    .deroule-box {
+        background: var(--bg-light);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .deroule-box pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-family: inherit;
+        margin: 0;
+        color: var(--text-dark);
+        line-height: 1.6;
+    }
+
+    /* Textarea for reports */
+    .report-area {
+        width: 100%;
+        min-height: 200px;
+        padding: 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        font-family: inherit;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        resize: vertical;
+    }
+
+    .report-area:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        outline: none;
+    }
+
+    /* Photos Grid */
+    .photos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .photo-card {
+        background: white;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .photo-card:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
+        transform: translateY(-5px);
+    }
+
+    .photo-image {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        cursor: pointer;
+    }
+
+    .photo-info {
+        padding: 1rem;
+    }
+
+    .photo-legende {
+        font-size: 0.875rem;
+        color: var(--text-dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .photo-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .photo-date {
+        font-size: 0.75rem;
+        color: var(--text-light);
+    }
+
+    .btn-delete-photo {
+        background: var(--danger-color);
+        color: white;
+        border: none;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        transition: all 0.3s ease;
+    }
+
+    .btn-delete-photo:hover {
+        background: #dc2626;
+    }
+
+    .upload-area {
+        border: 3px dashed var(--border-color);
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: var(--bg-light);
+    }
+
+    .upload-area:hover {
+        border-color: var(--primary-color);
+        background: #ede9fe;
+    }
+
+    .upload-area.dragover {
+        border-color: var(--success-color);
+        background: #d1fae5;
+    }
+
+    .upload-icon {
+        font-size: 3rem;
+        color: var(--text-light);
+        margin-bottom: 1rem;
+    }
+
+    .upload-text {
+        font-size: 1rem;
+        color: var(--text-dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .upload-hint {
+        font-size: 0.875rem;
+        color: var(--text-light);
+    }
+
+    #photoInput {
+        display: none;
+    }
+
+    .preview-container {
+        margin-top: 1.5rem;
+        display: none;
+    }
+
+    .preview-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+    }
+
+    /* Checklist */
+    .checklist-items {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .checklist-item {
+        background: white;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .checklist-item.valide {
+        border-color: var(--success-color);
+        background: #ecfdf5;
+    }
+
+    .checklist-item.refuse {
+        border-color: var(--danger-color);
+        background: #fef2f2;
+    }
+
+    .item-checkbox {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        border: 2px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .checklist-item.valide .item-checkbox {
+        background: var(--success-color);
+        border-color: var(--success-color);
+        color: white;
+    }
+
+    .checklist-item.refuse .item-checkbox {
+        background: var(--danger-color);
+        border-color: var(--danger-color);
+        color: white;
+    }
+
+    .item-content {
+        flex: 1;
+    }
+
+    .item-name {
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 0.25rem;
+    }
+
+    .item-quantity {
+        font-size: 0.875rem;
+        color: var(--text-light);
+    }
+
+    .item-status {
+        padding: 0.375rem 0.875rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .item-status.valide {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .item-status.refuse {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .item-status.en_cours {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    /* Historique */
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 9px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--border-color);
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-bottom: 2rem;
+    }
+
+    .timeline-item:last-child {
+        padding-bottom: 0;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -2rem;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: white;
+        border: 3px solid var(--primary-color);
+    }
+
+    .timeline-content {
+        background: var(--bg-light);
+        padding: 1rem;
+        border-radius: 12px;
+    }
+
+    .timeline-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 0.5rem;
+    }
+
+    .timeline-type {
+        font-weight: 700;
+        color: var(--text-dark);
+    }
+
+    .timeline-date {
+        font-size: 0.75rem;
+        color: var(--text-light);
+    }
+
+    .timeline-description {
+        font-size: 0.875rem;
+        color: var(--text-light);
+    }
+
+    .timeline-user {
+        font-size: 0.75rem;
+        color: var(--text-light);
+        margin-top: 0.5rem;
+    }
+
+    /* Modal */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        z-index: 200;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        max-width: 600px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 2rem;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--text-light);
+        cursor: pointer;
+        padding: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .modal-close:hover {
+        color: var(--text-dark);
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .form-textarea {
+        width: 100%;
+        padding: 0.875rem;
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        font-family: inherit;
+        resize: vertical;
+        min-height: 120px;
+    }
+
+    .form-textarea:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        outline: none;
+    }
+
+    /* Image Lightbox */
+    .lightbox {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.9);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 300;
+        padding: 2rem;
+    }
+
+    .lightbox.active {
+        display: flex;
+    }
+
+    .lightbox-image {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        border-radius: 12px;
+    }
+
+    .lightbox-close {
+        position: absolute;
+        top: 2rem;
+        right: 2rem;
+        background: white;
+        color: var(--text-dark);
+        border: none;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .lightbox-close:hover {
+        background: var(--bg-light);
+        transform: scale(1.1);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .detail-container {
+            padding: 0 1rem;
+            margin: 1rem auto;
+        }
+
+        .header-card {
+            padding: 1.5rem;
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+        }
+
+        .header-info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+
+        .action-buttons .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .tabs-nav {
+            flex-wrap: nowrap;
+        }
+
+        .tab-button {
+            padding: 1rem 1.5rem;
+        }
+
+        .tab-content {
+            padding: 1.5rem;
+        }
+
+        .photos-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail-container" x-data="contratDetail()">
+    
+    <!-- Back Button -->
+    <a href="{% url 'maitre_hotel:dashboard_maitre_hotel' %}?date={{ contrat.date_evenement|date:'Y-m-d' }}" class="back-button">
+        <i class="fas fa-arrow-left"></i>
+        Retour au dashboard
+    </a>
+    
+    <!-- Header Card -->
+    <div class="header-card status-{{ contrat.status }}">
+        <div class="header-top">
+            <div class="header-title">
+                <h1>{{ contrat.nom_evenement }}</h1>
+                <span class="header-numero">#{{ contrat.numero_contrat }}</span>
+            </div>
+            <span class="status-badge {{ contrat.status }}">
+                {% if contrat.status == 'planifie' %}
+                    <i class="fas fa-clock"></i> Planifié
+                {% elif contrat.status == 'en_cours' %}
+                    <i class="fas fa-play-circle"></i> En cours
+                {% elif contrat.status == 'termine' %}
+                    <i class="fas fa-check-circle"></i> Terminé
+                {% endif %}
+            </span>
+        </div>
+        
+        <div class="header-info-grid">
+            <div class="info-box">
+                <div class="info-icon-large blue">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="info-content">
+                    <h4>Client</h4>
+                    <p>{{ contrat.client_nom }}</p>
+                </div>
+            </div>
+            
+            <div class="info-box">
+                <div class="info-icon-large purple">
+                    <i class="fas fa-calendar"></i>
+                </div>
+                <div class="info-content">
+                    <h4>Date</h4>
+                    <p>{{ contrat.date_evenement|date:"d/m/Y" }}</p>
+                </div>
+            </div>
+            
+            <div class="info-box">
+                <div class="info-icon-large green">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="info-content">
+                    <h4>Horaire</h4>
+                    <p>{{ contrat.heure_debut_prevue|date:"H:i" }} - {{ contrat.heure_fin_prevue|date:"H:i" }}</p>
+                </div>
+            </div>
+            
+            <div class="info-box">
+                <div class="info-icon-large red">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="info-content">
+                    <h4>Convives</h4>
+                    <p>{{ contrat.nb_convives }} personnes</p>
+                </div>
+            </div>
+        </div>
+        
+        {% if contrat.status == 'en_cours' and contrat.heure_debut_reelle %}
+        <div style="margin-top: 1.5rem; padding: 1rem; background: #fef3c7; border-radius: 12px; display: flex; align-items: center; gap: 1rem;">
+            <i class="fas fa-hourglass-half" style="font-size: 1.5rem; color: #f59e0b;"></i>
+            <div>
+                <strong style="color: #92400e;">Contrat démarré à {{ contrat.heure_debut_reelle|date:"H:i" }}</strong>
+                <p style="margin: 0; font-size: 0.875rem; color: #92400e;">En cours depuis <span id="duree-en-cours"></span></p>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if contrat.status == 'termine' and contrat.duree_reelle %}
+        <div style="margin-top: 1.5rem; padding: 1rem; background: #d1fae5; border-radius: 12px; display: flex; align-items: center; gap: 1rem;">
+            <i class="fas fa-check-circle" style="font-size: 1.5rem; color: #10b981;"></i>
+            <div>
+                <strong style="color: #065f46;">Contrat terminé</strong>
+                <p style="margin: 0; font-size: 0.875rem; color: #065f46;">
+                    Durée totale: {{ contrat.duree_reelle }} heures
+                    ({{ contrat.heure_debut_reelle|date:"H:i" }} - {{ contrat.heure_fin_reelle|date:"H:i" }})
+                </p>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="action-buttons">
+            {% if contrat.status == 'planifie' %}
+            <button @click="commencerContrat()" class="btn btn-success">
+                <i class="fas fa-play"></i>
+                Commencer le contrat
+            </button>
+            {% endif %}
+            
+            {% if contrat.status == 'en_cours' %}
+            <button @click="ouvrirModalTerminer()" class="btn btn-danger">
+                <i class="fas fa-stop"></i>
+                Terminer le contrat
+            </button>
+            {% endif %}
+            
+            <a href="{% url 'maitre_hotel:dashboard_maitre_hotel' %}" class="btn btn-outline">
+                <i class="fas fa-home"></i>
+                Dashboard
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tabs -->
+    <div class="tabs-container">
+        <div class="tabs-nav">
+            <button class="tab-button active" data-tab="informations">
+                <i class="fas fa-info-circle"></i>
+                Informations
+            </button>
+            <button class="tab-button" data-tab="deroule">
+                <i class="fas fa-list-ol"></i>
+                Déroulé
+            </button>
+            <button class="tab-button" data-tab="checklist">
+                <i class="fas fa-list-check"></i>
+                Checklist
+            </button>
+            <button class="tab-button" data-tab="boissons">
+                <i class="fas fa-wine-glass"></i>
+                Rapport Boissons
+            </button>
+            <button class="tab-button" data-tab="photos">
+                <i class="fas fa-camera"></i>
+                Photos ({{ photos.count }}/10)
+            </button>
+            <button class="tab-button" data-tab="historique">
+                <i class="fas fa-history"></i>
+                Historique
+            </button>
+        </div>
+        
+        <!-- Tab: Informations -->
+        <div class="tab-content active" id="tab-informations">
+            <div class="info-section">
+                <h3>
+                    <i class="fas fa-user-circle"></i>
+                    Informations Client
+                </h3>
+                <div class="info-grid">
+                    <div class="info-field">
+                        <label>Nom</label>
+                        <p>{{ contrat.client_nom }}</p>
+                    </div>
+                    <div class="info-field">
+                        <label>Téléphone</label>
+                        <p><a href="tel:{{ contrat.client_telephone }}" style="color: var(--primary-color);">{{ contrat.client_telephone }}</a></p>
+                    </div>
+                    <div class="info-field">
+                        <label>Email</label>
+                        <p>
+                            {% if contrat.client_email %}
+                            <a href="mailto:{{ contrat.client_email }}" style="color: var(--primary-color);">{{ contrat.client_email }}</a>
+                            {% else %}
+                            <span style="color: var(--text-light);">Non renseigné</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="info-field">
+                        <label>Contact sur site</label>
+                        <p>{{ contrat.contact_sur_site|default:"Non renseigné" }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h3>
+                    <i class="fas fa-map-marker-alt"></i>
+                    Localisation
+                </h3>
+                <div class="info-grid">
+                    <div class="info-field" style="grid-column: 1 / -1;">
+                        <label>Adresse complète</label>
+                        <p>{{ contrat.adresse_complete }}</p>
+                    </div>
+                    <div class="info-field">
+                        <label>Ville</label>
+                        <p>{{ contrat.ville }}</p>
+                    </div>
+                    <div class="info-field">
+                        <label>Code postal</label>
+                        <p>{{ contrat.code_postal|default:"Non renseigné" }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            {% if contrat.informations_supplementaires %}
+            <div class="info-section">
+                <h3>
+                    <i class="fas fa-sticky-note"></i>
+                    Informations supplémentaires
+                </h3>
+                <div class="deroule-box">
+                    <pre>{{ contrat.informations_supplementaires }}</pre>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- SECTION LIVRAISON AVEC API -->
+            {% if contrat.livraison %}
+            <div class="info-section" x-data="livreursData()" x-init="chargerLivreurs()">
+                <h3>
+                    <i class="fas fa-truck"></i>
+                    Livraison associée
+                </h3>
+                <div style="background: #dbeafe; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #3b82f6;">
+                    <!-- Informations de base de la livraison -->
+                    <p style="margin: 0 0 0.5rem 0; font-weight: 700; color: #1e40af;">
+                        Livraison #{{ contrat.livraison.numero_livraison }}
+                    </p>
+                    <p style="margin: 0 0 1rem 0; font-size: 0.875rem; color: #1e40af;">
+                        <i class="fas fa-clock"></i> {{ contrat.livraison.date_livraison|date:"d/m/Y" }} - {{ contrat.livraison.get_periode_display }}
+                    </p>
+                    
+                    <!-- Loading state -->
+                    <div x-show="loading" style="text-align: center; padding: 2rem;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #3b82f6;"></i>
+                        <p style="margin-top: 0.5rem; color: #1e40af;">Chargement des informations...</p>
+                    </div>
+                    
+                    <!-- Informations des livreurs (chargées via API) -->
+                    <div x-show="!loading && livreurs.length > 0" x-cloak>
+                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(59, 130, 246, 0.3);">
+                            <p style="margin: 0 0 0.75rem 0; font-weight: 600; color: #1e40af; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-user-circle"></i> 
+                                Livreur(s) assigné(s): <span x-text="`(${livreurs.length})`"></span>
+                            </p>
+                            
+                            <template x-for="livreur in livreurs" :key="livreur.id">
+    <div style="margin: 0.5rem 0; padding: 1rem; background: rgba(255, 255, 255, 0.7); border-radius: 12px;">
+        <!-- Header avec avatar et nom -->
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <!-- Avatar/Icône -->
+            <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.3rem; flex-shrink: 0;">
+                <span x-text="livreur.nom_complet ? livreur.nom_complet.charAt(0).toUpperCase() : 'L'"></span>
+            </div>
+            
+            <!-- Nom du livreur -->
+            <div style="flex: 1;">
+                <p style="margin: 0; font-weight: 700; color: #1e40af; font-size: 1.1rem;" x-text="livreur.nom_complet || livreur.username"></p>
+                <p style="margin: 0.25rem 0 0 0; font-size: 0.75rem; color: #60a5fa;" x-text="livreur.role"></p>
+            </div>
+        </div>
+        
+        <!-- Informations de contact (empilées) -->
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; padding-left: 0;">
+            <!-- Téléphone -->
+            <template x-if="livreur.telephone">
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 36px; height: 36px; background: #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-phone" style="color: white; font-size: 0.9rem;"></i>
+                        </div>
+                        <div>
+                            <p style="margin: 0; font-size: 0.75rem; color: #60a5fa; text-transform: uppercase; letter-spacing: 0.5px;">Téléphone</p>
+                            <a :href="'tel:' + livreur.telephone" 
+                               style="margin: 0; color: #1e40af; text-decoration: none; font-weight: 700; font-size: 1rem;"
+                               x-text="livreur.telephone"></a>
+                        </div>
+                    </div>
+                    <a :href="'tel:' + livreur.telephone" 
+                       style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none; font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease; white-space: nowrap;"
+                       @mouseover="$el.style.transform='translateY(-2px)'; $el.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.3)';"
+                       @mouseout="$el.style.transform='translateY(0)'; $el.style.boxShadow='none';">
+                        <i class="fas fa-phone-alt"></i>
+                        Appeler
+                    </a>
+                </div>
+            </template>
+            
+            <template x-if="!livreur.telephone">
+                <div style="padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px; display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 36px; height: 36px; background: #ef4444; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-phone-slash" style="color: white; font-size: 0.9rem;"></i>
+                    </div>
+                    <p style="margin: 0; font-size: 0.875rem; color: #991b1b; font-style: italic;">
+                        Téléphone non renseigné
+                    </p>
+                </div>
+            </template>
+            
+            <!-- Email -->
+            <template x-if="livreur.email">
+                <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: rgba(139, 92, 246, 0.1); border-radius: 8px;">
+                    <div style="width: 36px; height: 36px; background: #8b5cf6; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-envelope" style="color: white; font-size: 0.9rem;"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <p style="margin: 0; font-size: 0.75rem; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.5px;">Email</p>
+                        <a :href="'mailto:' + livreur.email" 
+                           style="margin: 0; color: #6d28d9; text-decoration: none; font-weight: 600; font-size: 0.9rem; word-break: break-all;"
+                           x-text="livreur.email"></a>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</template>
+                            
+                            <!-- Informations de la route (premier livreur) -->
+                            <template x-if="livreurs.length > 0 && livreurs[0].route_nom">
+                                <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(255, 255, 255, 0.5); border-radius: 8px; border-left: 3px solid #3b82f6;">
+                                    <p style="margin: 0; font-size: 0.875rem; color: #1e40af;">
+                                        <i class="fas fa-route"></i> 
+                                        <strong>Route:</strong> <span x-text="livreurs[0].route_nom"></span>
+                                    </p>
+                                    <template x-if="livreurs[0].heure_depart">
+                                        <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem; color: #1e40af;">
+                                            <i class="fas fa-clock"></i> 
+                                            <strong>Départ prévu:</strong> <span x-text="livreurs[0].heure_depart"></span>
+                                        </p>
+                                    </template>
+                                    <template x-if="livreurs[0].vehicule">
+                                        <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem; color: #1e40af;">
+                                            <i class="fas fa-truck"></i> 
+                                            <strong>Véhicule:</strong> <span x-text="livreurs[0].vehicule"></span>
+                                        </p>
+                                    </template>
+                                    <template x-if="livreurs[0].route_status">
+                                        <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem; color: #1e40af;">
+                                            <i class="fas fa-info-circle"></i> 
+                                            <strong>Statut:</strong> <span x-text="livreurs[0].route_status"></span>
+                                        </p>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    
+                    <!-- Aucun livreur -->
+                    <div x-show="!loading && livreurs.length === 0" x-cloak>
+                        <div style="margin-top: 1rem; padding: 1rem; background: rgba(255, 255, 255, 0.5); border-radius: 8px; text-align: center;">
+                            <p style="margin: 0; font-size: 0.875rem; color: #60a5fa; font-style: italic;">
+                                <i class="fas fa-info-circle"></i> Aucun livreur assigné pour le moment
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Erreur -->
+                    <div x-show="error" x-cloak>
+                        <div style="margin-top: 1rem; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border-left: 3px solid #ef4444;">
+                            <p style="margin: 0; font-size: 0.875rem; color: #991b1b;">
+                                <i class="fas fa-exclamation-triangle"></i> <span x-text="error"></span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Tab: Déroulé -->
+        <div class="tab-content" id="tab-deroule">
+            <div class="info-section">
+                <h3>
+                    <i class="fas fa-list-ol"></i>
+                    Déroulé de l'événement
+                </h3>
+                {% if contrat.deroule_evenement %}
+                <div class="deroule-box">
+                    <pre>{{ contrat.deroule_evenement }}</pre>
+                </div>
+                {% else %}
+                <div class="empty-state" style="padding: 2rem;">
+                    <div class="empty-state-icon">📋</div>
+                    <p>Aucun déroulé renseigné pour cet événement</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Tab: Checklist -->
+        <div class="tab-content" id="tab-checklist">
+            <div class="info-section">
+                <h3>
+                    <i class="fas fa-list-check"></i>
+                    Checklist liée
+                </h3>
+                {% if checklist_items %}
+                <div class="checklist-items">
+                    {% for item in checklist_items %}
+                    <div class="checklist-item {{ item.statut_verification }}">
+                        <div class="item-checkbox">
+                            {% if item.statut_verification == 'valide' %}
+                            <i class="fas fa-check"></i>
+                            {% elif item.statut_verification == 'refuse' %}
+                            <i class="fas fa-times"></i>
+                            {% endif %}
+                        </div>
+                        <div class="item-content">
+                            <div class="item-name">{{ item.objet.nom }}</div>
+                            <div class="item-quantity">Quantité: {{ item.quantite }} {{ item.objet.unite }}</div>
+                        </div>
+                        <span class="item-status {{ item.statut_verification }}">
+                            {{ item.get_statut_verification_display }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state" style="padding: 2rem;">
+                    <div class="empty-state-icon">📦</div>
+                    <p>Aucune checklist associée à ce contrat</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Tab: Rapport Boissons -->
+        <div class="tab-content" id="tab-boissons">
+            <div class="info-section">
+                <h3>
+                    <i class="fas fa-wine-glass"></i>
+                    Rapport de consommation des boissons
+                </h3>
+                <form @submit.prevent="sauvegarderRapportBoissons()">
+                    <textarea 
+                        x-model="rapportBoissons"
+                        class="report-area"
+                        placeholder="Détaillez la consommation des boissons pendant l'événement...&#10;&#10;Exemple:&#10;- Vin rouge: 5 bouteilles&#10;- Champagne: 3 bouteilles&#10;- Eau plate: 10 bouteilles&#10;- Café: 2 thermos&#10;etc."
+                        {% if contrat.status != 'en_cours' and contrat.status != 'termine' %}disabled{% endif %}
+                    ></textarea>
+                    
+                    {% if contrat.status == 'en_cours' or contrat.status == 'termine' %}
+                    <div style="margin-top: 1rem;">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            Sauvegarder le rapport
+                        </button>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+        
+        <!-- Tab: Photos -->
+        <div class="tab-content" id="tab-photos">
+            <div class="info-section">
+                <h3>
+                    <i class="fas fa-camera"></i>
+                    Photos de l'événement ({{ photos.count }}/10)
+                </h3>
+                
+                {% if peut_ajouter_photo and contrat.status == 'en_cours' or contrat.status == 'termine' %}
+                <div class="upload-area" 
+                     onclick="document.getElementById('photoInput').click()"
+                     @dragover.prevent="dragOver = true"
+                     @dragleave.prevent="dragOver = false"
+                     @drop.prevent="handleDrop($event)"
+                     :class="{ 'dragover': dragOver }">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <p class="upload-text">Cliquez ou glissez pour ajouter une photo</p>
+                    <p class="upload-hint">Maximum 10 photos - JPG, JPEG, PNG</p>
+                </div>
+                
+                <input 
+                    type="file" 
+                    id="photoInput" 
+                    accept="image/jpeg,image/jpg,image/png"
+                    @change="previewPhoto($event)">
+                
+                <div class="preview-container" x-show="photoPreview" x-cloak>
+                    <img :src="photoPreview" class="preview-image" alt="Aperçu">
+                    <div class="form-group">
+                        <label class="form-label">Légende de la photo</label>
+                        <input 
+                            type="text" 
+                            x-model="photoLegende" 
+                            placeholder="Description de la photo..."
+                            class="form-input"
+                            style="width: 100%; padding: 0.875rem; border: 2px solid var(--border-color); border-radius: 10px;">
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <button @click="uploadPhoto()" class="btn btn-success">
+                            <i class="fas fa-upload"></i>
+                            Envoyer la photo
+                        </button>
+                        <button @click="cancelPhoto()" class="btn btn-outline">
+                            <i class="fas fa-times"></i>
+                            Annuler
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if photos %}
+                <div class="photos-grid" style="margin-top: 2rem;">
+                    {% for photo in photos %}
+                    <div class="photo-card">
+                        <img 
+                            src="{{ photo.image.url }}" 
+                            alt="{{ photo.legende }}"
+                            class="photo-image"
+                            onclick="openLightbox('{{ photo.image.url }}')">
+                        <div class="photo-info">
+                            <p class="photo-legende">{{ photo.legende|default:"Sans légende" }}</p>
+                            <div class="photo-actions">
+                                <span class="photo-date">{{ photo.date_ajout|date:"d/m/Y H:i" }}</span>
+                                {% if contrat.status == 'en_cours' or contrat.status == 'termine' %}
+                                <button @click="supprimerPhoto({{ photo.id }})" class="btn-delete-photo">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state" style="padding: 2rem; margin-top: 2rem;">
+                    <div class="empty-state-icon">📷</div>
+                    <p>Aucune photo ajoutée pour le moment</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Tab: Historique -->
+        <div class="tab-content" id="tab-historique">
+            <div class="info-section">
+                <h3>
+                    <i class="fas fa-history"></i>
+                    Historique des actions
+                </h3>
+                {% if historique %}
+                <div class="timeline">
+                    {% for action in historique %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-header">
+                                <span class="timeline-type">{{ action.get_type_action_display }}</span>
+                                <span class="timeline-date">{{ action.date_action|date:"d/m/Y H:i" }}</span>
+                            </div>
+                            {% if action.description %}
+                            <p class="timeline-description">{{ action.description }}</p>
+                            {% endif %}
+                            {% if action.effectue_par %}
+                            <p class="timeline-user">
+                                <i class="fas fa-user"></i>
+                                Par {{ action.effectue_par.get_full_name }}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state" style="padding: 2rem;">
+                    <div class="empty-state-icon">📜</div>
+                    <p>Aucun historique disponible</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Terminer Contrat -->
+    <div class="modal-overlay" :class="{ 'active': modalTerminer }" @click.self="modalTerminer = false">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Terminer le contrat</h3>
+                <button @click="modalTerminer = false" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form @submit.prevent="terminerContrat()">
+                <div class="form-group">
+                    <label class="form-label">Notes finales (optionnel)</label>
+                    <textarea 
+                        x-model="notesFinales"
+                        class="form-textarea"
+                        placeholder="Remarques, commentaires, incidents, suggestions..."></textarea>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" @click="modalTerminer = false" class="btn btn-outline" style="flex: 1;">
+                        Annuler
+                    </button>
+                    <button type="submit" class="btn btn-danger" style="flex: 1;">
+                        <i class="fas fa-stop"></i>
+                        Terminer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox" @click="closeLightbox()">
+        <button class="lightbox-close" onclick="closeLightbox()">
+            <i class="fas fa-times"></i>
+        </button>
+        <img id="lightbox-image" class="lightbox-image" src="" alt="">
+    </div>
+</div>
+
+<script>
+// Tabs functionality
+document.querySelectorAll('.tab-button').forEach(button => {
+    button.addEventListener('click', () => {
+        const tabName = button.dataset.tab;
+        
+        // Remove active class from all buttons and contents
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        // Add active class to clicked button and corresponding content
+        button.classList.add('active');
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+    });
+});
+
+// Lightbox
+function openLightbox(imageUrl) {
+    document.getElementById('lightbox').classList.add('active');
+    document.getElementById('lightbox-image').src = imageUrl;
+}
+
+function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('active');
+}
+
+// Alpine.js data principale
+function contratDetail() {
+    return {
+        contratId: '{{ contrat.id }}',
+        rapportBoissons: `{{ contrat.rapport_boissons|escapejs }}`,
+        modalTerminer: false,
+        notesFinales: '',
+        photoPreview: null,
+        photoLegende: '',
+        photoFile: null,
+        dragOver: false,
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        },
+        
+        async commencerContrat() {
+            if (!confirm('Démarrer ce contrat maintenant ?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/maitre_hotel/contrat/${this.contratId}/commencer/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Contrat démarré avec succès !');
+                    window.location.reload();
+                } else {
+                    alert('Erreur : ' + data.error);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors du démarrage du contrat');
+            }
+        },
+        
+        ouvrirModalTerminer() {
+            this.modalTerminer = true;
+            this.notesFinales = '';
+        },
+        
+        async terminerContrat() {
+            try {
+                const response = await fetch(`/maitre_hotel/contrat/${this.contratId}/terminer/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        notes_finales: this.notesFinales
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Contrat terminé avec succès !\nDurée totale: ' + data.duree + ' heures');
+                    window.location.reload();
+                } else {
+                    alert('Erreur : ' + data.error);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la terminaison du contrat');
+            }
+        },
+        
+        async sauvegarderRapportBoissons() {
+            try {
+                const response = await fetch(`/maitre_hotel/contrat/${this.contratId}/rapport-boissons/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        rapport: this.rapportBoissons
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Rapport de boissons sauvegardé !');
+                } else {
+                    alert('Erreur lors de la sauvegarde');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la sauvegarde');
+            }
+        },
+        
+        previewPhoto(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.photoFile = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.photoPreview = e.target.result;
+                    document.querySelector('.preview-container').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        },
+        
+        handleDrop(event) {
+            this.dragOver = false;
+            const file = event.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                this.photoFile = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.photoPreview = e.target.result;
+                    document.querySelector('.preview-container').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        },
+        
+        async uploadPhoto() {
+            if (!this.photoFile) {
+                alert('Aucune photo sélectionnée');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('image', this.photoFile);
+            formData.append('legende', this.photoLegende);
+            
+            try {
+                const response = await fetch(`/maitre_hotel/contrat/${this.contratId}/ajouter-photo/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Photo ajoutée avec succès !');
+                    window.location.reload();
+                } else {
+                    alert('Erreur : ' + data.error);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de l\'upload de la photo');
+            }
+        },
+        
+        cancelPhoto() {
+            this.photoPreview = null;
+            this.photoLegende = '';
+            this.photoFile = null;
+            document.getElementById('photoInput').value = '';
+            document.querySelector('.preview-container').style.display = 'none';
+        },
+        
+        async supprimerPhoto(photoId) {
+            if (!confirm('Supprimer cette photo ?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/maitre_hotel/photo/${photoId}/supprimer/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Photo supprimée');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la suppression');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la suppression');
+            }
+        }
+    }
+}
+
+// Alpine.js data pour les livreurs (API)
+function livreursData() {
+    return {
+        livreurs: [],
+        loading: true,
+        error: null,
+        
+        async chargerLivreurs() {
+            try {
+                this.loading = true;
+                this.error = null;
+                
+                const response = await fetch(`/maitre_hotel/api/contrat/{{ contrat.id }}/livreurs/`);
+                
+                if (!response.ok) {
+                    throw new Error('Erreur lors du chargement des livreurs');
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.livreurs = data.livreurs;
+                } else {
+                    this.error = data.error || 'Erreur inconnue';
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                this.error = 'Impossible de charger les informations des livreurs';
+            } finally {
+                this.loading = false;
+            }
+        }
+    }
+}
+
+// Update durée en cours
+{% if contrat.status == 'en_cours' and contrat.heure_debut_reelle %}
+function updateDuree() {
+    const debut = new Date('{{ contrat.heure_debut_reelle|date:"c" }}');
+    const maintenant = new Date();
+    const diff = maintenant - debut;
+    
+    const heures = Math.floor(diff / 3600000);
+    const minutes = Math.floor((diff % 3600000) / 60000);
+    
+    const element = document.getElementById('duree-en-cours');
+    if (element) {
+        element.textContent = `${heures}h ${minutes}min`;
+    }
+}
+
+updateDuree();
+setInterval(updateDuree, 60000); // Update every minute
+{% endif %}
+</script>
+{% endblock %}

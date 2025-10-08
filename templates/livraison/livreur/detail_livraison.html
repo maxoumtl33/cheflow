@@ -1,0 +1,922 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Détail Livraison{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100" x-data="livraisonDetail()">
+    
+    <!-- Header sticky -->
+    <div class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex-1 min-w-0">
+                    <h1 class="text-xl font-bold text-slate-900 truncate">
+                        {% if livraison.nom_evenement %}
+                            {{ livraison.nom_evenement }}
+                        {% else %}
+                            Livraison
+                        {% endif %}
+                    </h1>
+                    <p class="text-sm text-slate-600">Détails de la livraison</p>
+                </div>
+                <a href="{% url 'livraison:livraisons_route' route.id %}" 
+                   class="ml-3 flex-shrink-0 bg-slate-500 hover:bg-slate-600 text-white px-4 py-2 rounded-xl transition text-sm font-medium">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenu principal -->
+    <div class="max-w-7xl mx-auto px-4 py-6 pb-24">
+        
+        <!-- Statut -->
+        <div class="bg-white rounded-2xl shadow-lg p-5 mb-4">
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-slate-600">Statut actuel</span>
+                <span class="px-4 py-2 rounded-full text-sm font-bold
+                    {% if livraison.status == 'livree' %}bg-green-100 text-green-800
+                    {% elif livraison.status == 'en_cours' %}bg-blue-100 text-blue-800
+                    {% elif livraison.status == 'assignee' %}bg-orange-100 text-orange-800
+                    {% else %}bg-slate-100 text-slate-800{% endif %}">
+                    <i class="fas fa-circle text-xs mr-1"></i>
+                    {{ livraison.get_status_display }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Informations de livraison -->
+        <div class="bg-white rounded-2xl shadow-lg p-5 mb-4">
+            <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i class="fas fa-info-circle text-blue-600"></i>
+                Informations
+            </h2>
+            
+            <div class="space-y-4">
+                <!-- Adresse -->
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-map-marker-alt text-blue-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs text-slate-600 mb-1">Adresse de livraison</p>
+                        <p class="text-base font-semibold text-slate-900">
+                            {{ livraison.adresse_complete }}
+                        </p>
+                        {% if livraison.ligne_adresse_2 %}
+                        <p class="text-sm text-slate-600 mt-1">{{ livraison.ligne_adresse_2 }}</p>
+                        {% endif %}
+                        {% if livraison.app %}
+                        <p class="text-sm text-slate-600">App. {{ livraison.app }}</p>
+                        {% endif %}
+                        <p class="text-sm text-slate-600">{{ livraison.code_postal }} {{ livraison.ville }}</p>
+                        <a href="https://maps.google.com/?q={{ livraison.adresse_complete|urlencode }}" 
+                           target="_blank"
+                           class="text-sm text-blue-600 hover:underline mt-2 inline-block">
+                            <i class="fas fa-directions"></i> Ouvrir dans Maps
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Client -->
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-user text-purple-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs text-slate-600 mb-1">Client</p>
+                        <p class="text-base font-semibold text-slate-900">
+                            {{ livraison.client_nom }}
+                        </p>
+                        {% if livraison.contact_sur_site %}
+                        <p class="text-sm text-slate-600">Contact: {{ livraison.contact_sur_site }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Période et heure -->
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-clock text-orange-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs text-slate-600 mb-1">Horaire</p>
+                        <p class="text-base font-semibold text-slate-900">
+                            {{ livraison.get_periode_display }}
+                            {% if livraison.heure_souhaitee %} - {{ livraison.heure_souhaitee|time:"H:i" }}{% endif %}
+                        </p>
+                        <p class="text-sm text-slate-600">{{ livraison.date_livraison|date:"l d F Y" }}</p>
+                    </div>
+                </div>
+
+                <!-- Téléphone -->
+                {% if livraison.client_telephone %}
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-phone text-green-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs text-slate-600 mb-1">Téléphone</p>
+                        <a href="tel:{{ livraison.client_telephone }}" 
+                           class="text-base font-semibold text-green-600 hover:underline">
+                            {{ livraison.client_telephone }}
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Nombre de convives -->
+                {% if livraison.nb_convives %}
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-users text-indigo-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs text-slate-600 mb-1">Nombre de convives</p>
+                        <p class="text-base font-semibold text-slate-900">
+                            {{ livraison.nb_convives }} personne{{ livraison.nb_convives|pluralize }}
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Mode d'envoi -->
+                {% if livraison.mode_envoi %}
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-truck text-teal-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs text-slate-600 mb-1">Mode d'envoi</p>
+                        <p class="text-base font-semibold text-slate-900">
+                            {{ livraison.mode_envoi.nom }}
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Besoins spécifiques + Checklist -->
+        {% if livraison.besoin_cafe or livraison.besoin_the or livraison.besoin_sac_glace or livraison.besoin_part_chaud or livraison.autres_besoins or livraison.checklist %}
+        <div class="bg-white rounded-2xl shadow-lg p-5 mb-4">
+            <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i class="fas fa-exclamation-triangle text-amber-600"></i>
+                Besoins spécifiques
+            </h2>
+            
+            <div class="flex flex-wrap gap-2">
+                {% if livraison.besoin_cafe %}
+                <span class="px-4 py-2 bg-amber-100 text-amber-800 rounded-xl text-sm font-medium">
+                    <i class="fas fa-coffee"></i> Café
+                </span>
+                {% endif %}
+                {% if livraison.besoin_the %}
+                <span class="px-4 py-2 bg-green-100 text-green-800 rounded-xl text-sm font-medium">
+                    <i class="fas fa-mug-hot"></i> Thé
+                </span>
+                {% endif %}
+                {% if livraison.besoin_sac_glace %}
+                <span class="px-4 py-2 bg-blue-100 text-blue-800 rounded-xl text-sm font-medium">
+                    <i class="fas fa-snowflake"></i> Sac de glace
+                </span>
+                {% endif %}
+                {% if livraison.besoin_part_chaud %}
+                <span class="px-4 py-2 bg-red-100 text-red-800 rounded-xl text-sm font-medium">
+                    <i class="fas fa-fire"></i> Part chaud
+                </span>
+                {% endif %}
+                {% if livraison.autres_besoins %}
+                <span class="px-4 py-2 bg-purple-100 text-purple-800 rounded-xl text-sm font-medium">
+                    <i class="fas fa-plus"></i> {{ livraison.autres_besoins }}
+                </span>
+                {% endif %}
+                
+                <!-- Badge Checklist -->
+                {% if livraison.checklist %}
+                <span class="px-4 py-2 bg-purple-100 text-purple-800 rounded-xl text-sm font-medium">
+                    <i class="fas fa-list-check"></i> Checklist
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Section Checklist détaillée (si existe) -->
+{% if livraison.checklist %}
+<div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl shadow-lg p-5 mb-4 border-2 border-purple-200">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-purple-900 flex items-center gap-2">
+            <i class="fas fa-list-check"></i>
+            Checklist associée
+        </h2>
+        <span class="px-3 py-1 rounded-full text-xs font-semibold
+            {% if livraison.checklist.status == 'validee' %}bg-green-100 text-green-800
+            {% elif livraison.checklist.status == 'en_cours' %}bg-orange-100 text-orange-800
+            {% elif livraison.checklist.status == 'incomplete' %}bg-red-100 text-red-800
+            {% else %}bg-purple-100 text-purple-800{% endif %}">
+            {{ livraison.checklist.get_status_display }}
+        </span>
+    </div>
+    
+    <div class="bg-white rounded-xl p-4 mb-3">
+        <div class="flex items-start gap-3 mb-3">
+            <div class="w-10 h-10 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-clipboard-list text-purple-700"></i>
+            </div>
+            <div class="flex-1">
+                <p class="text-sm font-bold text-slate-900">{{ livraison.checklist.nom }}</p>
+                <p class="text-xs text-slate-600">N° Commande: {{ livraison.checklist.numero_commande }}</p>
+                {% if livraison.checklist.date_evenement %}
+                <p class="text-xs text-slate-600">
+                    <i class="fas fa-calendar"></i> {{ livraison.checklist.date_evenement|date:"d/m/Y" }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Barre de progression de la checklist -->
+        {% if livraison.checklist.items.all %}
+        <div class="mb-3">
+            <div class="flex justify-between text-xs text-slate-600 mb-1">
+                <span>Items validés</span>
+                <span class="font-semibold">{{ livraison.checklist.progression }}%</span>
+            </div>
+            <div class="h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-500" 
+                     style="width: {{ livraison.checklist.progression }}%"></div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- NOUVEAU: Informations du Maître d'Hôtel -->
+    {% if livraison.contrat and livraison.contrat.maitre_hotel %}
+    <div class="bg-gradient-to-r from-indigo-50 to-blue-50 border-2 border-indigo-200 rounded-xl p-4 mb-3">
+        <div class="flex items-center gap-2 mb-3">
+            <div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-concierge-bell text-white text-lg"></i>
+            </div>
+            <div>
+                <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wide">Maître d'Hôtel</p>
+                <p class="text-sm font-bold text-indigo-900">Contrat: {{ livraison.contrat.numero_contrat }}</p>
+            </div>
+        </div>
+        
+        <!-- Carte du maître d'hôtel -->
+        <div class="bg-white rounded-lg p-3 border border-indigo-200">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                    <span class="text-white font-bold text-lg">
+                        {{ livraison.contrat.maitre_hotel.first_name.0|default:"M" }}{{ livraison.contrat.maitre_hotel.last_name.0|default:"H" }}
+                    </span>
+                </div>
+                <div class="flex-1">
+                    <p class="text-base font-bold text-slate-900">
+                        {{ livraison.contrat.maitre_hotel.get_full_name }}
+                    </p>
+                    <p class="text-xs text-slate-500">{{ livraison.contrat.maitre_hotel.get_role_display }}</p>
+                </div>
+            </div>
+            
+            <!-- Contact -->
+            <div class="space-y-2 mt-3">
+                {% if livraison.contrat.maitre_hotel.telephone %}
+                <div class="flex items-center justify-between p-2 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-phone text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-green-600 font-medium">Téléphone</p>
+                            <a href="tel:{{ livraison.contrat.maitre_hotel.telephone }}" 
+                               class="text-sm font-bold text-green-900">
+                                {{ livraison.contrat.maitre_hotel.telephone }}
+                            </a>
+                        </div>
+                    </div>
+                    <a href="tel:{{ livraison.contrat.maitre_hotel.telephone }}" 
+                       class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-xs font-bold transition shadow-sm">
+                        <i class="fas fa-phone-alt"></i> Appeler
+                    </a>
+                </div>
+                {% else %}
+                <div class="flex items-center gap-2 p-2 bg-amber-50 rounded-lg border border-amber-200">
+                    <div class="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-phone-slash text-white text-sm"></i>
+                    </div>
+                    <p class="text-xs text-amber-700 italic">Téléphone non renseigné</p>
+                </div>
+                {% endif %}
+                
+                
+            </div>
+        </div>
+        
+       
+    </div>
+    {% elif livraison.contrat %}
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+        <div class="flex items-center gap-2">
+            <i class="fas fa-exclamation-triangle text-amber-600"></i>
+            <p class="text-sm text-amber-800">
+                <strong>Contrat {{ livraison.contrat.numero_contrat }}</strong> - Aucun maître d'hôtel assigné
+            </p>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Liste des items (dépliable) - RESTE INCHANGÉ -->
+    {% if livraison.checklist.items.all %}
+    <div x-data="{ itemsOpen: false }" class="mb-3">
+        <button @click="itemsOpen = !itemsOpen"
+                class="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-purple-50 rounded-lg transition">
+            <span class="text-sm font-semibold text-purple-900">
+                <i class="fas fa-boxes mr-2"></i>
+                Items ({{ livraison.checklist.items.count }})
+            </span>
+            <svg class="w-5 h-5 text-purple-600 transition-transform duration-200" 
+                 :class="{ 'rotate-180': itemsOpen }"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+        
+        <div x-show="itemsOpen" 
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 transform scale-95"
+             x-transition:enter-end="opacity-100 transform scale-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 transform scale-100"
+             x-transition:leave-end="opacity-0 transform scale-95"
+             class="mt-2 space-y-2 max-h-96 overflow-y-auto">
+            {% for item in livraison.checklist.items.all %}
+            <div class="bg-white rounded-lg p-3 flex items-center gap-3 border-l-4
+                {% if item.statut_verification == 'valide' %}border-green-500
+                {% elif item.statut_verification == 'refuse' %}border-red-500
+                {% else %}border-slate-300{% endif %}">
+                <div class="flex-shrink-0">
+                    {% if item.statut_verification == 'valide' %}
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                    {% elif item.statut_verification == 'refuse' %}
+                    <i class="fas fa-times-circle text-red-600 text-xl"></i>
+                    {% else %}
+                    <i class="far fa-circle text-slate-400 text-xl"></i>
+                    {% endif %}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-slate-900">{{ item.objet.nom }}</p>
+                    <div class="flex items-center gap-3 mt-1">
+                        <span class="text-xs text-slate-600">
+                            <i class="fas fa-hashtag"></i> Qté: {{ item.quantite }}
+                        </span>
+                        {% if item.objet.categorie %}
+                        <span class="text-xs text-slate-600">
+                            <i class="fas fa-tag"></i> {{ item.objet.categorie }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% if item.notes %}
+                    <p class="text-xs text-slate-500 mt-1 italic">{{ item.notes }}</p>
+                    {% endif %}
+                </div>
+                <span class="flex-shrink-0 px-2 py-1 rounded-full text-xs font-medium
+                    {% if item.statut_verification == 'valide' %}bg-green-100 text-green-700
+                    {% elif item.statut_verification == 'refuse' %}bg-red-100 text-red-700
+                    {% else %}bg-slate-100 text-slate-600{% endif %}">
+                    {{ item.get_statut_verification_display }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Notes de la checklist - RESTE INCHANGÉ -->
+    {% if livraison.checklist.notes %}
+    <div class="bg-purple-100 border border-purple-300 rounded-lg p-3 mb-3">
+        <p class="text-xs font-semibold text-purple-900 mb-1">
+            <i class="fas fa-sticky-note"></i> Notes
+        </p>
+        <p class="text-sm text-purple-800">{{ livraison.checklist.notes }}</p>
+    </div>
+    {% endif %}
+    
+    <!-- Notes du vérificateur - RESTE INCHANGÉ -->
+    {% if livraison.checklist.notes_verificateur %}
+    <div class="bg-amber-100 border border-amber-300 rounded-lg p-3 mb-3">
+        <p class="text-xs font-semibold text-amber-900 mb-1">
+            <i class="fas fa-user-check"></i> Notes du vérificateur
+        </p>
+        <p class="text-sm text-amber-800">{{ livraison.checklist.notes_verificateur }}</p>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+        <!-- Informations supplémentaires -->
+        {% if livraison.informations_supplementaires %}
+        <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 mb-4">
+            <h2 class="text-base font-bold text-amber-900 mb-2 flex items-center gap-2">
+                <i class="fas fa-sticky-note"></i>
+                Notes importantes
+            </h2>
+            <p class="text-sm text-amber-800">{{ livraison.informations_supplementaires }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Photo de livraison -->
+        <div class="bg-white rounded-2xl shadow-lg p-5 mb-4">
+            <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i class="fas fa-camera text-purple-600"></i>
+                Photos de livraison
+                <span class="text-sm font-normal text-slate-500">({{ livraison.photos.count }}/5)</span>
+            </h2>
+            
+            <!-- Grille des photos existantes -->
+            {% if livraison.photos.all %}
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                {% for photo in livraison.photos.all %}
+                <div class="relative group">
+                    <img src="{{ photo.image.url }}" 
+                         alt="Photo {{ forloop.counter }}" 
+                         class="w-full h-40 object-cover rounded-xl border-2 border-slate-200">
+                    <button type="button"
+                            @click="deletePhoto({{ photo.id }})"
+                            class="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full opacity-0 group-hover:opacity-100 transition">
+                        <i class="fas fa-trash text-sm"></i>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Prévisualisations des nouvelles photos -->
+            <div x-show="photoPreviews.length > 0" class="grid grid-cols-2 gap-3 mb-4">
+                <template x-for="(preview, index) in photoPreviews" :key="index">
+                    <div class="relative">
+                        <img :src="preview" 
+                             class="w-full h-40 object-cover rounded-xl border-4 border-green-500">
+                        <button type="button"
+                                @click="removePreview(index)"
+                                class="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full">
+                            <i class="fas fa-times text-sm"></i>
+                        </button>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Formulaire upload -->
+            <form method="post" 
+                  action="{% url 'livraison:prendre_photo' livraison.id %}" 
+                  enctype="multipart/form-data" 
+                  id="photoForm"
+                  @submit="compressAndSubmit($event)">
+                {% csrf_token %}
+                
+                <input type="file" 
+                       name="photos" 
+                       id="galleryInput"
+                       accept="image/*"
+                       multiple
+                       :disabled="({{ livraison.photos.count }} + photoPreviews.length) >= 5"
+                       class="hidden"
+                       @change="handlePhotos($event)">
+                
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <!-- Bouton Caméra -->
+                    <label class="block bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-4 py-4 rounded-xl font-bold text-center cursor-pointer transition shadow-lg shadow-purple-500/30 transform active:scale-95"
+                           :class="({{ livraison.photos.count }} + photoPreviews.length) >= 5 ? 'opacity-50 cursor-not-allowed' : ''">
+                        <input type="file" 
+                               accept="image/*" 
+                               capture="environment"
+                               :disabled="({{ livraison.photos.count }} + photoPreviews.length) >= 5"
+                               class="hidden"
+                               @change="handlePhotos($event)">
+                        <i class="fas fa-camera text-lg block mb-1"></i>
+                        <span class="text-sm">Prendre</span>
+                    </label>
+                    
+                    <!-- Bouton Galerie -->
+                    <label for="galleryInput" 
+                           class="block bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-4 rounded-xl font-bold text-center cursor-pointer transition shadow-lg shadow-blue-500/30 transform active:scale-95"
+                           :class="({{ livraison.photos.count }} + photoPreviews.length) >= 5 ? 'opacity-50 cursor-not-allowed' : ''">
+                        <i class="fas fa-images text-lg block mb-1"></i>
+                        <span class="text-sm">Galerie (5 max)</span>
+                    </label>
+                </div>
+                
+                <button type="submit" 
+                        x-show="photoPreviews.length > 0"
+                        :disabled="uploading"
+                        class="w-full bg-green-600 hover:bg-green-700 disabled:bg-slate-400 text-white px-6 py-3 rounded-xl font-bold transition">
+                    <span x-show="!uploading">
+                        <i class="fas fa-save"></i> Enregistrer <span x-text="photoPreviews.length"></span> photo(s)
+                    </span>
+                    <span x-show="uploading">
+                        <i class="fas fa-spinner fa-spin"></i> Upload en cours...
+                    </span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Signature -->
+        {% if livraison.status != 'livree' %}
+        <div class="bg-white rounded-2xl shadow-lg p-5 mb-4">
+            <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i class="fas fa-signature text-blue-600"></i>
+                Signature du client
+            </h2>
+            
+            {% if livraison.signature_client %}
+            <div class="mb-4">
+                <img src="{{ livraison.signature_client.url }}" 
+                     alt="Signature" 
+                     class="w-full h-48 object-contain bg-slate-50 border-2 border-slate-200 rounded-xl">
+                {% if livraison.nom_signataire %}
+                <p class="text-center text-sm text-slate-600 mt-2">
+                    Signé par: <strong>{{ livraison.nom_signataire }}</strong>
+                </p>
+                {% endif %}
+                <p class="text-center text-sm text-green-600 font-semibold mt-2">
+                    <i class="fas fa-check-circle"></i> Signature enregistrée
+                </p>
+            </div>
+            {% else %}
+            <!-- Champ nom du signataire -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">
+                    <i class="fas fa-user-edit"></i> Nom du signataire
+                </label>
+                <input type="text" 
+                       x-model="nomSignataire"
+                       placeholder="Entrez le nom du signataire"
+                       class="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition">
+            </div>
+            
+            <!-- Canvas signature -->
+            <div class="bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl p-8 mb-4">
+                <canvas id="signatureCanvas" 
+                        class="w-full h-48 bg-white rounded-lg border-2 border-slate-200 touch-none"
+                        @touchstart.prevent="startDrawing($event)"
+                        @touchmove.prevent="draw($event)"
+                        @touchend.prevent="stopDrawing()"
+                        @mousedown.prevent="startDrawing($event)"
+                        @mousemove.prevent="draw($event)"
+                        @mouseup.prevent="stopDrawing()">
+                </canvas>
+                <p class="text-center text-sm text-slate-600 mt-3">
+                    <i class="fas fa-hand-pointer"></i> Signez avec votre doigt
+                </p>
+            </div>
+            
+            <div class="flex gap-2 mb-4">
+                <button type="button" 
+                        @click="clearSignature()"
+                        class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-3 rounded-xl font-medium transition">
+                    <i class="fas fa-eraser"></i> Effacer
+                </button>
+                <button type="button" 
+                        @click="saveSignature()"
+                        :disabled="!nomSignataire || nomSignataire.trim() === ''"
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white px-4 py-3 rounded-xl font-bold transition">
+                    <i class="fas fa-save"></i> Enregistrer
+                </button>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Bouton de validation fixe en bas (Swipe to validate) -->
+    {% if livraison.status != 'livree' and livraison.signature_client and livraison.nom_signataire and livraison.photos.count > 0 %}
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-slate-200 p-4 z-40">
+        <div class="max-w-7xl mx-auto">
+            <div class="relative bg-gradient-to-r from-green-500 to-green-600 rounded-2xl overflow-hidden h-16 shadow-lg">
+                <div class="absolute inset-0 flex items-center justify-center text-white font-bold text-lg pointer-events-none">
+                    <span x-show="!swiped">
+                        <i class="fas fa-arrow-right mr-2"></i>
+                        Glissez pour valider
+                    </span>
+                    <span x-show="swiped" class="text-2xl">
+                        <i class="fas fa-check-circle"></i>
+                    </span>
+                </div>
+                
+                <div class="absolute inset-y-0 left-0" 
+                     :style="`width: ${swipeProgress}%`"
+                     :class="swipeProgress >= 100 ? 'bg-green-700' : 'bg-green-400/30'">
+                </div>
+                
+                <div class="absolute inset-y-2 left-2"
+                     @touchstart.prevent="startSwipe($event)"
+                     @touchmove.prevent="moveSwipe($event)"
+                     @touchend.prevent="endSwipe()"
+                     @mousedown.prevent="startSwipe($event)"
+                     @mousemove.prevent="moveSwipe($event)"
+                     @mouseup.prevent="endSwipe()">
+                    <div class="w-12 h-12 bg-white rounded-xl shadow-lg flex items-center justify-center transform transition-transform"
+                         :style="`transform: translateX(${swipeOffset}px)`">
+                        <i class="fas fa-chevron-right text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function livraisonDetail() {
+    return {
+        showPhoto: false,
+        photoPreviews: [],
+        photoFiles: [],
+        uploading: false,
+        nomSignataire: '',
+        
+        canvas: null,
+        ctx: null,
+        isDrawing: false,
+        lastX: 0,
+        lastY: 0,
+        
+        swipeStartX: 0,
+        swipeOffset: 0,
+        swipeProgress: 0,
+        swiped: false,
+        isSwipeActive: false,
+        
+        init() {
+            this.canvas = document.getElementById('signatureCanvas');
+            if (this.canvas) {
+                this.ctx = this.canvas.getContext('2d');
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+        },
+        
+        resizeCanvas() {
+            const rect = this.canvas.getBoundingClientRect();
+            this.canvas.width = rect.width;
+            this.canvas.height = rect.height;
+            this.ctx.strokeStyle = '#1e293b';
+            this.ctx.lineWidth = 2;
+            this.ctx.lineCap = 'round';
+            this.ctx.lineJoin = 'round';
+        },
+        
+        getEventCoords(e) {
+            const rect = this.canvas.getBoundingClientRect();
+            const touch = e.touches ? e.touches[0] : e;
+            return {
+                x: touch.clientX - rect.left,
+                y: touch.clientY - rect.top
+            };
+        },
+        
+        startDrawing(e) {
+            this.isDrawing = true;
+            const coords = this.getEventCoords(e);
+            this.lastX = coords.x;
+            this.lastY = coords.y;
+        },
+        
+        draw(e) {
+            if (!this.isDrawing) return;
+            const coords = this.getEventCoords(e);
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.lastX, this.lastY);
+            this.ctx.lineTo(coords.x, coords.y);
+            this.ctx.stroke();
+            this.lastX = coords.x;
+            this.lastY = coords.y;
+        },
+        
+        stopDrawing() {
+            this.isDrawing = false;
+        },
+        
+        clearSignature() {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        },
+        
+        async saveSignature() {
+            if (!this.nomSignataire || this.nomSignataire.trim() === '') {
+                alert('Veuillez entrer le nom du signataire');
+                return;
+            }
+            
+            const dataUrl = this.canvas.toDataURL('image/png');
+            try {
+                const response = await fetch('{% url "livraison:sauvegarder_signature" livraison.id %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ 
+                        signature: dataUrl,
+                        nom_signataire: this.nomSignataire.trim()
+                    })
+                });
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de l\'enregistrement');
+                }
+            } catch (error) {
+                alert('Erreur réseau');
+            }
+        },
+        
+        handlePhotos(event) {
+            const files = Array.from(event.target.files);
+            const currentTotal = {{ livraison.photos.count }} + this.photoPreviews.length;
+            const maxPhotos = 5;
+            const availableSlots = maxPhotos - currentTotal;
+            
+            if (availableSlots <= 0) {
+                alert('Maximum 5 photos atteintes');
+                event.target.value = '';
+                return;
+            }
+            
+            const filesToAdd = files.slice(0, availableSlots);
+            
+            if (files.length > availableSlots) {
+                alert(`Seulement ${availableSlots} photo(s) peuvent être ajoutée(s)`);
+            }
+            
+            filesToAdd.forEach(file => {
+                this.photoFiles.push(file);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.photoPreviews.push(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            });
+            
+            event.target.value = '';
+        },
+        
+        removePreview(index) {
+            this.photoPreviews.splice(index, 1);
+            this.photoFiles.splice(index, 1);
+        },
+        
+        async deletePhoto(photoId) {
+            if (!confirm('Supprimer cette photo ?')) return;
+            
+            try {
+                const response = await fetch(`/livraison/livreur/photo/${photoId}/supprimer/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': this.getCookie('csrftoken') }
+                });
+                
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la suppression');
+                }
+            } catch (error) {
+                alert('Erreur réseau');
+            }
+        },
+        
+        async compressAndSubmit(event) {
+            event.preventDefault();
+            if (this.photoFiles.length === 0) return;
+            
+            this.uploading = true;
+            
+            try {
+                const formData = new FormData();
+                
+                // Compresser et ajouter chaque photo
+                for (let i = 0; i < this.photoFiles.length; i++) {
+                    const compressed = await this.compressImage(this.photoFiles[i]);
+                    formData.append('photos', compressed, `photo_${i}.jpg`);
+                }
+                
+                formData.append('csrfmiddlewaretoken', this.getCookie('csrftoken'));
+                
+                const response = await fetch(event.target.action, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de l\'upload');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur de compression');
+            } finally {
+                this.uploading = false;
+            }
+        },
+        
+        compressImage(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const maxSize = 1200;
+                        
+                        if (width > height && width > maxSize) {
+                            height = (height * maxSize) / width;
+                            width = maxSize;
+                        } else if (height > maxSize) {
+                            width = (width * maxSize) / height;
+                            height = maxSize;
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        canvas.toBlob((blob) => {
+                            resolve(blob);
+                        }, 'image/jpeg', 0.7);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        },
+        
+        startSwipe(e) {
+            this.isSwipeActive = true;
+            const touch = e.touches ? e.touches[0] : e;
+            this.swipeStartX = touch.clientX;
+        },
+        
+        moveSwipe(e) {
+            if (!this.isSwipeActive) return;
+            const touch = e.touches ? e.touches[0] : e;
+            const maxSwipe = window.innerWidth - 80;
+            const currentOffset = Math.max(0, Math.min(maxSwipe, touch.clientX - this.swipeStartX));
+            this.swipeOffset = currentOffset;
+            this.swipeProgress = (currentOffset / maxSwipe) * 100;
+        },
+        
+        async endSwipe() {
+            if (this.swipeProgress >= 90) {
+                this.swiped = true;
+                this.swipeProgress = 100;
+                try {
+                    const response = await fetch('{% url "livraison:marquer_livree" livraison.id %}', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': this.getCookie('csrftoken') }
+                    });
+                    if (response.ok) {
+                        setTimeout(() => {
+                            window.location.href = '{% url "livraison:livraisons_route" route.id %}';
+                        }, 500);
+                    } else {
+                        alert('Erreur validation');
+                        this.resetSwipe();
+                    }
+                } catch (error) {
+                    alert('Erreur réseau');
+                    this.resetSwipe();
+                }
+            } else {
+                this.resetSwipe();
+            }
+        },
+        
+        resetSwipe() {
+            this.swipeOffset = 0;
+            this.swipeProgress = 0;
+            this.isSwipeActive = false;
+            this.swiped = false;
+        },
+        
+        getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    }
+}
+</script>
+{% endblock %}

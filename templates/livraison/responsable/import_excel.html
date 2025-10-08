@@ -1,0 +1,747 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Import Excel - Livraisons{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #6366f1;
+        --primary-hover: #4f46e5;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --bg-light: #f9fafb;
+        --border-color: #e5e7eb;
+        --text-dark: #1f2937;
+        --text-light: #6b7280;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .dashboard-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    .header-section {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--primary-color);
+        font-weight: 600;
+        text-decoration: none;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .back-link:hover {
+        color: var(--primary-hover);
+        gap: 0.75rem;
+    }
+
+    .header-title h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .header-subtitle {
+        color: var(--text-light);
+        font-size: 0.95rem;
+    }
+
+    .upload-section {
+        background: white;
+        border-radius: 20px;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .drop-zone {
+        border: 3px dashed var(--border-color);
+        border-radius: 16px;
+        padding: 4rem 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .drop-zone.drag-over {
+        border-color: var(--primary-color);
+        background: #eff6ff;
+    }
+
+    .drop-zone-icon {
+        font-size: 4rem;
+        color: var(--success-color);
+        margin-bottom: 1.5rem;
+    }
+
+    .drop-zone-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 0.75rem;
+    }
+
+    .drop-zone-subtitle {
+        color: var(--text-light);
+        margin-bottom: 2rem;
+    }
+
+    .btn {
+        padding: 0.875rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+        color: white;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, var(--success-color), #059669);
+        color: white;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-success:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-success:disabled {
+        background: linear-gradient(135deg, #9ca3af, #6b7280);
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .file-name {
+        font-size: 0.875rem;
+        color: var(--text-light);
+        margin-top: 1.5rem;
+        font-weight: 500;
+    }
+
+    .info-box {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .info-box-title {
+        font-weight: 700;
+        color: #1e40af;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .info-box ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .info-box li {
+        color: #1e40af;
+        padding: 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 1.25rem;
+        font-size: 1rem;
+        margin-top: 2rem;
+    }
+
+    .progress-section {
+        text-align: center;
+    }
+
+    .progress-icon-wrapper {
+        display: inline-flex;
+        padding: 1.5rem;
+        background: #eff6ff;
+        border-radius: 50%;
+        margin-bottom: 1.5rem;
+    }
+
+    .progress-icon {
+        font-size: 3rem;
+        color: var(--primary-color);
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .progress-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 0.75rem;
+    }
+
+    .progress-message {
+        color: var(--text-light);
+        margin-bottom: 2rem;
+    }
+
+    .progress-bar-container {
+        width: 100%;
+        height: 2rem;
+        background: var(--bg-light);
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+        border-radius: 12px;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 0.875rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+    }
+
+    .stat-card.blue {
+        background: #eff6ff;
+    }
+
+    .stat-card.green {
+        background: #ecfdf5;
+    }
+
+    .stat-card.orange {
+        background: #fff7ed;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .stat-value.blue {
+        color: #1e40af;
+    }
+
+    .stat-value.green {
+        color: #065f46;
+    }
+
+    .stat-value.orange {
+        color: #92400e;
+    }
+
+    .history-section {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .history-header {
+        padding: 1.5rem;
+        background: var(--bg-light);
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .history-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .history-table thead {
+        background: var(--bg-light);
+    }
+
+    .history-table th {
+        padding: 1rem 1.5rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-light);
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .history-table td {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.875rem;
+    }
+
+    .history-table tr:hover {
+        background: var(--bg-light);
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 0.375rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .badge-success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge-danger {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .badge-gray {
+        background: var(--bg-light);
+        color: var(--text-dark);
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 0 1rem;
+            margin: 1rem auto;
+        }
+
+        .header-section,
+        .upload-section {
+            padding: 1.5rem;
+        }
+
+        .header-title h2 {
+            font-size: 1.5rem;
+        }
+
+        .drop-zone {
+            padding: 3rem 1rem;
+        }
+
+        .drop-zone-title {
+            font-size: 1.25rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .history-table {
+            font-size: 0.75rem;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 0.75rem 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    
+    <div class="header-section">
+        <a href="{% url 'livraison:dashboard_responsable' %}" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Retour au dashboard
+        </a>
+        
+        <div class="header-title">
+            <h2>Import de livraisons Excel</h2>
+            <p class="header-subtitle">Importez vos livraisons depuis un fichier Excel</p>
+        </div>
+    </div>
+    
+    <!-- Zone d'upload -->
+    <div class="upload-section" x-data="importData()">
+        
+        <!-- Formulaire (visible par défaut) -->
+        <div x-show="!importing">
+            <form method="post" 
+                  enctype="multipart/form-data" 
+                  @submit.prevent="startImport($event)">
+                
+                {% csrf_token %}
+                
+                <div :class="dragOver ? 'drag-over' : ''"
+                     class="drop-zone"
+                     @dragover.prevent="dragOver = true"
+                     @dragleave.prevent="dragOver = false"
+                     @drop.prevent="handleDrop($event)">
+                    
+                    <div class="drop-zone-icon">
+                        <i class="fas fa-file-excel"></i>
+                    </div>
+                    
+                    <h3 class="drop-zone-title">
+                        Glissez votre fichier Excel ici
+                    </h3>
+                    <p class="drop-zone-subtitle">
+                        ou cliquez pour sélectionner un fichier
+                    </p>
+                    
+                    <input type="file" 
+                           name="fichier_excel" 
+                           id="fichier_excel"
+                           x-ref="fileInput"
+                           accept=".xlsx,.xls"
+                           class="hidden"
+                           @change="fileSelected($event)">
+                    
+                    <label for="fichier_excel" class="btn btn-primary">
+                        <i class="fas fa-upload"></i>
+                        Choisir un fichier
+                    </label>
+                    
+                    <p class="file-name" x-text="fileName"></p>
+                </div>
+                
+                <div class="info-box">
+                    <h4 class="info-box-title">
+                        <i class="fas fa-info-circle"></i>
+                        Création des livraisons
+                    </h4>
+                    <ul>
+                        <li>✅ Import des livraisons</li>
+                        <li>✅ Géocodage automatique des adresses</li>
+                    </ul>
+                </div>
+                
+                <button type="submit" 
+                        :disabled="!selectedFile"
+                        :class="selectedFile ? 'btn-success' : ''"
+                        class="btn submit-btn">
+                    <i class="fas fa-check-circle"></i>
+                    Lancer l'import
+                </button>
+            </form>
+        </div>
+        
+        <!-- Barre de progression (cachée par défaut) -->
+        <div x-show="importing" x-cloak class="progress-section">
+            <div class="progress-icon-wrapper">
+                <i class="fas fa-spinner progress-icon"></i>
+            </div>
+            <h3 class="progress-title">Import en cours...</h3>
+            <p class="progress-message" x-text="progressMessage"></p>
+            
+            <!-- Barre de progression -->
+            <div class="progress-bar-container">
+                <div class="progress-bar"
+                     :style="`width: ${progress}%`"
+                     x-text="`${progress}%`"></div>
+            </div>
+            
+            <!-- Statistiques en temps réel -->
+            <div class="stats-grid">
+                <div class="stat-card blue">
+                    <p class="stat-label">Lignes lues</p>
+                    <p class="stat-value blue" x-text="stats.lignes"></p>
+                </div>
+                <div class="stat-card green">
+                    <p class="stat-label">Importées</p>
+                    <p class="stat-value green" x-text="stats.importees"></p>
+                </div>
+                <div class="stat-card orange">
+                    <p class="stat-label">Erreurs</p>
+                    <p class="stat-value orange" x-text="stats.erreurs"></p>
+                </div>
+            </div>
+            
+            <!-- Alertes de géocodage -->
+            <div x-show="stats.geocoding_failed && stats.geocoding_failed.length > 0" 
+                 style="margin-top: 2rem; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 1.5rem;">
+                <h4 style="font-weight: 700; color: #92400e; margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span x-text="`${stats.geocoding_failed.length} livraison(s) non géocodée(s)`"></span>
+                </h4>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <template x-for="item in stats.geocoding_failed" :key="item.numero">
+                        <div style="padding: 0.75rem; margin-bottom: 0.5rem; background: white; border-radius: 8px; border-left: 3px solid #f97316;">
+                            <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 0.25rem;">
+                                #<span x-text="item.numero"></span> - <span x-text="item.nom"></span>
+                            </div>
+                            <div style="font-size: 0.875rem; color: var(--text-light); margin-bottom: 0.25rem;">
+                                📍 <span x-text="item.adresse"></span>
+                            </div>
+                            <div style="font-size: 0.875rem; color: #92400e; font-style: italic;">
+                                ⚠️ <span x-text="item.raison"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Historique des imports -->
+    {% if imports_recents %}
+    <div class="history-section">
+        <div class="history-header">
+            <h3 class="history-title">
+                <i class="fas fa-history"></i>
+                Historique des imports
+            </h3>
+        </div>
+        
+        <div style="overflow-x: auto;">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Fichier</th>
+                        <th>Lignes</th>
+                        <th>Importées</th>
+                        <th>Erreurs</th>
+                        <th>Par</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for import in imports_recents %}
+                    <tr>
+                        <td style="white-space: nowrap;">
+                            {{ import.date_import|date:"d/m/Y H:i" }}
+                        </td>
+                        <td>
+                            <i class="fas fa-file-excel" style="color: var(--success-color); margin-right: 0.5rem;"></i>
+                            {{ import.fichier.name|slice:":30" }}...
+                        </td>
+                        <td>
+                            {{ import.nb_lignes_total }}
+                        </td>
+                        <td>
+                            <span class="badge badge-success">
+                                {{ import.nb_lignes_importees }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if import.nb_erreurs > 0 %}
+                                <span class="badge badge-danger">
+                                    {{ import.nb_erreurs }}
+                                </span>
+                            {% else %}
+                                <span class="badge badge-gray">
+                                    0
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td style="color: var(--text-light);">
+                            {{ import.importe_par.get_full_name }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+</div>
+
+<script>
+function importData() {
+    return {
+        dragOver: false,
+        selectedFile: null,
+        fileName: 'Aucun fichier sélectionné',
+        importing: false,
+        progress: 0,
+        progressMessage: '',
+        stats: {
+            lignes: 0,
+            importees: 0,
+            erreurs: 0,
+            geocoding_failed: []
+        },
+        
+        fileSelected(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.selectedFile = file;
+                this.fileName = file.name;
+            }
+        },
+        
+        handleDrop(event) {
+            this.dragOver = false;
+            const file = event.dataTransfer.files[0];
+            if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+                this.selectedFile = file;
+                this.fileName = file.name;
+                this.$refs.fileInput.files = event.dataTransfer.files;
+            }
+        },
+        
+        async startImport(event) {
+            console.log('startImport appelé');
+            console.log('Fichier sélectionné:', this.selectedFile);
+            
+            if (!this.selectedFile) {
+                alert('Aucun fichier sélectionné');
+                return;
+            }
+            
+            this.importing = true;
+            this.progress = 0;
+            this.progressMessage = 'Préparation de l\'import...';
+            
+            const formData = new FormData(event.target);
+            
+            console.log('FormData créé');
+            for (let pair of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+            
+            this.simulateProgress();
+            
+            try {
+                console.log('Envoi de la requête...');
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                console.log('Réponse reçue, status:', response.status);
+                console.log('Content-Type:', response.headers.get('Content-Type'));
+                
+                const text = await response.text();
+                console.log('Réponse brute:', text.substring(0, 500));
+                
+                let data;
+                try {
+                    data = JSON.parse(text);
+                    console.log('Données JSON:', data);
+                } catch (e) {
+                    console.error('Erreur parse JSON:', e);
+                    alert('La réponse n\'est pas du JSON valide. Voir console.');
+                    this.importing = false;
+                    return;
+                }
+                
+                if (data.success) {
+                    this.progress = 100;
+                    this.progressMessage = 'Import terminé!';
+                    this.stats.lignes = data.total || 0;
+                    this.stats.importees = data.livraisons_creees || 0;
+                    this.stats.erreurs = data.erreurs || 0;
+                    this.stats.geocoding_failed = data.geocoding_failed || [];
+                    
+                    setTimeout(() => {
+                        window.location.href = "{% url 'livraison:dashboard_responsable' %}";
+                    }, 2000);
+                } else {
+                    alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+                    this.importing = false;
+                }
+            } catch (error) {
+                console.error('Erreur complète:', error);
+                alert('Erreur: ' + error.message);
+                this.importing = false;
+            }
+        },
+        
+        simulateProgress() {
+            const steps = [
+                { progress: 10, message: 'Lecture du fichier...', delay: 500 },
+                { progress: 20, message: 'Analyse de la structure...', delay: 1000 },
+                { progress: 40, message: 'Lecture des données...', delay: 2000 },
+                { progress: 60, message: 'Fusion des livraisons...', delay: 1500 },
+                { progress: 80, message: 'Géocodage des adresses...', delay: 3000 },
+                { progress: 95, message: 'Finalisation...', delay: 1000 }
+            ];
+            
+            let currentStep = 0;
+            
+            const updateProgress = () => {
+                if (currentStep < steps.length && this.progress < 95) {
+                    const step = steps[currentStep];
+                    this.progress = step.progress;
+                    this.progressMessage = step.message;
+                    currentStep++;
+                    
+                    setTimeout(updateProgress, step.delay);
+                }
+            };
+            
+            updateProgress();
+        }
+    }
+}
+</script>
+{% endblock %}

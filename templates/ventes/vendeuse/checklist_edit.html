@@ -1,0 +1,728 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #6366f1;
+        --primary-hover: #4f46e5;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --bg-light: #f9fafb;
+        --border-color: #e5e7eb;
+        --text-dark: #1f2937;
+        --text-light: #6b7280;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+
+    .container {
+        max-width: 1400px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    .header-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6366f1;
+        text-decoration: none;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .back-btn:hover {
+        color: #4f46e5;
+        transform: translateX(-3px);
+    }
+
+    h1 {
+        font-size: 2rem;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+        color: #6b7280;
+        margin-bottom: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    label {
+        display: block;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    textarea {
+        width: 100%;
+        padding: 0.875rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    input:focus,
+    textarea:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .grid-layout {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 2rem;
+        align-items: start;
+    }
+
+    .left-section,
+    .right-section {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .right-section {
+        position: sticky;
+        top: 2rem;
+        max-height: calc(100vh - 4rem);
+        overflow-y: auto;
+    }
+
+    .search-bar {
+        margin-bottom: 1.5rem;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 0.875rem 1rem 0.875rem 3rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E") no-repeat 1rem center;
+        background-size: 20px;
+    }
+
+    .search-input:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        outline: none;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1.5rem;
+    }
+
+    .items-table thead {
+        background: #f9fafb;
+    }
+
+    .items-table th {
+        padding: 0.75rem;
+        text-align: left;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .items-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .items-table tr:hover {
+        background: #f9fafb;
+    }
+
+    .qty-input {
+        width: 80px;
+        padding: 0.5rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .qty-input:focus {
+        border-color: #6366f1;
+        outline: none;
+    }
+
+    .btn-remove-item {
+        background: #fee2e2;
+        color: #dc2626;
+        border: none;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-remove-item:hover {
+        background: #fecaca;
+    }
+
+    .category-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .category-header {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: white;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        transition: all 0.3s ease;
+    }
+
+    .category-header:hover {
+        transform: translateX(3px);
+    }
+
+    .category-header.collapsed {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    .category-header:not(.collapsed) {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: white;
+    }
+
+    .objects-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .object-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background: #f9fafb;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+
+    .object-item:hover {
+        border-color: #6366f1;
+    }
+
+    .object-item.in-list {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+
+    .object-name {
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .btn-add-object {
+        background: #10b981;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-add-object:hover {
+        background: #059669;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6b7280;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        cursor: pointer;
+        width: 100%;
+        transition: all 0.3s ease;
+        margin-top: 1rem;
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+
+    .alert-warning {
+        background: #fef3c7;
+        color: #78350f;
+        border-left: 4px solid #f59e0b;
+    }
+
+    @media (max-width: 1024px) {
+        .grid-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .right-section {
+            position: relative;
+            top: 0;
+            max-height: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header-card">
+        <a href="{% url 'ventes:checklist_detail' checklist.pk %}" class="back-btn">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Retour au détail
+        </a>
+
+        <h1>Modifier la checklist</h1>
+        <p class="subtitle">{{ checklist.nom }} - {{ checklist.numero_commande }}</p>
+
+        <form method="post" id="checklistForm">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="nom">Nom de la checklist *</label>
+                <input type="text" id="nom" name="nom" required value="{{ checklist.nom }}">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label for="numero_commande">Numéro de commande *</label>
+                    <input type="text" id="numero_commande" name="numero_commande" required value="{{ checklist.numero_commande }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="date_evenement">Date de l'événement *</label>
+                    <input type="date" id="date_evenement" name="date_evenement" required value="{{ checklist.date_evenement|date:'Y-m-d' }}">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="notes">Notes (optionnel)</label>
+                <textarea id="notes" name="notes">{{ checklist.notes }}</textarea>
+            </div>
+
+            <div class="alert alert-warning">
+                <strong>💡 Astuce :</strong> Vous pouvez modifier les quantités directement dans le tableau, ajouter de nouveaux objets depuis la colonne de droite, ou supprimer des objets.
+            </div>
+        </form>
+    </div>
+
+    <div class="grid-layout">
+        <!-- Section gauche: Objets actuels -->
+        <div class="left-section">
+            <div class="section-title">Objets dans la checklist (<span id="itemCount">{{ items.count }}</span>)</div>
+
+            <div id="tableContainer">
+                {% if items %}
+                <table class="items-table" id="itemsTable">
+                    <thead>
+                        <tr>
+                            <th>Objet</th>
+                            <th>Catégorie</th>
+                            <th>Quantité</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsTableBody">
+                        {% for item in items %}
+                        <tr data-item-id="{{ item.objet.id }}" data-quantity="{{ item.quantite|stringformat:'g' }}">
+                            <td><strong>{{ item.objet.nom }}</strong></td>
+                            <td>{{ item.objet.categorie.nom }}</td>
+                            <td>
+                                <input type="number" 
+                                       class="qty-input" 
+                                       min="1" 
+                                       step="0.01"
+                                       value="{{ item.quantite|stringformat:'g' }}" 
+                                       data-object-id="{{ item.objet.id }}">
+                            </td>
+                            <td>
+                                <button type="button" class="btn-remove-item" onclick="removeItem({{ item.objet.id }})">
+                                    Supprimer
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state" id="emptyState">
+                    <p>Aucun objet dans cette checklist. Ajoutez-en depuis la colonne de droite.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <button type="button" class="btn-submit" onclick="submitForm()">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: inline; vertical-align: middle; margin-right: 0.5rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Enregistrer les modifications
+            </button>
+        </div>
+
+        <!-- Section droite: Ajouter des objets -->
+        <div class="right-section">
+            <div class="section-title">Ajouter des objets</div>
+
+            <div class="search-bar">
+                <input type="text" 
+                       class="search-input" 
+                       id="searchObjects" 
+                       placeholder="Rechercher un objet...">
+            </div>
+
+            <div id="categoriesContainer">
+                {% for categorie in categories %}
+                <div class="category-section">
+                    <div class="category-header" onclick="toggleCategory(this)">
+                        <span>{{ categorie.nom }}</span>
+                        <span>▶</span>
+                    </div>
+                    <div class="objects-list" style="display: none;">
+                        {% for objet in categorie.objets.all %}
+                        <div class="object-item" 
+                             data-object-id="{{ objet.id }}" 
+                             data-object-name="{{ objet.nom }}"
+                             data-category="{{ categorie.nom }}">
+                            <span class="object-name">{{ objet.nom }}</span>
+                            <button type="button" class="btn-add-object" onclick="addObject({{ objet.id }}, '{{ objet.nom|escapejs }}', '{{ categorie.nom|escapejs }}')">
+                                + Ajouter
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Stocker les quantités de tous les objets (initiaux ou modifiés)
+    const objectQuantities = {};
+    
+    // Suivre les objets dans la liste
+    const itemsInList = new Set();
+
+    // Initialiser avec les objets existants ET DEBUG
+    document.querySelectorAll('#itemsTableBody tr').forEach(row => {
+        const objectId = row.dataset.itemId;
+        const qtyInput = row.querySelector('.qty-input');
+        const dataQuantity = row.dataset.quantity;
+        
+        console.log(`Objet ID: ${objectId}, Quantité input: ${qtyInput?.value}, Data quantity: ${dataQuantity}`);
+        
+        if (qtyInput) {
+            // Si l'input est vide, utiliser data-quantity
+            if (!qtyInput.value && dataQuantity) {
+                qtyInput.value = dataQuantity;
+            }
+            
+            objectQuantities[objectId] = qtyInput.value || '1';
+            
+            // Écouter les changements de quantité pour mettre à jour le stockage
+            qtyInput.addEventListener('input', function() {
+                objectQuantities[objectId] = this.value;
+            });
+        }
+        itemsInList.add(objectId);
+        updateObjectAvailability(objectId);
+    });
+
+    function toggleCategory(header) {
+        const list = header.nextElementSibling;
+        const arrow = header.querySelector('span:last-child');
+        
+        if (list.style.display === 'none') {
+            list.style.display = 'flex';
+            arrow.textContent = '▼';
+            header.classList.remove('collapsed');
+        } else {
+            list.style.display = 'none';
+            arrow.textContent = '▶';
+            header.classList.add('collapsed');
+        }
+    }
+
+    function addObject(objectId, objectName, categoryName) {
+        const objectIdStr = objectId.toString();
+        
+        if (itemsInList.has(objectIdStr)) {
+            alert('Cet objet est déjà dans la liste');
+            return;
+        }
+
+        // Créer le tableau s'il n'existe pas
+        let tbody = document.getElementById('itemsTableBody');
+        if (!tbody) {
+            const tableContainer = document.getElementById('tableContainer');
+            const emptyState = document.getElementById('emptyState');
+            if (emptyState) {
+                emptyState.remove();
+            }
+            
+            tableContainer.innerHTML = `
+                <table class="items-table" id="itemsTable">
+                    <thead>
+                        <tr>
+                            <th>Objet</th>
+                            <th>Catégorie</th>
+                            <th>Quantité</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsTableBody"></tbody>
+                </table>
+            `;
+            tbody = document.getElementById('itemsTableBody');
+        }
+
+        // Utiliser la quantité enregistrée ou 1 par défaut
+        const quantity = objectQuantities[objectIdStr] || '1';
+
+        const row = document.createElement('tr');
+        row.dataset.itemId = objectIdStr;
+        row.innerHTML = `
+            <td><strong>${objectName}</strong></td>
+            <td>${categoryName}</td>
+            <td>
+                <input type="number" 
+                       class="qty-input" 
+                       min="1" 
+                       step="0.01"
+                       value="${quantity}" 
+                       data-object-id="${objectIdStr}">
+            </td>
+            <td>
+                <button type="button" class="btn-remove-item" onclick="removeItem(${objectId})">
+                    Supprimer
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+
+        // Ajouter l'événement pour suivre les changements de quantité
+        const qtyInput = row.querySelector('.qty-input');
+        qtyInput.addEventListener('input', function() {
+            objectQuantities[objectIdStr] = this.value;
+        });
+
+        itemsInList.add(objectIdStr);
+        updateObjectAvailability(objectIdStr);
+        updateItemCount();
+    }
+
+    function removeItem(objectId) {
+        if (confirm('Voulez-vous vraiment supprimer cet objet de la checklist ?')) {
+            const objectIdStr = objectId.toString();
+            const row = document.querySelector(`#itemsTableBody tr[data-item-id="${objectIdStr}"]`);
+            if (row) {
+                // Sauvegarder la quantité avant suppression
+                const qtyInput = row.querySelector('.qty-input');
+                if (qtyInput) {
+                    objectQuantities[objectIdStr] = qtyInput.value;
+                }
+                
+                row.remove();
+                itemsInList.delete(objectIdStr);
+                updateObjectAvailability(objectIdStr);
+                updateItemCount();
+                
+                // Afficher l'état vide si plus d'objets
+                const tbody = document.getElementById('itemsTableBody');
+                if (tbody && tbody.children.length === 0) {
+                    const tableContainer = document.getElementById('tableContainer');
+                    tableContainer.innerHTML = `
+                        <div class="empty-state" id="emptyState">
+                            <p>Aucun objet dans cette checklist. Ajoutez-en depuis la colonne de droite.</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+    }
+
+    function updateObjectAvailability(objectId) {
+        const objectIdStr = objectId.toString();
+        const objectItem = document.querySelector(`.object-item[data-object-id="${objectIdStr}"]`);
+        if (objectItem) {
+            if (itemsInList.has(objectIdStr)) {
+                objectItem.classList.add('in-list');
+            } else {
+                objectItem.classList.remove('in-list');
+            }
+        }
+    }
+
+    function updateItemCount() {
+        const count = itemsInList.size;
+        const countSpan = document.getElementById('itemCount');
+        if (countSpan) {
+            countSpan.textContent = count;
+        }
+    }
+
+    // Recherche avec ouverture automatique des catégories
+    document.getElementById('searchObjects').addEventListener('input', function(e) {
+        const search = e.target.value.toLowerCase().trim();
+        
+        if (search === '') {
+            // Si recherche vide, fermer toutes les catégories et afficher tous les objets
+            document.querySelectorAll('.category-section').forEach(section => {
+                const header = section.querySelector('.category-header');
+                const list = section.querySelector('.objects-list');
+                const arrow = header.querySelector('span:last-child');
+                
+                list.style.display = 'none';
+                arrow.textContent = '▶';
+                header.classList.add('collapsed');
+                
+                section.querySelectorAll('.object-item').forEach(item => {
+                    item.style.display = 'flex';
+                });
+            });
+            return;
+        }
+        
+        // Filtrer et ouvrir les catégories pertinentes
+        document.querySelectorAll('.category-section').forEach(section => {
+            const header = section.querySelector('.category-header');
+            const list = section.querySelector('.objects-list');
+            const arrow = header.querySelector('span:last-child');
+            let hasVisibleItems = false;
+            
+            // Filtrer les objets
+            section.querySelectorAll('.object-item').forEach(item => {
+                const name = item.dataset.objectName.toLowerCase();
+                if (name.includes(search)) {
+                    item.style.display = 'flex';
+                    hasVisibleItems = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            // Ouvrir/fermer la catégorie selon si elle a des objets visibles
+            if (hasVisibleItems) {
+                list.style.display = 'flex';
+                arrow.textContent = '▼';
+                header.classList.remove('collapsed');
+            } else {
+                list.style.display = 'none';
+                arrow.textContent = '▶';
+                header.classList.add('collapsed');
+            }
+        });
+    });
+
+    function submitForm() {
+        const form = document.getElementById('checklistForm');
+        
+        // Vérifier qu'il y a au moins un objet
+        const tbody = document.getElementById('itemsTableBody');
+        if (!tbody || tbody.children.length === 0) {
+            alert('Veuillez ajouter au moins un objet à la checklist.');
+            return;
+        }
+        
+        // Récupérer tous les objets avec leurs quantités
+        const items = [];
+        tbody.querySelectorAll('tr').forEach(row => {
+            const objectId = row.dataset.itemId;
+            const qtyInput = row.querySelector('.qty-input');
+            const qty = qtyInput ? qtyInput.value : '1';
+            
+            if (qty && parseFloat(qty) > 0) {
+                items.push(`${objectId}:${qty}`);
+            }
+        });
+
+        if (items.length === 0) {
+            alert('Veuillez ajouter au moins un objet avec une quantité valide.');
+            return;
+        }
+
+        // Ajouter les items au formulaire
+        items.forEach(item => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'items[]';
+            input.value = item;
+            form.appendChild(input);
+        });
+
+        form.submit();
+    }
+</script>
+{% endblock %}

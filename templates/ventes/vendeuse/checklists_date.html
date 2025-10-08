@@ -1,0 +1,323 @@
+<!-- ==================== ventes/templates/ventes/checklists_date.html ==================== -->
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+
+    .container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    .header-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6366f1;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .back-btn:hover {
+        color: #4f46e5;
+        transform: translateX(-3px);
+    }
+
+    h1 {
+        font-size: 2rem;
+        color: #1f2937;
+        margin: 0;
+    }
+
+    .date-display {
+        font-size: 1.25rem;
+        color: #6b7280;
+        margin-top: 0.5rem;
+    }
+
+    .checklist-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .checklist-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border-left: 4px solid #6366f1;
+    }
+
+    .checklist-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .checklist-card.mine {
+        border-left-color: #10b981;
+    }
+
+    .checklist-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+
+    .checklist-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    .badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .badge.validee {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge.brouillon,
+    .badge.en_cours {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .badge.mine {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .checklist-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f3f4f6;
+    }
+
+    .info-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6b7280;
+        font-size: 0.875rem;
+    }
+
+    .progress-bar-container {
+        width: 100%;
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 1rem 0;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #059669);
+        transition: width 0.3s ease;
+    }
+
+    .checklist-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 0.625rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .btn-primary {
+        background: #6366f1;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #4f46e5;
+        transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .btn-secondary:hover {
+        background: #e5e7eb;
+    }
+
+    .empty-state {
+        background: white;
+        border-radius: 20px;
+        padding: 4rem 2rem;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state h2 {
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+        color: #6b7280;
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header-card">
+        <div class="header-top">
+            <div>
+                <a href="{% url 'ventes:dashboard_vendeuse' %}" class="back-btn">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Retour au calendrier
+                </a>
+                <h1>Checklists du {{ date|date:"d F Y" }}</h1>
+                <p class="date-display">
+                    {% if view_type == 'mine' %}
+                        Mes checklists uniquement
+                    {% else %}
+                        Toutes les checklists
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    {% if checklists %}
+    <div class="checklist-grid">
+        {% for checklist in checklists %}
+        <div class="checklist-card {% if checklist.creee_par == request.user %}mine{% endif %}">
+            <div class="checklist-header">
+                <div class="checklist-title">{{ checklist.nom }}</div>
+                <span class="badge {{ checklist.status }}">
+                    {% if checklist.status == 'validee' %}✓ Validée{% else %}{{ checklist.get_status_display }}{% endif %}
+                </span>
+            </div>
+
+            <div class="checklist-info">
+                <div class="info-row">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                    <strong>{{ checklist.numero_commande }}</strong>
+                </div>
+                <div class="info-row">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    {{ checklist.creee_par.get_full_name|default:checklist.creee_par.username }}
+                    {% if checklist.creee_par == request.user %}
+                        <span class="badge mine" style="margin-left: 0.5rem;">Moi</span>
+                    {% endif %}
+                </div>
+                <div class="info-row">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    {{ checklist.items.count }} objet{{ checklist.items.count|pluralize }}
+                </div>
+            </div>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar" style="width: {{ checklist.progression }}%"></div>
+            </div>
+            <div style="text-align: center; color: #6b7280; font-size: 0.875rem; margin-top: 0.5rem;">
+                {{ checklist.progression }}% complété
+            </div>
+
+            <div class="checklist-actions">
+                <a href="{% url 'ventes:checklist_detail' checklist.pk %}" class="btn btn-primary">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    Voir détails
+                </a>
+                {% if checklist.creee_par == request.user %}
+                <a href="{% url 'ventes:checklist_edit' checklist.pk %}" class="btn btn-secondary">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                    Modifier
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <h2>Aucune checklist pour cette date</h2>
+        <p>
+            {% if view_type == 'mine' %}
+                Vous n'avez pas de checklist pour le {{ date|date:"d F Y" }}
+            {% else %}
+                Aucune checklist n'a été créée pour le {{ date|date:"d F Y" }}
+            {% endif %}
+        </p>
+        <a href="{% url 'ventes:checklist_create' %}" class="btn btn-primary">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Créer une checklist
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,199 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .wizard-container { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; }
+    .wizard-header { background: white; border-radius: 20px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+    .wizard-steps { display: flex; justify-content: space-between; margin-bottom: 2rem; position: relative; }
+    .wizard-steps::before { content: ''; position: absolute; top: 20px; left: 0; right: 0; height: 2px; background: #e5e7eb; z-index: 0; }
+    .wizard-step { flex: 1; text-align: center; position: relative; z-index: 1; }
+    .step-circle { width: 40px; height: 40px; border-radius: 50%; background: #e5e7eb; color: #6b7280; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 700; transition: all 0.3s; }
+    .wizard-step.active .step-circle { background: #6366f1; color: white; }
+    .wizard-step.completed .step-circle { background: #10b981; color: white; }
+    .step-label { font-size: 0.85rem; color: #6b7280; font-weight: 600; }
+    .wizard-step.active .step-label { color: #6366f1; }
+    .form-card { background: white; border-radius: 20px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+    .form-group { margin-bottom: 1.5rem; }
+    .form-label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: #1f2937; }
+    .form-input { width: 100%; padding: 0.75rem 1rem; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 0.95rem; transition: all 0.3s; }
+    .form-input:focus { outline: none; border-color: #6366f1; }
+    .form-actions { display: flex; gap: 1rem; justify-content: space-between; margin-top: 2rem; }
+    .btn { padding: 0.75rem 1.5rem; border-radius: 10px; font-weight: 600; cursor: pointer; border: none; transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; }
+    .btn-primary { background: #10b981; color: white; }
+    .btn-primary:hover { background: #059669; }
+    .btn-secondary { background: #f3f4f6; color: #374151; }
+    .btn-secondary:hover { background: #e5e7eb; }
+    
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
+    .summary-section { background: #f9fafb; padding: 1.5rem; border-radius: 10px; }
+    .summary-title { font-weight: 700; color: #1f2937; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; font-size: 1rem; }
+    .summary-item { display: flex; margin-bottom: 0.75rem; }
+    .summary-label { font-weight: 600; color: #6b7280; min-width: 150px; font-size: 0.9rem; }
+    .summary-value { color: #1f2937; font-size: 0.9rem; }
+    
+    @media (max-width: 768px) {
+        .summary-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wizard-container">
+    <div class="wizard-header">
+        <h1 style="margin: 0 0 2rem 0;">🎉 Nouveau Contrat</h1>
+        
+        <div class="wizard-steps">
+            <div class="wizard-step completed">
+                <div class="step-circle">✓</div>
+                <div class="step-label">Identifiants</div>
+            </div>
+            <div class="wizard-step completed">
+                <div class="step-circle">✓</div>
+                <div class="step-label">Informations</div>
+            </div>
+            <div class="wizard-step active">
+                <div class="step-circle">3</div>
+                <div class="step-label">Déroulé & Confirmation</div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" class="form-card">
+        {% csrf_token %}
+        
+        <h2 style="margin-bottom: 1.5rem;">✅ Étape 3 : Déroulé & Confirmation</h2>
+
+        <!-- Déroulé de l'événement -->
+        <div class="form-group" style="margin-bottom: 3rem;">
+            <label class="form-label">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: inline; vertical-align: middle; margin-right: 0.5rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Déroulé de l'événement
+            </label>
+            <textarea 
+                name="deroule_evenement" 
+                class="form-input" 
+                rows="8" 
+                placeholder="Décrivez le déroulement prévu de l'événement (horaires, services, particularités...)&#10;&#10;Exemple:&#10;18h00 - Arrivée des invités + cocktail&#10;19h30 - Entrée en salle&#10;20h00 - Service du repas&#10;22h00 - Gâteau et animations&#10;01h00 - Fin prévue"
+            ></textarea>
+            <p style="font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem;">
+                💡 Détaillez les moments clés, les services à prévoir, et toute information utile pour le maître d'hôtel
+            </p>
+        </div>
+
+        <!-- Résumé des informations -->
+        <div style="border-top: 2px solid #e5e7eb; padding-top: 2rem; margin-top: 2rem;">
+            <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.5rem; color: #1f2937;">
+                📋 Résumé du contrat
+            </h3>
+
+            <div class="summary-grid">
+                <!-- Identifiants -->
+                <div class="summary-section">
+                    <div class="summary-title">
+                        🆔 Identifiants
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">N° Contrat:</div>
+                        <div class="summary-value">{{ step1.numero_contrat }}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Événement:</div>
+                        <div class="summary-value">{{ step1.nom_evenement }}</div>
+                    </div>
+                    {% if maitre_hotel %}
+                    <div class="summary-item">
+                        <div class="summary-label">Maître d'hôtel:</div>
+                        <div class="summary-value">{{ maitre_hotel.get_full_name }}</div>
+                    </div>
+                    {% endif %}
+                    {% if checklist %}
+                    <div class="summary-item">
+                        <div class="summary-label">Checklist:</div>
+                        <div class="summary-value">{{ checklist.numero_commande }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Client -->
+                <div class="summary-section">
+                    <div class="summary-title">
+                        👤 Client
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Nom:</div>
+                        <div class="summary-value">{{ step2.client_nom }}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Téléphone:</div>
+                        <div class="summary-value">{{ step2.client_telephone }}</div>
+                    </div>
+                    {% if step2.client_email %}
+                    <div class="summary-item">
+                        <div class="summary-label">Email:</div>
+                        <div class="summary-value">{{ step2.client_email }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Adresse -->
+                <div class="summary-section">
+                    <div class="summary-title">
+                        📍 Lieu
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Adresse:</div>
+                        <div class="summary-value">{{ step2.adresse_complete }}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Ville:</div>
+                        <div class="summary-value">{{ step2.ville }}</div>
+                    </div>
+                </div>
+
+                <!-- Date/Heure -->
+                <div class="summary-section">
+                    <div class="summary-title">
+                        📅 Date & Horaires
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Date:</div>
+                        <div class="summary-value">{{ step2.date_evenement }}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Début:</div>
+                        <div class="summary-value">{{ step2.heure_debut_prevue }}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Fin:</div>
+                        <div class="summary-value">{{ step2.heure_fin_prevue }}</div>
+                    </div>
+                    {% if step2.nb_convives %}
+                    <div class="summary-item">
+                        <div class="summary-label">Convives:</div>
+                        <div class="summary-value">{{ step2.nb_convives }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'ventes:contrat_create_step2' %}" class="btn btn-secondary">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Précédent
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Créer le contrat
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

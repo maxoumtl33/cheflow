@@ -1,0 +1,941 @@
+<!-- ==================== ventes/templates/ventes/checklist_create.html ==================== -->
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #6366f1;
+        --primary-hover: #4f46e5;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --bg-light: #f9fafb;
+        --border-color: #e5e7eb;
+        --text-dark: #1f2937;
+        --text-light: #6b7280;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+
+    .container {
+        max-width: 1000px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    .card {
+        background: white;
+        border-radius: 20px;
+        padding: 2.5rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6366f1;
+        text-decoration: none;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .back-btn:hover {
+        color: #4f46e5;
+        transform: translateX(-3px);
+    }
+
+    .stepper {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 3rem;
+        position: relative;
+    }
+
+    .stepper::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: #e5e7eb;
+        z-index: 0;
+    }
+
+    .stepper-progress {
+        position: absolute;
+        top: 20px;
+        left: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #6366f1, #4f46e5);
+        z-index: 1;
+        transition: width 0.3s ease;
+    }
+
+    .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 2;
+        flex: 1;
+    }
+
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: white;
+        border: 4px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #6b7280;
+        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .step.active .step-number {
+        border-color: #6366f1;
+        color: #6366f1;
+        background: white;
+    }
+
+    .step.completed .step-number {
+        border-color: #10b981;
+        background: #10b981;
+        color: white;
+    }
+
+    .step-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .step.active .step-label {
+        color: #6366f1;
+    }
+
+    .step-content {
+        display: none;
+    }
+
+    .step-content.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+        font-size: 2rem;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+        color: #6b7280;
+        margin-bottom: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    label {
+        display: block;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    textarea {
+        width: 100%;
+        padding: 0.875rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    input:focus,
+    textarea:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .search-bar {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 10;
+        padding: 1rem 0;
+        margin-bottom: 1.5rem;
+    }
+
+    .search-input-wrapper {
+        position: relative;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 1rem 1rem 1rem 3rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .search-input:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        outline: none;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6b7280;
+    }
+
+    .category-section {
+        margin-bottom: 2rem;
+    }
+
+    .category-header {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        font-weight: 700;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .category-header:hover {
+        transform: translateX(5px);
+    }
+
+    .category-header.collapsed {
+        background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+        color: #374151;
+    }
+
+    .objects-container {
+        max-height: 400px;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+    }
+
+    .objects-container::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .objects-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .objects-container::-webkit-scrollbar-thumb {
+        background: #6366f1;
+        border-radius: 10px;
+    }
+
+    .object-item {
+        background: #f9fafb;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s ease;
+    }
+
+    .object-item:hover {
+        border-color: #6366f1;
+        transform: translateX(5px);
+    }
+
+    .object-item.selected {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+        border-color: #10b981;
+    }
+
+    .object-name {
+        font-weight: 600;
+        color: #1f2937;
+        flex: 1;
+    }
+
+    .quantity-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .qty-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        border: 2px solid #6366f1;
+        background: white;
+        color: #6366f1;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .qty-btn:hover {
+        background: #6366f1;
+        color: white;
+    }
+
+    .qty-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .qty-display {
+        min-width: 40px;
+        text-align: center;
+        font-weight: 700;
+        color: #1f2937;
+        font-size: 1.125rem;
+    }
+
+    .btn-add {
+        background: #10b981;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-add:hover {
+        background: #059669;
+        transform: scale(1.05);
+    }
+
+    .selected-items {
+        background: #f9fafb;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .selected-items h3 {
+        color: #1f2937;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .selected-count {
+        background: #6366f1;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+    }
+
+    .selected-item {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-left: 4px solid #10b981;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .item-info {
+        flex: 1;
+    }
+
+    .item-name {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 0.25rem;
+    }
+
+    .item-category {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
+    .item-qty {
+        background: #e0e7ff;
+        color: #6366f1;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 700;
+        margin-right: 1rem;
+    }
+
+    .btn-remove {
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-remove:hover {
+        background: #dc2626;
+    }
+
+    .verification-card {
+        background: #f0f9ff;
+        border: 2px solid #0ea5e9;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .verification-card h3 {
+        color: #0c4a6e;
+        margin-bottom: 1rem;
+    }
+
+    .info-row {
+        display: flex;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #bae6fd;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #0c4a6e;
+        width: 180px;
+    }
+
+    .info-value {
+        color: #0e7490;
+    }
+
+    .alert-info {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .alert-info p {
+        color: #78350f;
+        margin: 0;
+        font-weight: 500;
+    }
+
+    .step-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: space-between;
+        margin-top: 2rem;
+    }
+
+    .btn {
+        padding: 0.875rem 2rem;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-secondary {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .btn-secondary:hover {
+        background: #e5e7eb;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: white;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6b7280;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <a href="{% url 'ventes:dashboard_vendeuse' %}" class="back-btn">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Retour au dashboard
+        </a>
+
+        <h1>✨ Créer une nouvelle checklist</h1>
+        <p class="subtitle">Processus guidé en 3 étapes</p>
+
+        <!-- Stepper -->
+        <div class="stepper">
+            <div class="stepper-progress" id="stepperProgress"></div>
+            <div class="step active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Informations</div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Objets</div>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Vérification</div>
+            </div>
+        </div>
+
+        <form method="post" id="checklistForm">
+            {% csrf_token %}
+
+            <!-- Étape 1: Informations de base -->
+            <div class="step-content active" data-step="1">
+                <h2>📝 Informations de base</h2>
+                <p class="subtitle">Commencez par remplir les informations principales</p>
+
+                <div class="form-group">
+                    <label for="nom">Nom de la checklist *</label>
+                    <input type="text" id="nom" name="nom" required placeholder="Ex: Mariage Dupont">
+                </div>
+
+                <div class="form-group">
+                    <label for="numero_commande">Numéro de commande *</label>
+                    <input type="text" id="numero_commande" name="numero_commande" required placeholder="Entrez seulement les chiffres (ex: 49589 devient CMD-49589)">
+                </div>
+
+                <div class="form-group">
+                    <label for="date_evenement">Date de l'événement *</label>
+                    <input type="date" id="date_evenement" name="date_evenement" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Notes (optionnel)</label>
+                    <textarea id="notes" name="notes" placeholder="Informations supplémentaires..."></textarea>
+                </div>
+
+                <div class="step-actions">
+                    <div></div>
+                    <button type="button" class="btn btn-primary" onclick="nextStep()">
+                        Suivant
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Étape 2: Sélection des objets -->
+            <div class="step-content" data-step="2">
+                <h2>📦 Sélection des objets</h2>
+                <p class="subtitle">Ajoutez les objets nécessaires pour cet événement</p>
+
+                <div class="search-bar">
+                    <div class="search-input-wrapper">
+                        <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        <input type="text" id="searchInput" class="search-input" placeholder="Rechercher un objet...">
+                    </div>
+                </div>
+
+                <div id="categoriesContainer">
+                    {% for categorie in categories %}
+                    <div class="category-section" data-category="{{ categorie.id }}">
+                        <div class="category-header" onclick="toggleCategory(this)">
+                            <span>{{ categorie.nom }}</span>
+                            <span class="category-count">0 sélectionné(s)</span>
+                        </div>
+                        <div class="objects-container">
+                            {% for objet in categorie.objets.all %}
+                            <div class="object-item" data-object-id="{{ objet.id }}" data-object-name="{{ objet.nom }}" data-category-name="{{ categorie.nom }}">
+                                <div class="object-name">{{ objet.nom }}</div>
+                                <div class="quantity-controls">
+                                    <button type="button" class="qty-btn" onclick="decreaseQty(this)">−</button>
+                                    <span class="qty-display">1</span>
+                                    <button type="button" class="qty-btn" onclick="increaseQty(this)">+</button>
+                                    <button type="button" class="btn-add" onclick="addItem(this)">Ajouter</button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="selected-items" id="selectedItemsContainer" style="display: none;">
+                    <h3>
+                        Objets sélectionnés
+                        <span class="selected-count" id="selectedCount">0</span>
+                    </h3>
+                    <div id="selectedItemsList"></div>
+                </div>
+
+                <div class="step-actions">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                        Précédent
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="nextStep()" id="btnToStep3" disabled>
+                        Suivant
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Étape 3: Vérification -->
+            <div class="step-content" data-step="3">
+                <h2>✅ Vérification</h2>
+                <p class="subtitle">Vérifiez les informations avant de créer la checklist</p>
+
+                <div class="alert-info">
+                    <p>💡 <strong>Bon à savoir :</strong> Vous pourrez modifier cette checklist à tout moment depuis le dashboard.</p>
+                </div>
+
+                <div class="verification-card">
+                    <h3>Informations générales</h3>
+                    <div class="info-row">
+                        <span class="info-label">Nom :</span>
+                        <span class="info-value" id="verify-nom"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Numéro de commande :</span>
+                        <span class="info-value" id="verify-numero"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Date de l'événement :</span>
+                        <span class="info-value" id="verify-date"></span>
+                    </div>
+                    <div class="info-row" id="verify-notes-row" style="display: none;">
+                        <span class="info-label">Notes :</span>
+                        <span class="info-value" id="verify-notes"></span>
+                    </div>
+                </div>
+
+                <div class="verification-card">
+                    <h3>Objets sélectionnés (<span id="verify-total-items">0</span>)</h3>
+                    <div id="verifyItemsList"></div>
+                </div>
+
+                <div class="step-actions">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                        Précédent
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Créer la checklist
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let currentStep = 1;
+    const selectedItems = new Map();
+
+    // Gestion des étapes
+    function updateStepper() {
+        document.querySelectorAll('.step').forEach((step, index) => {
+            const stepNum = index + 1;
+            step.classList.remove('active', 'completed');
+            
+            if (stepNum < currentStep) {
+                step.classList.add('completed');
+            } else if (stepNum === currentStep) {
+                step.classList.add('active');
+            }
+        });
+
+        document.querySelectorAll('.step-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.querySelector(`.step-content[data-step="${currentStep}"]`).classList.add('active');
+
+        const progress = ((currentStep - 1) / 2) * 100;
+        document.getElementById('stepperProgress').style.width = progress + '%';
+    }
+
+    function nextStep() {
+        if (currentStep === 1) {
+            if (!validateStep1()) return;
+        }
+        if (currentStep === 2) {
+            if (selectedItems.size === 0) {
+                alert('Veuillez ajouter au moins un objet');
+                return;
+            }
+            updateVerification();
+        }
+        if (currentStep < 3) {
+            currentStep++;
+            updateStepper();
+        }
+    }
+
+    function prevStep() {
+        if (currentStep > 1) {
+            currentStep--;
+            updateStepper();
+        }
+    }
+
+    function validateStep1() {
+        const nom = document.getElementById('nom').value;
+        const numero = document.getElementById('numero_commande').value;
+        const date = document.getElementById('date_evenement').value;
+
+        if (!nom || !numero || !date) {
+            alert('Veuillez remplir tous les champs obligatoires');
+            return false;
+        }
+        return true;
+    }
+
+    // Gestion des quantités
+    function increaseQty(btn) {
+        const qtyDisplay = btn.previousElementSibling;
+        let qty = parseInt(qtyDisplay.textContent);
+        qtyDisplay.textContent = qty + 1;
+    }
+
+    function decreaseQty(btn) {
+        const qtyDisplay = btn.nextElementSibling;
+        let qty = parseInt(qtyDisplay.textContent);
+        if (qty > 1) {
+            qtyDisplay.textContent = qty - 1;
+        }
+    }
+
+    // Ajouter un objet
+    function addItem(btn) {
+        const objectItem = btn.closest('.object-item');
+        const objectId = objectItem.dataset.objectId;
+        const objectName = objectItem.dataset.objectName;
+        const categoryName = objectItem.dataset.categoryName;
+        const qty = parseInt(objectItem.querySelector('.qty-display').textContent);
+
+        selectedItems.set(objectId, {
+            name: objectName,
+            quantity: qty,
+            category: categoryName
+        });
+
+        objectItem.classList.add('selected');
+        updateSelectedItemsList();
+        updateCategoryCount(objectItem.closest('.category-section').dataset.category);
+    }
+
+    // Supprimer un objet
+    function removeItem(objectId) {
+        selectedItems.delete(objectId);
+        const objectItem = document.querySelector(`.object-item[data-object-id="${objectId}"]`);
+        if (objectItem) {
+            objectItem.classList.remove('selected');
+            updateCategoryCount(objectItem.closest('.category-section').dataset.category);
+        }
+        updateSelectedItemsList();
+    }
+
+    // Mettre à jour la liste des objets sélectionnés
+    function updateSelectedItemsList() {
+        const container = document.getElementById('selectedItemsContainer');
+        const list = document.getElementById('selectedItemsList');
+        const count = document.getElementById('selectedCount');
+        const btnNext = document.getElementById('btnToStep3');
+
+        if (selectedItems.size === 0) {
+            container.style.display = 'none';
+            btnNext.disabled = true;
+            return;
+        }
+
+        container.style.display = 'block';
+        btnNext.disabled = false;
+        count.textContent = selectedItems.size;
+
+        list.innerHTML = '';
+        selectedItems.forEach((item, id) => {
+            const div = document.createElement('div');
+            div.className = 'selected-item';
+            div.innerHTML = `
+                <div class="item-info">
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-category">${item.category}</div>
+                </div>
+                <span class="item-qty">Qté: ${item.quantity}</span>
+                <button type="button" class="btn-remove" onclick="removeItem('${id}')">Retirer</button>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    // Mettre à jour le compteur de catégorie
+    function updateCategoryCount(categoryId) {
+        const category = document.querySelector(`.category-section[data-category="${categoryId}"]`);
+        const items = category.querySelectorAll('.object-item.selected');
+        const count = category.querySelector('.category-count');
+        count.textContent = `${items.length} sélectionné(s)`;
+    }
+
+    // Toggle catégorie
+    function toggleCategory(header) {
+        const container = header.nextElementSibling;
+        header.classList.toggle('collapsed');
+        container.style.display = container.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Recherche
+    document.getElementById('searchInput')?.addEventListener('input', function(e) {
+        const search = e.target.value.toLowerCase();
+        document.querySelectorAll('.object-item').forEach(item => {
+            const name = item.dataset.objectName.toLowerCase();
+            const match = name.includes(search);
+            item.style.display = match ? 'flex' : 'none';
+        });
+    });
+
+    // Vérification finale
+    function updateVerification() {
+        document.getElementById('verify-nom').textContent = document.getElementById('nom').value;
+        document.getElementById('verify-numero').textContent = document.getElementById('numero_commande').value;
+        
+        const dateInput = document.getElementById('date_evenement').value;
+        const date = new Date(dateInput);
+        const formattedDate = date.toLocaleDateString('fr-FR', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        document.getElementById('verify-date').textContent = formattedDate;
+
+        const notes = document.getElementById('notes').value;
+        if (notes) {
+            document.getElementById('verify-notes-row').style.display = 'flex';
+            document.getElementById('verify-notes').textContent = notes;
+        }
+
+        document.getElementById('verify-total-items').textContent = selectedItems.size;
+
+        const verifyList = document.getElementById('verifyItemsList');
+        verifyList.innerHTML = '';
+        selectedItems.forEach((item, id) => {
+            const div = document.createElement('div');
+            div.className = 'info-row';
+            div.innerHTML = `
+                <span class="info-label">${item.name}</span>
+                <span class="info-value">Quantité: ${item.quantity} (${item.category})</span>
+            `;
+            verifyList.appendChild(div);
+        });
+    }
+
+    // Soumission du formulaire
+    document.getElementById('checklistForm').addEventListener('submit', function(e) {
+        selectedItems.forEach((item, id) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'items[]';
+            input.value = `${id}:${item.quantity}`;
+            this.appendChild(input);
+        });
+    });
+
+    updateStepper();
+</script>
+{% endblock %}

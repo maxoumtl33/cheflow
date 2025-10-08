@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Livraisons - {{ date|date:"d/m/Y" }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+        }
+
+        .page {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            page-break-after: always;
+            padding: 2rem;
+        }
+
+        .page:last-child {
+            page-break-after: auto;
+        }
+
+        .date {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 3rem;
+            text-align: center;
+            color: #1f2937;
+            text-transform: capitalize;
+        }
+
+        .nom {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 3rem;
+            text-align: center;
+            color: #1f2937;
+        }
+
+        .heure {
+            font-size: 3rem;
+            margin-bottom: 3rem;
+            text-align: center;
+            color: #6b7280;
+        }
+
+        .besoins {
+            font-size: 2rem;
+            text-align: center;
+            color: #6b7280;
+            max-width: 80%;
+            line-height: 1.6;
+        }
+
+        @media print {
+            body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% for livraison in livraisons %}
+    <div class="page">
+        <div class="date">{{ livraison.date_livraison|date:"l j F Y" }}</div>
+        <div class="nom">{{ livraison.nom_evenement }}</div>
+        <div class="heure">{{ livraison.heure_souhaitee|default:"Heure non spécifiée" }}</div>
+        <div class="besoins">{{ livraison.informations_supplementaires|default:"Aucun besoin spécifique" }}</div>
+        
+
+    </div>
+    {% empty %}
+    <div class="page">
+        <div class="nom">Aucune livraison</div>
+        <div class="besoins">Aucune livraison prévue pour cette date</div>
+    </div>
+    {% endfor %}
+
+    <script>
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,1253 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Gestion des Livreurs{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #6366f1;
+        --primary-hover: #4f46e5;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+        --purple-color: #8b5cf6;
+        --orange-color: #f97316;
+        --bg-light: #f9fafb;
+        --border-color: #e5e7eb;
+        --text-dark: #1f2937;
+        --text-light: #6b7280;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .dashboard-container {
+        max-width: 1800px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    .header-section {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .header-title h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .header-subtitle {
+        color: var(--text-light);
+        font-size: 0.95rem;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 0.875rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+        color: white;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, var(--success-color), #059669);
+        color: white;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-secondary {
+        background: linear-gradient(135deg, #6b7280, #4b5563);
+        color: white;
+        box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3);
+    }
+
+    .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(107, 114, 128, 0.4);
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.75rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .stat-card-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .stat-info h3 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-light);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .stat-value {
+        font-size: 2.25rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+    }
+
+    .card-section {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+
+    .card-header {
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .card-header.gradient {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        border-bottom: none;
+    }
+
+    .card-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .planning-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .planning-table th {
+        background: var(--bg-light);
+        padding: 1rem;
+        text-align: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-light);
+        text-transform: uppercase;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .planning-table th.sticky {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        text-align: left;
+    }
+
+    .planning-table td {
+        padding: 1rem;
+        text-align: center;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .planning-table td.sticky {
+        position: sticky;
+        left: 0;
+        background: white;
+        z-index: 5;
+        border-right: 2px solid var(--border-color);
+    }
+
+    .planning-table tr:hover td {
+        background: var(--bg-light);
+    }
+
+    .planning-table tr:hover td.sticky {
+        background: white;
+    }
+
+    .planning-table th.today,
+    .planning-table td.today {
+        background: #dbeafe;
+    }
+
+    .livreur-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 1.25rem;
+    }
+
+    .dispo-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.875rem;
+    }
+
+    .dispo-badge:hover {
+        transform: scale(1.1);
+    }
+
+    .dispo-badge.disponible {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .dispo-badge.indisponible {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .dispo-badge.conge {
+        background: #fed7aa;
+        color: #92400e;
+    }
+
+    .dispo-badge.maladie {
+        background: #ede9fe;
+        color: #6b21a8;
+    }
+
+    .dispo-badge.empty {
+        background: var(--bg-light);
+        color: var(--text-light);
+    }
+
+    .livreur-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .livreur-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+
+    .livreur-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .livreur-card-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .livreur-card-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 1.5rem;
+    }
+
+    .livreur-card-info h4 {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0 0 0.25rem 0;
+    }
+
+    .livreur-card-info p {
+        font-size: 0.875rem;
+        color: var(--text-light);
+        margin: 0;
+    }
+
+    .livreur-card-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 1.25rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .livreur-detail-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.875rem;
+        color: var(--text-dark);
+    }
+
+    .livreur-detail-icon {
+        width: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .livreur-card-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-sm {
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    .btn-edit {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .btn-edit:hover {
+        background: #bfdbfe;
+        transform: translateY(-2px);
+    }
+
+    .btn-delete {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .btn-delete:hover {
+        background: #fecaca;
+        transform: translateY(-2px);
+    }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        z-index: 200;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        max-width: 500px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 2rem;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--text-light);
+        cursor: pointer;
+        padding: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .modal-close:hover {
+        color: var(--text-dark);
+    }
+
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        font-family: inherit;
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        outline: none;
+    }
+
+    .form-hint {
+        font-size: 0.75rem;
+        color: var(--text-light);
+        margin-top: 0.375rem;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .info-box {
+        padding: 1rem;
+        border-radius: 10px;
+        border: 1px solid;
+    }
+
+    .info-box.blue {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+    }
+
+    .info-box.yellow {
+        background: #fefce8;
+        border-color: #fde047;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn-cancel {
+        flex: 1;
+        background: white;
+        color: var(--text-dark);
+        border: 2px solid var(--border-color);
+    }
+
+    .btn-cancel:hover {
+        border-color: var(--text-dark);
+    }
+
+    .btn-submit {
+        flex: 1;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 0 1rem;
+            margin: 1rem auto;
+        }
+
+        .header-section {
+            padding: 1.5rem;
+        }
+
+        .header-title h2 {
+            font-size: 1.5rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .livreur-cards-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .planning-table {
+            font-size: 0.875rem;
+        }
+
+        .planning-table th,
+        .planning-table td {
+            padding: 0.5rem;
+        }
+
+        .dispo-badge {
+            width: 32px;
+            height: 32px;
+            font-size: 0.75rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container" x-data="livreurManagement()" x-init="init()">
+    
+    <!-- Header -->
+    <div class="header-section">
+        <div class="header-content">
+            <div class="header-title">
+                <h2>Gestion des Livreurs</h2>
+                <p class="header-subtitle">Gérez votre équipe et leurs disponibilités</p>
+            </div>
+            
+            <div class="header-actions">
+                <a href="{% url 'livraison:dashboard_responsable' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i>
+                    Retour Dashboard
+                </a>
+                
+                <button @click="modalNouveauLivreur = true" class="btn btn-success">
+                    <i class="fas fa-user-plus"></i>
+                    Nouveau Livreur
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-card-content">
+                <div class="stat-info">
+                    <h3>Livreurs actifs</h3>
+                    <p class="stat-value" style="color: #3b82f6;">{{ livreurs|length }}</p>
+                </div>
+                <div class="stat-icon" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.2)); color: #3b82f6;">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-content">
+                <div class="stat-info">
+                    <h3>Disponibles aujourd'hui</h3>
+                    <p class="stat-value" style="color: #10b981;" x-text="livreursDisponiblesAujourdhui"></p>
+                </div>
+                <div class="stat-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.2)); color: #10b981;">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-content">
+                <div class="stat-info">
+                    <h3>En congé</h3>
+                    <p class="stat-value" style="color: #f97316;" x-text="livreursEnConge"></p>
+                </div>
+                <div class="stat-icon" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(249, 115, 22, 0.2)); color: #f97316;">
+                    <i class="fas fa-umbrella-beach"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-content">
+                <div class="stat-info">
+                    <h3>Routes en cours</h3>
+                    <p class="stat-value" style="color: #8b5cf6;" x-text="routesEnCours"></p>
+                </div>
+                <div class="stat-icon" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.2)); color: #8b5cf6;">
+                    <i class="fas fa-route"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Planning -->
+    <div class="card-section">
+        <div class="card-header gradient">
+            <h3 class="card-title">
+                <i class="fas fa-calendar-alt"></i>
+                Planning des 14 prochains jours
+            </h3>
+            <button @click="modalDispo = true" class="btn btn-primary" style="background: white; color: #3b82f6; box-shadow: none;">
+                <i class="fas fa-plus"></i>
+                Ajouter une disponibilité
+            </button>
+        </div>
+        
+        <div style="overflow-x: auto;">
+            <table class="planning-table">
+                <thead>
+                    <tr>
+                        <th class="sticky">Livreur</th>
+                        {% for jour in jours_planning %}
+                        <th :class="'{{ jour|date:'Y-m-d' }}' === '{{ aujourd_hui|date:'Y-m-d' }}' ? 'today' : ''">
+                            <div>{{ jour|date:'D' }}</div>
+                            <div style="font-weight: 700; margin-top: 0.25rem;">{{ jour|date:'d/m' }}</div>
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for livreur in livreurs %}
+                    <tr>
+                        <td class="sticky">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div class="livreur-avatar">
+                                    {{ livreur.first_name.0|upper }}{{ livreur.last_name.0|upper }}
+                                </div>
+                                <div style="text-align: left;">
+                                    <div style="font-weight: 600; color: var(--text-dark);">
+                                        {{ livreur.get_full_name }}
+                                    </div>
+                                    <div style="font-size: 0.875rem; color: var(--text-light);">
+                                        {{ livreur.routes_actives }} route(s)
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        {% for jour in jours_planning %}
+                        <td :class="'{{ jour|date:'Y-m-d' }}' === '{{ aujourd_hui|date:'Y-m-d' }}' ? 'today' : ''">
+                            {% with livreur_id=livreur.id jour_str=jour|date:'Y-m-d' %}
+                            <div x-data="{ dispo: disponibilitesMap['{{ livreur_id }}-{{ jour_str }}'] || null }">
+                                <template x-if="dispo">
+                                    <div>
+                                        <span x-show="dispo.type_dispo === 'disponible'"
+                                              class="dispo-badge disponible"
+                                              @click="voirDispo(dispo)"
+                                              title="Disponible">
+                                            <i class="fas fa-check"></i>
+                                        </span>
+                                        <span x-show="dispo.type_dispo === 'indisponible'"
+                                              class="dispo-badge indisponible"
+                                              @click="voirDispo(dispo)"
+                                              title="Indisponible">
+                                            <i class="fas fa-times"></i>
+                                        </span>
+                                        <span x-show="dispo.type_dispo === 'conge'"
+                                              class="dispo-badge conge"
+                                              @click="voirDispo(dispo)"
+                                              title="Congé">
+                                            <i class="fas fa-umbrella-beach"></i>
+                                        </span>
+                                        <span x-show="dispo.type_dispo === 'maladie'"
+                                              class="dispo-badge maladie"
+                                              @click="voirDispo(dispo)"
+                                              title="Maladie">
+                                            <i class="fas fa-notes-medical"></i>
+                                        </span>
+                                    </div>
+                                </template>
+                                <template x-if="!dispo">
+                                    <div class="dispo-badge empty">
+                                        <i class="fas fa-minus" style="font-size: 0.75rem;"></i>
+                                    </div>
+                                </template>
+                            </div>
+                            {% endwith %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Liste des livreurs -->
+    <div class="livreur-cards-grid">
+        {% for livreur in livreurs %}
+        <div class="livreur-card">
+            <div class="livreur-card-header">
+                <div class="livreur-card-avatar">
+                    {{ livreur.first_name.0|upper }}{{ livreur.last_name.0|upper }}
+                </div>
+                <div class="livreur-card-info">
+                    <h4>{{ livreur.get_full_name }}</h4>
+                    <p>{{ livreur.username }}</p>
+                </div>
+            </div>
+            
+            <div class="livreur-card-details">
+                <div class="livreur-detail-item">
+                    <div class="livreur-detail-icon">
+                        <i class="fas fa-route" style="color: #3b82f6;"></i>
+                    </div>
+                    <span>{{ livreur.routes_actives }} route(s) active(s)</span>
+                </div>
+                
+                <div class="livreur-detail-item">
+                    <div class="livreur-detail-icon">
+                        <i class="fas fa-calendar" style="color: #10b981;"></i>
+                    </div>
+                    <span>
+                        {% if livreur.disponibilites.all %}
+                            {{ livreur.disponibilites.all|length }} période(s) planifiée(s)
+                        {% else %}
+                            Aucune disponibilité enregistrée
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="livreur-card-actions">
+                <button @click="ajouterDispoLivreur({{ livreur.id }}, '{{ livreur.get_full_name|escapejs }}')"
+                        class="btn btn-primary btn-sm" style="flex: 1;">
+                    <i class="fas fa-calendar-plus"></i>
+                    Disponibilités
+                </button>
+                <button @click="editerLivreur({{ livreur.id }})"
+                        class="btn btn-edit btn-sm">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button @click="supprimerLivreur({{ livreur.id }}, '{{ livreur.get_full_name|escapejs }}')"
+                        class="btn btn-delete btn-sm">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Modals restent identiques mais avec les nouvelles classes -->
+    <!-- Modal Ajouter Disponibilité -->
+    <div x-show="modalDispo" x-cloak class="modal-overlay" @click.self="modalDispo = false">
+        <div class="modal-content" @click.stop>
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-calendar-plus" style="color: #3b82f6;"></i>
+                    Ajouter une disponibilité
+                </h3>
+                <button @click="modalDispo = false" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form @submit.prevent="sauvegarderDispo()">
+                <div class="form-group">
+                    <label class="form-label">Livreur</label>
+                    <select x-model="nouvelleDispo.livreur_id" required class="form-select">
+                        <option value="">Sélectionner un livreur</option>
+                        {% for livreur in livreurs %}
+                        <option value="{{ livreur.id }}">{{ livreur.get_full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select x-model="nouvelleDispo.type_dispo" required class="form-select">
+                        <option value="disponible">Disponible</option>
+                        <option value="indisponible">Indisponible</option>
+                        <option value="conge">Congé</option>
+                        <option value="maladie">Maladie</option>
+                    </select>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Date début</label>
+                        <input type="date" x-model="nouvelleDispo.date_debut" required class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date fin</label>
+                        <input type="date" x-model="nouvelleDispo.date_fin" required class="form-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea x-model="nouvelleDispo.notes" rows="3" class="form-textarea"></textarea>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" @click="modalDispo = false" class="btn btn-cancel">
+                        Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-submit">
+                        Sauvegarder
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modal Nouveau Livreur -->
+    <div x-show="modalNouveauLivreur" x-cloak class="modal-overlay" @click.self="modalNouveauLivreur = false">
+        <div class="modal-content" style="max-width: 600px;" @click.stop>
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-user-plus" style="color: #10b981;"></i>
+                    Créer un nouveau livreur
+                </h3>
+                <button @click="modalNouveauLivreur = false" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form @submit.prevent="creerLivreur()">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Prénom *</label>
+                        <input type="text" x-model="nouveauLivreur.first_name" required class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nom *</label>
+                        <input type="text" x-model="nouveauLivreur.last_name" required class="form-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Nom d'utilisateur *</label>
+                    <input type="text" x-model="nouveauLivreur.username" required class="form-input">
+                    <p class="form-hint">Utilisé pour se connecter</p>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" x-model="nouveauLivreur.email" class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Téléphone</label>
+                    <input type="tel" x-model="nouveauLivreur.telephone" class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Mot de passe *</label>
+                    <input type="password" x-model="nouveauLivreur.password" required class="form-input">
+                    <p class="form-hint">Minimum 8 caractères</p>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" @click="modalNouveauLivreur = false" class="btn btn-cancel">
+                        Annuler
+                    </button>
+                    <button type="submit" class="btn btn-success btn-submit">
+                        <i class="fas fa-save"></i>
+                        Créer le livreur
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modal Éditer Livreur (similaire, avec les nouvelles classes) -->
+    <div x-show="modalEditerLivreur" x-cloak class="modal-overlay" @click.self="modalEditerLivreur = false">
+        <div class="modal-content" style="max-width: 600px;" @click.stop>
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-user-edit" style="color: #3b82f6;"></i>
+                    Modifier le livreur
+                </h3>
+                <button @click="modalEditerLivreur = false" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form @submit.prevent="sauvegarderLivreur()">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Prénom *</label>
+                        <input type="text" x-model="livreurEnEdition.first_name" required class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nom *</label>
+                        <input type="text" x-model="livreurEnEdition.last_name" required class="form-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Nom d'utilisateur *</label>
+                    <input type="text" x-model="livreurEnEdition.username" required class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" x-model="livreurEnEdition.email" class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Téléphone</label>
+                    <input type="tel" x-model="livreurEnEdition.telephone" class="form-input">
+                </div>
+                
+                <div class="info-box yellow">
+                    <label style="display: flex; align-items: center; margin: 0;">
+                        <input type="checkbox" x-model="livreurEnEdition.change_password" style="width: 1rem; height: 1rem; margin-right: 0.5rem; accent-color: #f59e0b;">
+                        <span style="font-size: 0.875rem; font-weight: 600;">Changer le mot de passe</span>
+                    </label>
+                </div>
+                
+                <div x-show="livreurEnEdition.change_password" class="form-group" style="margin-top: 1rem;">
+                    <label class="form-label">Nouveau mot de passe</label>
+                    <input type="password" x-model="livreurEnEdition.new_password" class="form-input">
+                </div>
+                
+                <div class="info-box blue" style="margin-top: 1rem;">
+                    <label style="display: flex; align-items: start; margin: 0;">
+                        <input type="checkbox" x-model="livreurEnEdition.is_active" style="width: 1rem; height: 1rem; margin-right: 0.5rem; margin-top: 0.125rem; accent-color: #3b82f6;">
+                        <div>
+                            <span style="font-size: 0.875rem; font-weight: 600; display: block;">Compte actif</span>
+                            <p style="font-size: 0.75rem; color: var(--text-light); margin: 0.25rem 0 0 0;">Décocher pour désactiver le compte temporairement</p>
+                        </div>
+                    </label>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" @click="modalEditerLivreur = false" class="btn btn-cancel">
+                        Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-submit">
+                        <i class="fas fa-save"></i>
+                        Sauvegarder
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+</div>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Le reste du JavaScript reste identique
+function livreurManagement() {
+    return {
+        modalDispo: false,
+        modalNouveauLivreur: false,
+        modalEditerLivreur: false,
+        
+        nouvelleDispo: {
+            livreur_id: '',
+            type_dispo: 'disponible',
+            date_debut: '',
+            date_fin: '',
+            notes: ''
+        },
+        
+        nouveauLivreur: {
+            first_name: '',
+            last_name: '',
+            username: '',
+            email: '',
+            telephone: '',
+            password: ''
+        },
+        
+        livreurEnEdition: {
+            id: '',
+            first_name: '',
+            last_name: '',
+            username: '',
+            email: '',
+            telephone: '',
+            is_active: true,
+            change_password: false,
+            new_password: ''
+        },
+        
+        disponibilites: [],
+        disponibilitesMap: {},
+        
+        livreursDisponiblesAujourdhui: 0,
+        livreursEnConge: 0,
+        routesEnCours: 0,
+        
+        async init() {
+            await this.chargerDisponibilites();
+            this.calculerStats();
+        },
+        
+        async chargerDisponibilites() {
+            try {
+                const response = await fetch('/livraison/api/disponibilites/');
+                const data = await response.json();
+                this.disponibilites = data.disponibilites;
+                
+                this.disponibilitesMap = {};
+                this.disponibilites.forEach(dispo => {
+                    const debut = new Date(dispo.date_debut);
+                    const fin = new Date(dispo.date_fin);
+                    
+                    for (let d = new Date(debut); d <= fin; d.setDate(d.getDate() + 1)) {
+                        const jourStr = d.toISOString().split('T')[0];
+                        const key = `${dispo.livreur_id}-${jourStr}`;
+                        this.disponibilitesMap[key] = dispo;
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        },
+        
+        calculerStats() {
+            const aujourd_hui = new Date().toISOString().split('T')[0];
+            
+            this.livreursDisponiblesAujourdhui = 0;
+            this.livreursEnConge = 0;
+            
+            Object.keys(this.disponibilitesMap).forEach(key => {
+                if (key.includes(aujourd_hui)) {
+                    const dispo = this.disponibilitesMap[key];
+                    if (dispo.type_dispo === 'disponible') {
+                        this.livreursDisponiblesAujourdhui++;
+                    } else if (dispo.type_dispo === 'conge') {
+                        this.livreursEnConge++;
+                    }
+                }
+            });
+        },
+        
+        ajouterDispoLivreur(livreurId, livreurNom) {
+            this.nouvelleDispo.livreur_id = livreurId;
+            this.modalDispo = true;
+        },
+        
+        async sauvegarderDispo() {
+            try {
+                const response = await fetch('/livraison/api/disponibilites/ajouter/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.nouvelleDispo)
+                });
+                
+                if (response.ok) {
+                    alert('Disponibilité ajoutée!');
+                    this.modalDispo = false;
+                    this.nouvelleDispo = {
+                        livreur_id: '',
+                        type_dispo: 'disponible',
+                        date_debut: '',
+                        date_fin: '',
+                        notes: ''
+                    };
+                    await this.chargerDisponibilites();
+                    this.calculerStats();
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + (error.error || 'Erreur lors de la sauvegarde'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la sauvegarde');
+            }
+        },
+        
+        async creerLivreur() {
+            try {
+                const response = await fetch('/livraison/api/livreurs/creer/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.nouveauLivreur)
+                });
+                
+                if (response.ok) {
+                    alert('Livreur créé avec succès!');
+                    window.location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + (error.error || 'Erreur lors de la création'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la création');
+            }
+        },
+        
+        async editerLivreur(livreurId) {
+            try {
+                const response = await fetch(`/livraison/api/livreurs/${livreurId}/`);
+                const data = await response.json();
+                
+                this.livreurEnEdition = {
+                    id: data.id,
+                    first_name: data.first_name,
+                    last_name: data.last_name,
+                    username: data.username,
+                    email: data.email || '',
+                    telephone: data.telephone || '',
+                    is_active: data.is_active,
+                    change_password: false,
+                    new_password: ''
+                };
+                
+                this.modalEditerLivreur = true;
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors du chargement des données');
+            }
+        },
+        
+        async sauvegarderLivreur() {
+            try {
+                const response = await fetch(`/livraison/api/livreurs/${this.livreurEnEdition.id}/modifier/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(this.livreurEnEdition)
+                });
+                
+                if (response.ok) {
+                    alert('Livreur modifié avec succès!');
+                    window.location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + (error.error || 'Erreur lors de la modification'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la modification');
+            }
+        },
+        
+        async supprimerLivreur(livreurId, livreurNom) {
+            if (!confirm(`Êtes-vous sûr de vouloir supprimer ${livreurNom}?\n\nCette action est irréversible!`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/livraison/api/livreurs/${livreurId}/supprimer/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+                
+                if (response.ok) {
+                    alert('Livreur supprimé');
+                    window.location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + (error.error || 'Erreur lors de la suppression'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la suppression');
+            }
+        },
+        
+        voirDispo(dispo) {
+            alert(`${dispo.livreur_nom}\n${dispo.type_display}\nDu ${dispo.date_debut} au ${dispo.date_fin}\n\n${dispo.notes || 'Aucune note'}`);
+        }
+    }
+}
+</script>
+{% endblock %}

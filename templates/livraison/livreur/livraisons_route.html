@@ -1,0 +1,266 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Livraisons - {{ route.nom }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    
+    <!-- Header sticky -->
+    <div class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex-1 min-w-0">
+                    <h1 class="text-xl font-bold text-slate-900 truncate">{{ route.nom }}</h1>
+                    <p class="text-sm text-slate-600">Vos livraisons</p>
+                </div>
+                <a href="{% url 'livraison:dashboard_livreur' %}" 
+                   class="ml-3 flex-shrink-0 bg-slate-500 hover:bg-slate-600 text-white px-4 py-2 rounded-xl transition text-sm font-medium">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenu principal -->
+    <div class="max-w-7xl mx-auto px-4 py-6 pb-20">
+        
+        <!-- Stats de la route -->
+        <div class="bg-white rounded-2xl shadow-lg p-5 mb-4">
+            <div class="grid grid-cols-4 gap-3 mb-4">
+                <div class="text-center">
+                    <span class="block px-2 py-1 rounded-full text-xs font-semibold
+                        {% if route.status == 'en_cours' %}bg-orange-100 text-orange-800
+                        {% elif route.status == 'terminee' %}bg-green-100 text-green-800
+                        {% elif route.status == 'planifiee' %}bg-blue-100 text-blue-800
+                        {% else %}bg-slate-100 text-slate-800{% endif %}">
+                        {{ route.get_status_display }}
+                    </span>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-slate-900">{{ livraisons.count }}</p>
+                    <p class="text-xs text-slate-600">Total</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-green-600">{{ route.livraisons_livrees }}</p>
+                    <p class="text-xs text-slate-600">Livrées</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-orange-600">{{ route.livraisons_en_cours }}</p>
+                    <p class="text-xs text-slate-600">Restantes</p>
+                </div>
+            </div>
+            
+            <!-- Barre de progression -->
+            <div>
+                {% widthratio route.livraisons_livrees route.livraisonroute_set.count 100 as progression %}
+                <div class="flex justify-between text-xs text-slate-600 mb-1">
+                    <span>Progression</span>
+                    <span class="font-semibold">{{ progression|default:0 }}%</span>
+                </div>
+                <div class="h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full transition-all duration-500" 
+                         style="width: {{ progression|default:0 }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liste des livraisons -->
+        {% if livraisons %}
+            <div class="space-y-3">
+                {% for livraison_route in livraisons %}
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden border-l-4
+                    {% if livraison_route.livraison.status == 'livree' %}border-green-500
+                    {% elif livraison_route.livraison.status == 'en_cours' %}border-blue-500
+                    {% elif livraison_route.livraison.status == 'en_attente' %}border-orange-500
+                    {% else %}border-slate-300{% endif %}">
+                    
+                    <div class="p-5">
+                        <!-- En-tête livraison -->
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full 
+                                    {% if livraison_route.livraison.status == 'livree' %}bg-green-500
+                                    {% elif livraison_route.livraison.status == 'en_cours' %}bg-blue-500
+                                    {% elif livraison_route.livraison.status == 'en_attente' %}bg-orange-500
+                                    {% else %}bg-slate-300{% endif %} 
+                                    text-white text-sm font-bold">
+                                    {{ livraison_route.ordre }}
+                                </span>
+                                <div>
+                                    <h3 class="font-bold text-slate-900">
+                                        {% if livraison_route.livraison.nom_evenement %}
+                                            {{ livraison_route.livraison.nom_evenement }}
+                                        {% else %}
+                                            Livraison #{{ forloop.counter }}
+                                        {% endif %}
+                                    </h3>
+                                    <span class="px-2 py-0.5 rounded-full text-xs font-medium
+                                        {% if livraison_route.livraison.status == 'livree' %}bg-green-100 text-green-800
+                                        {% elif livraison_route.livraison.status == 'en_cours' %}bg-blue-100 text-blue-800
+                                        {% elif livraison_route.livraison.status == 'en_attente' %}bg-orange-100 text-orange-800
+                                        {% elif livraison_route.livraison.status == 'annulee' %}bg-red-100 text-red-800
+                                        {% else %}bg-slate-100 text-slate-800{% endif %}">
+                                        {{ livraison_route.livraison.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <span class="flex-shrink-0">
+                                {% if livraison_route.livraison.status == 'livree' %}
+                                    <i class="fas fa-check-circle text-green-500 text-2xl"></i>
+                                {% elif livraison_route.livraison.status == 'en_cours' %}
+                                    <i class="fas fa-shipping-fast text-blue-500 text-2xl"></i>
+                                {% else %}
+                                    <i class="fas fa-hourglass-half text-orange-500 text-2xl"></i>
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <!-- Informations -->
+                        <div class="space-y-3 mb-4">
+                            
+                            <!-- Adresse -->
+                            <div class="flex items-start gap-2">
+                                <i class="fas fa-map-marker-alt text-slate-400 mt-1 flex-shrink-0"></i>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs text-slate-600">Adresse</p>
+                                    <p class="text-sm font-medium text-slate-900">
+                                        {{ livraison_route.livraison.adresse_complete|default:"Adresse non définie" }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Heure estimée -->
+                            {% if livraison_route.livraison.heure_souhaitee %}
+                            <div class="flex items-start gap-2">
+                                <i class="fas fa-clock text-slate-400 mt-1 flex-shrink-0"></i>
+                                <div class="flex-1">
+                                    <p class="text-xs text-slate-600">Heure estimée</p>
+                                    <p class="text-sm font-medium text-slate-900">
+                                        {{ livraison_route.livraison.heure_souhaitee|time:"H:i" }}
+                                    </p>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Contact -->
+                            {% if livraison_route.livraison.client_telephone %}
+                            <div class="flex items-start gap-2">
+                                <i class="fas fa-phone text-slate-400 mt-1 flex-shrink-0"></i>
+                                <div class="flex-1">
+                                    <p class="text-xs text-slate-600">Contact</p>
+                                    <a href="tel:{{ livraison_route.livraison.client_telephone }}" 
+                                       class="text-sm font-medium text-blue-600 hover:underline">
+                                        {{ livraison_route.livraison.client_telephone }}
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Besoins spécifiques + Checklist -->
+                            {% if livraison_route.livraison.besoin_cafe or livraison_route.livraison.besoin_the or livraison_route.livraison.besoin_sac_glace or livraison_route.livraison.besoin_part_chaud or livraison_route.livraison.checklist %}
+                            <div class="flex items-start gap-2">
+                                <i class="fas fa-exclamation-circle text-slate-400 mt-1 flex-shrink-0"></i>
+                                <div class="flex-1">
+                                    <p class="text-xs text-slate-600 mb-1">Besoins</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        {% if livraison_route.livraison.besoin_cafe %}
+                                        <span class="px-2 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-medium">
+                                            <i class="fas fa-coffee"></i> Café
+                                        </span>
+                                        {% endif %}
+                                        {% if livraison_route.livraison.besoin_the %}
+                                        <span class="px-2 py-1 bg-green-100 text-green-800 rounded-lg text-xs font-medium">
+                                            <i class="fas fa-mug-hot"></i> Thé
+                                        </span>
+                                        {% endif %}
+                                        {% if livraison_route.livraison.besoin_sac_glace %}
+                                        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-medium">
+                                            <i class="fas fa-snowflake"></i> Glace
+                                        </span>
+                                        {% endif %}
+                                        {% if livraison_route.livraison.besoin_part_chaud %}
+                                        <span class="px-2 py-1 bg-red-100 text-red-800 rounded-lg text-xs font-medium">
+                                            <i class="fas fa-fire"></i> Chaud
+                                        </span>
+                                        {% endif %}
+                                        
+                                        <!-- Badge Checklist -->
+                                        {% if livraison_route.livraison.checklist %}
+                                        <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded-lg text-xs font-medium">
+                                            <i class="fas fa-list-check"></i> Checklist
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Informations supplémentaires -->
+                            {% if livraison_route.livraison.informations_supplementaires %}
+                            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                <p class="text-xs font-semibold text-amber-900 mb-1">
+                                    <i class="fas fa-info-circle"></i> Informations
+                                </p>
+                                <p class="text-sm text-amber-800">
+                                    {{ livraison_route.livraison.informations_supplementaires }}
+                                </p>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex gap-2">
+                            {% if livraison_route.livraison.status == 'livree' %}
+                                <div class="flex-1 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-center">
+                                    <span class="text-sm font-semibold text-green-800">
+                                        <i class="fas fa-check-circle"></i> Livrée avec succès
+                                    </span>
+                                </div>
+                            {% else %}
+                                <a href="{% url 'livraison:detail_livraison' livraison_route.livraison.id %}" 
+                                   class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-xl text-sm font-bold text-center transition shadow-lg shadow-blue-500/30 transform active:scale-95">
+                                    <i class="fas fa-eye"></i> Voir détails
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="bg-white rounded-2xl shadow-lg p-12 text-center">
+                <i class="fas fa-box-open text-slate-400 text-6xl mb-4"></i>
+                <h3 class="text-xl font-bold text-slate-900 mb-2">Aucune livraison</h3>
+                <p class="text-slate-600">Cette route n'a pas encore de livraisons assignées.</p>
+            </div>
+        {% endif %}
+
+        <!-- Actions globales route -->
+        {% if livraisons and route.status != 'terminee' %}
+        <div class="mt-6 space-y-3">
+            {% if route.status == 'planifiee' %}
+            <form method="post" action="{% url 'livraison:demarrer_route' route.id %}">
+                {% csrf_token %}
+                <button type="submit" 
+                        class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-4 rounded-xl font-bold text-base shadow-lg shadow-green-500/30 transform active:scale-95 transition">
+                    <i class="fas fa-play-circle"></i> Démarrer la route complète
+                </button>
+            </form>
+            {% endif %}
+
+            {% if route.status == 'en_cours' and route.livraisons_restantes == 0 %}
+            <form method="post" action="{% url 'livraison:terminer_route' route.id %}">
+                {% csrf_token %}
+                <button type="submit" 
+                        class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-4 rounded-xl font-bold text-base shadow-lg shadow-blue-500/30 transform active:scale-95 transition">
+                    <i class="fas fa-flag-checkered"></i> Terminer la route
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
