@@ -72,6 +72,78 @@
         box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
 
+    .date-selector {
+        background: #eff6ff;
+        border: 2px solid #bfdbfe;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .date-selector-title {
+        font-weight: 700;
+        color: #1e40af;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+    }
+
+    .date-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .date-input-wrapper label {
+        font-weight: 600;
+        color: var(--text-dark);
+        min-width: 150px;
+    }
+
+    .date-input-wrapper input[type="date"] {
+        flex: 1;
+        padding: 0.875rem 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--text-dark);
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .date-input-wrapper input[type="date"]:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .date-input-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        font-size: 1.2rem;
+        color: var(--primary-color);
+    }
+
+    .date-preview {
+        margin-top: 0.75rem;
+        padding: 0.75rem 1rem;
+        background: white;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        color: var(--text-light);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .date-preview strong {
+        color: var(--text-dark);
+        font-weight: 600;
+    }
+
     .drop-zone {
         border: 3px dashed var(--border-color);
         border-radius: 16px;
@@ -394,6 +466,15 @@
             font-size: 1.25rem;
         }
 
+        .date-input-wrapper {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .date-input-wrapper label {
+            min-width: auto;
+        }
+
         .stats-grid {
             grid-template-columns: 1fr;
         }
@@ -436,6 +517,30 @@
                 
                 {% csrf_token %}
                 
+                <!-- Sélecteur de date -->
+                <div class="date-selector">
+                    <h3 class="date-selector-title">
+                        <i class="fas fa-calendar-alt"></i>
+                        Date de livraison
+                    </h3>
+                    <div class="date-input-wrapper">
+                        <label for="date_livraison">
+                            Sélectionnez la date :
+                        </label>
+                        <input type="date" 
+                               name="date_livraison" 
+                               id="date_livraison"
+                               x-model="dateLivraison"
+                               required
+                               :min="minDate"
+                               :max="maxDate">
+                    </div>
+                    <div class="date-preview" x-show="dateLivraison">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Les livraisons seront créées pour le <strong x-text="formatDate(dateLivraison)"></strong></span>
+                    </div>
+                </div>
+                
                 <div :class="dragOver ? 'drag-over' : ''"
                      class="drop-zone"
                      @dragover.prevent="dragOver = true"
@@ -475,14 +580,15 @@
                         Création des livraisons
                     </h4>
                     <ul>
-                        <li>✅ Import des livraisons</li>
+                        <li>✅ Import des livraisons pour la date sélectionnée</li>
                         <li>✅ Géocodage automatique des adresses</li>
+                        <li>✅ Détection automatique de la ville (Montréal, Laval, etc.)</li>
                     </ul>
                 </div>
                 
                 <button type="submit" 
-                        :disabled="!selectedFile"
-                        :class="selectedFile ? 'btn-success' : ''"
+                        :disabled="!selectedFile || !dateLivraison"
+                        :class="(selectedFile && dateLivraison) ? 'btn-success' : ''"
                         class="btn submit-btn">
                     <i class="fas fa-check-circle"></i>
                     Lancer l'import
@@ -617,6 +723,9 @@ function importData() {
         dragOver: false,
         selectedFile: null,
         fileName: 'Aucun fichier sélectionné',
+        dateLivraison: '',
+        minDate: '',
+        maxDate: '',
         importing: false,
         progress: 0,
         progressMessage: '',
@@ -625,6 +734,31 @@ function importData() {
             importees: 0,
             erreurs: 0,
             geocoding_failed: []
+        },
+        
+        init() {
+            // Date par défaut = aujourd'hui
+            const today = new Date();
+            this.dateLivraison = today.toISOString().split('T')[0];
+            
+            // Min = aujourd'hui
+            this.minDate = today.toISOString().split('T')[0];
+            
+            // Max = dans 90 jours
+            const maxDate = new Date();
+            maxDate.setDate(maxDate.getDate() + 90);
+            this.maxDate = maxDate.toISOString().split('T')[0];
+        },
+        
+        formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr + 'T00:00:00');
+            return date.toLocaleDateString('fr-CA', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
         },
         
         fileSelected(event) {
@@ -648,9 +782,15 @@ function importData() {
         async startImport(event) {
             console.log('startImport appelé');
             console.log('Fichier sélectionné:', this.selectedFile);
+            console.log('Date de livraison:', this.dateLivraison);
             
             if (!this.selectedFile) {
                 alert('Aucun fichier sélectionné');
+                return;
+            }
+            
+            if (!this.dateLivraison) {
+                alert('Veuillez sélectionner une date de livraison');
                 return;
             }
             

@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-@notd@0q13wyjssfyuyy=_8zmrgte3*y*6f8jbz-5@z0s@^x+j
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['www.cheflow.ca', 'cheflow.ca', 'maxoufaya33.pythonanywhere.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -63,15 +63,6 @@ AUTH_USER_MODEL = 'users.CustomUser'
 LOGIN_URL = 'login'
 LOGOUT_REDIRECT_URL = 'login'
 
-# Médias
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
-# Static files
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -88,7 +79,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            BASE_DIR / 'templates',  # ← IMPORTANT : Ajoutez cette ligne
+            BASE_DIR / 'templates',
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -138,7 +129,6 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-
 LANGUAGE_CODE = 'fr'
 
 USE_L10N = True
@@ -149,8 +139,22 @@ USE_I18N = True
 
 USE_TZ = True
 
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
+
+STATIC_URL = '/static/'
+
+# En développement, Django cherche les static files dans ces dossiers
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# En production, collectstatic copie tout ici
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+
+# Media files (uploads utilisateurs)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 
 # Default primary key field type

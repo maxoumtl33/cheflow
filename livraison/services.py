@@ -86,53 +86,6 @@ class ExcelImportService:
         
         return numero_str
     
-    def extraire_adresse_base(self, adresse_complete):
-        """
-        Extrait uniquement le numéro et le nom de la rue
-        Exemples:
-        - "600, Maisonneuve Boulevard West, suite 1500" -> "600, Maisonneuve Boulevard West"
-        - "5445, Avenue de Gaspé, bureau 1005" -> "5445, Avenue de Gaspé"
-        - "123 Rue Saint-Denis, App 405" -> "123 Rue Saint-Denis"
-        """
-        if not adresse_complete:
-            return ''
-        
-        # Nettoyer d'abord
-        adresse = adresse_complete.strip()
-        
-        # Patterns à ignorer (suite, bureau, app, etc.)
-        patterns_a_retirer = [
-            r',\s*suite\s+\d+',
-            r',\s*bureau\s+\d+',
-            r',\s*app\.?\s*\d+',
-            r',\s*apt\.?\s*\d+',
-            r',\s*#\s*\d+',
-            r',\s*unit[eé]\s+\d+',
-        ]
-        
-        for pattern in patterns_a_retirer:
-            adresse = re.sub(pattern, '', adresse, flags=re.IGNORECASE)
-        
-        # Séparer par virgules
-        parties = [p.strip() for p in adresse.split(',')]
-        
-        # Filtrer les parties vides et les doublons
-        parties_propres = []
-        for partie in parties:
-            if partie and partie.lower() not in ['montreal', 'montréal', 'quebec', 'québec']:
-                # Ignorer si c'est un code postal (pattern: A1A 1A1 ou A1A1A1)
-                if not re.match(r'^[A-Z]\d[A-Z]\s?\d[A-Z]\d$', partie.upper()):
-                    if partie not in parties_propres:
-                        parties_propres.append(partie)
-        
-        # Garder seulement les 2 premières parties (numéro + rue)
-        if len(parties_propres) >= 2:
-            return f"{parties_propres[0]}, {parties_propres[1]}"
-        elif len(parties_propres) == 1:
-            return parties_propres[0]
-        
-        return adresse.split(',')[0].strip() if ',' in adresse else adresse
-    
     def get_safe_value(self, row, col_name):
         """Récupère une valeur en gérant les NaN"""
         val = row.get(col_name, '')
@@ -256,25 +209,31 @@ class ExcelImportService:
                     'Code postal manquant'
                 )
             else:
+                # ✨ Géocodage SANS forcer la ville (auto-détection)
                 geo_result = self.geocoding_service.geocoder_adresse(
                     adresse_complete,
-                    'Montréal',
-                    code_postal
+                    ville=None,  # Auto-détection depuis adresse ou code postal
+                    code_postal=code_postal
                 )
                 
                 if geo_result['success']:
                     livraison.latitude = geo_result['latitude']
                     livraison.longitude = geo_result['longitude']
                     livraison.place_id = str(geo_result.get('place_id', ''))
-                    champs_modifies.extend(['latitude', 'longitude', 'place_id'])
                     
-                    note_geo = f"\n🔄 Géocodage mis à jour le {timezone.now().strftime('%d/%m/%Y à %H:%M')}"
+                    # ✨ Sauvegarder la ville détectée
+                    ville_utilisee = geo_result.get('ville_utilisee', 'Montréal')
+                    livraison.ville = ville_utilisee
+                    
+                    champs_modifies.extend(['latitude', 'longitude', 'place_id', 'ville'])
+                    
+                    note_geo = f"\n🔄 Géocodage: {ville_utilisee} - {timezone.now().strftime('%d/%m/%Y à %H:%M')}"
                     if geo_result.get('approximatif'):
                         note_geo += " (approximatif)"
                     livraison.notes_internes = (livraison.notes_internes or '') + note_geo
                     champs_modifies.append('notes_internes')
                 else:
-                    raison_echec = geo_result.get('error', 'Erreur API Google Maps')
+                    raison_echec = geo_result.get('error', 'Erreur API Nominatim')
                     self.ajouter_geocoding_failed(
                         livraison.numero_livraison,
                         livraison.nom_evenement,
@@ -426,10 +385,11 @@ class ExcelImportService:
                     if nom_conseiller:
                         notes_internes += f"\nConseiller: {nom_conseiller}"
                     
-                    # Géocodage
+                    # ========== GÉOCODAGE ==========
                     latitude = None
                     longitude = None
                     place_id = ''
+                    ville = 'Montréal'  # Défaut
                     
                     if not adresse_complete:
                         self.ajouter_geocoding_failed(
@@ -448,28 +408,33 @@ class ExcelImportService:
                         )
                         notes_internes += "\n❌ Géocodage impossible: code postal manquant"
                     else:
+                        # ✨ Géocodage avec auto-détection de la ville
                         geo_result = self.geocoding_service.geocoder_adresse(
                             adresse_complete,
-                            'Montréal',
-                            code_postal
+                            ville=None,  # Auto-détection
+                            code_postal=code_postal
                         )
                         
                         if geo_result['success']:
                             latitude = geo_result['latitude']
                             longitude = geo_result['longitude']
                             place_id = str(geo_result.get('place_id', ''))
+                            ville = geo_result.get('ville_utilisee', 'Montréal')  # ✨ Récupérer la ville
                             
                             if geo_result.get('approximatif'):
-                                notes_internes += "\n⚠️ Géocodage approximatif"
+                                notes_internes += f"\n⚠️ Géocodage approximatif ({ville})"
+                            else:
+                                notes_internes += f"\n✅ Géocodé: {ville}"
                         else:
-                            raison_echec = geo_result.get('error', 'Erreur API Google Maps')
+                            raison_echec = geo_result.get('error', 'Erreur API Nominatim')
+                            ville_tentee = geo_result.get('ville_utilisee', 'Montréal')
                             self.ajouter_geocoding_failed(
                                 numero_base,
                                 nom_evenement,
                                 f"{adresse_complete}, {code_postal}",
                                 raison_echec
                             )
-                            notes_internes += f"\n❌ Géocodage échoué: {raison_echec}"
+                            notes_internes += f"\n❌ Géocodage échoué ({ville_tentee}): {raison_echec}"
                     
                     # Besoins automatiques
                     nom_lower = nom_evenement.lower() if nom_evenement else ''
@@ -478,7 +443,7 @@ class ExcelImportService:
                     besoin_part_chaud = 'part chaud' in nom_lower or 'chaud' in nom_lower
                     besoin_sac_glace = 'glace' in nom_lower or 'glacé' in nom_lower
                     
-                    # Création
+                    # ========== CRÉATION ==========
                     nouvelle_livraison = Livraison.objects.create(
                         numero_livraison=numero_base,
                         nom_evenement=nom_evenement,
@@ -488,6 +453,7 @@ class ExcelImportService:
                         app=app,
                         ligne_adresse_2=ligne2,
                         code_postal=code_postal,
+                        ville=ville,  # ✨ UTILISER LA VILLE DÉTECTÉE
                         latitude=latitude,
                         longitude=longitude,
                         place_id=place_id,
@@ -511,8 +477,9 @@ class ExcelImportService:
                     
                     self.success_count += 1
                     coord_info = f"({latitude}, {longitude})" if latitude else "(non géocodé)"
+                    ville_info = f"[{ville}]" if ville != 'Montréal' else ""
                     checklist_info = " 🔗" if nouvelle_livraison.checklist else ""
-                    print(f"✅ #{numero_base}: {nom_evenement[:35] if nom_evenement else 'OK'} {coord_info}{checklist_info}")
+                    print(f"✅ #{numero_base}: {nom_evenement[:30] if nom_evenement else 'OK'} {ville_info} {coord_info}{checklist_info}")
                     
                 except Exception as e:
                     error_msg = f"Ligne {index + 5}: {str(e)}"

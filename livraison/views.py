@@ -43,6 +43,17 @@ def dashboard_responsable(request):
 
 from .forms import ExcelUploadForm
 
+# Dans votre views.py
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.utils import timezone
+from datetime import datetime, date
+import json
+
+
 @login_required
 def import_excel(request):
     """Vue pour importer les livraisons depuis Excel"""
@@ -53,50 +64,140 @@ def import_excel(request):
         print("POST détecté")
         print(f"FILES: {request.FILES}")
         print(f"POST data: {request.POST}")
+        print("POST détecté")
+        print(f"FILES: {request.FILES}")
+        print(f"POST data: {request.POST}")
         
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         print(f"Est AJAX: {is_ajax}")
         
+        # Récupérer le fichier
         fichier = request.FILES.get('fichier_excel') or request.FILES.get('fichier')
         print(f"Fichier récupéré: {fichier}")
         
         if not fichier:
             print("ERREUR: Aucun fichier")
             if is_ajax:
-                return JsonResponse({'error': 'Aucun fichier sélectionné'}, status=400)
-            messages.error(request, 'Aucun fichier sélectionné')
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Aucun fichier fourni'
+                }, status=400)
+            messages.error(request, 'Aucun fichier fourni')
             return redirect('livraison:import_excel')
         
         print(f"Nom du fichier: {fichier.name}")
-        date_livraison = timezone.now().date()
-        print(f"Date de livraison: {date_livraison}")
         
-        print("Création du service...")
-        service = ExcelImportService()
+        # Récupérer la date de livraison
+        date_livraison_str = request.POST.get('date_livraison')
+        print(f"Date reçue (string): {date_livraison_str}")
         
-        print("Début de l'import...")
-        resultat = service.importer(fichier, date_livraison)
-        print(f"Résultat: {resultat}")
+        if not date_livraison_str:
+            print("ERREUR: Aucune date fournie")
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Aucune date de livraison fournie'
+                }, status=400)
+            messages.error(request, 'Veuillez sélectionner une date de livraison')
+            return redirect('livraison:import_excel')
         
-        if is_ajax:
-            return JsonResponse({
-                'success': resultat['success'],
-                'total': resultat['imported'] + resultat['skipped'],
-                'livraisons_creees': resultat['imported'],
-                'erreurs': len(resultat['errors']),
-                'error': resultat.get('error', '')
-            })
-        else:
+        # Parser la date
+        try:
+            date_livraison = datetime.strptime(date_livraison_str, '%Y-%m-%d').date()
+            print(f"Date parsée: {date_livraison}")
+        except ValueError as e:
+            print(f"ERREUR: Format de date invalide - {e}")
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Format de date invalide'
+                }, status=400)
+            messages.error(request, 'Format de date invalide')
+            return redirect('livraison:import_excel')
+        
+        # Vérifier que la date n'est pas dans le passé (optionnel - vous pouvez retirer cette vérification)
+        if date_livraison < date.today():
+            print(f"AVERTISSEMENT: Date dans le passé ({date_livraison})")
+            # Note: On peut autoriser les imports dans le passé si nécessaire
+            # Si vous voulez bloquer, décommentez ci-dessous:
+            # if is_ajax:
+            #     return JsonResponse({
+            #         'success': False,
+            #         'error': 'La date de livraison ne peut pas être dans le passé'
+            #     }, status=400)
+            # messages.error(request, 'La date de livraison ne peut pas être dans le passé')
+            # return redirect('livraison:import_excel')
+        
+        try:
+            print("Création du service...")
+            service = ExcelImportService()
+            
+            print(f"Début de l'import pour le {date_livraison}...")
+            resultat = service.importer(fichier, date_livraison=date_livraison)
+            print(f"Résultat: {resultat}")
+            
             if resultat['success']:
-                messages.success(request, f"✅ {resultat['imported']} livraisons importées")
+                if is_ajax:
+                    return JsonResponse({
+                        'success': True,
+                        'livraisons_creees': resultat['imported'],
+                        'livraisons_mises_a_jour': resultat['updated'],
+                        'livraisons_inchangees': resultat['skipped'],
+                        'total': resultat['imported'] + resultat['updated'] + resultat['skipped'],
+                        'erreurs': len(resultat['errors']),
+                        'geocoding_failed': resultat['geocoding_failed'],
+                        'date_livraison': date_livraison.strftime('%Y-%m-%d')
+                    })
+                
+                # Message de succès
+                message = f"✅ Import réussi pour le {date_livraison.strftime('%d/%m/%Y')} : "
+                message += f"{resultat['imported']} créées, "
+                message += f"{resultat['updated']} mises à jour, "
+                message += f"{resultat['skipped']} inchangées"
+                
+                if resultat['geocoding_failed']:
+                    message += f" | ⚠️ {len(resultat['geocoding_failed'])} non géocodées"
+                
+                messages.success(request, message)
                 return redirect('livraison:dashboard_responsable')
             else:
-                messages.error(request, f"❌ Erreur : {resultat.get('error')}")
+                # Erreur
+                error_msg = resultat.get('error', 'Erreur inconnue')
+                print(f"ERREUR lors de l'import: {error_msg}")
+                
+                if is_ajax:
+                    return JsonResponse({
+                        'success': False,
+                        'error': error_msg
+                    }, status=500)
+                
+                messages.error(request, f"Erreur lors de l'import : {error_msg}")
                 return redirect('livraison:import_excel')
+        
+        except Exception as e:
+            print(f"EXCEPTION: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'error': str(e)
+                }, status=500)
+            
+            messages.error(request, f"Erreur : {str(e)}")
+            return redirect('livraison:import_excel')
     
+    # GET - Afficher le formulaire
     print("GET request - affichage du formulaire")
-    form = ExcelUploadForm()
-    return render(request, 'livraison/responsable/import_excel.html', {'form': form})
+    
+    context = {
+        'date_aujourd_hui': date.today().isoformat(),
+        # Si vous avez un modèle ImportExcel pour l'historique
+        # 'imports_recents': ImportExcel.objects.order_by('-date_import')[:10]
+    }
+    
+    return render(request, 'livraison/responsable/import_excel.html', context)
 
 @login_required
 def livraisons_json(request):

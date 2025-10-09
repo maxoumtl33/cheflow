@@ -11,7 +11,7 @@ class ModeEnvoiAdmin(admin.ModelAdmin):
 
 @admin.register(Livraison)
 class LivraisonAdmin(admin.ModelAdmin):
-    list_display = ['numero_livraison', 'client_nom', 'date_livraison', 'periode', 'status']
+    list_display = ['numero_livraison', 'nom_evenement', 'date_livraison', 'periode', 'status']
     list_filter = ['status', 'periode', 'date_livraison', 'est_recuperation']
     search_fields = ['numero_livraison', 'client_nom', 'adresse_complete']
     date_hierarchy = 'date_livraison'
