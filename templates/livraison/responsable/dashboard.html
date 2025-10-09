@@ -524,7 +524,7 @@
 
     .route-zone {
         padding: 1.25rem;
-        min-height: 120px;
+        min-height: 200px; /* ✨ Augmenté de 120px à 200px */
     }
 
     .route-zone.empty {
@@ -535,13 +535,14 @@
         justify-content: center;
         text-align: center;
         color: var(--text-light);
+        min-height: 250px; /* ✨ Zone vide encore plus grande */
     }
 
     .route-deliveries {
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
-        min-height: 50px;
+        min-height: 180px; /* ✨ Hauteur minimale pour la zone de drop */
     }
 
     .route-delivery-item {
@@ -1684,11 +1685,11 @@ function dashboardData() {
                     group: {
                         name: 'livraisons',
                         pull: 'clone',
-                        put: false
+                        put: true  // ✨ CHANGÉ: Permet de recevoir des éléments
                     },
                     animation: 150,
                     sort: false,
-                    draggable: '.livraison-card',
+                    draggable: '.livraison-card, .route-delivery-item', // ✨ Accepte les deux types
                     
                     // IMPORTANT: Copier le data-id sur le clone
                     onClone: (evt) => {
@@ -1709,12 +1710,24 @@ function dashboardData() {
                         console.log('🎯 Début drag depuis pool:', evt.item.dataset.id);
                     },
                     
+                    // ✨ NOUVEAU: Gérer le retour vers le pool
+                    onAdd: async (evt) => {
+                        console.log('🔙 Livraison retournée au pool');
+                        const livraisonId = evt.item.dataset.id;
+                        
+                        if (!livraisonId) {
+                            console.error('❌ Pas d\'ID');
+                            evt.item.remove();
+                            return;
+                        }
+                        
+                        // Retirer de la route
+                        evt.item.remove();
+                        await this.retirerLivraisonRoute(livraisonId);
+                    },
+                    
                     onEnd: (evt) => {
                         console.log('✅ Fin drag');
-                        console.log('  From:', evt.from);
-                        console.log('  To:', evt.to);
-                        console.log('  Item:', evt.item);
-                        console.log('  Clone:', evt.clone);
                         
                         // Nettoyer les clones orphelins dans le pool
                         setTimeout(() => {
@@ -1915,6 +1928,7 @@ function dashboardData() {
                 if (response.ok && data.success) {
                     console.log('✅ Livraison ajoutée avec succès!');
                     
+                    // ✨ REFRESH AUTOMATIQUE
                     await this.chargerLivraisons();
                     await this.chargerRoutes();
                     
@@ -1934,6 +1948,57 @@ function dashboardData() {
             } catch (error) {
                 console.error('❌ Erreur catch:', error);
                 alert('Erreur lors de l\'ajout de la livraison: ' + error.message);
+                
+                await this.chargerLivraisons();
+                await this.chargerRoutes();
+                this.$nextTick(() => {
+                    this.initDragAndDrop();
+                });
+            }
+        },
+        
+        // ✨ NOUVELLE FONCTION: Retirer une livraison d'une route
+        async retirerLivraisonRoute(livraisonId) {
+            console.log('🔙 retirerLivraisonRoute appelé');
+            console.log('  Livraison ID:', livraisonId);
+            
+            try {
+                const response = await fetch('/livraison/api/routes/retirer-livraison/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        livraison_id: livraisonId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    console.log('✅ Livraison retirée avec succès!');
+                    
+                    // ✨ REFRESH AUTOMATIQUE
+                    await this.chargerLivraisons();
+                    await this.chargerRoutes();
+                    
+                    this.$nextTick(() => {
+                        this.initDragAndDrop();
+                    });
+                } else {
+                    console.error('❌ Erreur:', data.error);
+                    alert('Erreur: ' + (data.error || 'Impossible de retirer la livraison'));
+                    
+                    await this.chargerLivraisons();
+                    await this.chargerRoutes();
+                    this.$nextTick(() => {
+                        this.initDragAndDrop();
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Erreur:', error);
+                alert('Erreur: ' + error.message);
                 
                 await this.chargerLivraisons();
                 await this.chargerRoutes();
