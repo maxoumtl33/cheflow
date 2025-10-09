@@ -30,7 +30,6 @@
         padding: 0 1.5rem;
     }
 
-    /* Header Section */
     .header-section {
         background: white;
         border-radius: 20px;
@@ -65,7 +64,6 @@
         flex-wrap: wrap;
     }
 
-    /* Buttons */
     .btn {
         padding: 0.875rem 1.5rem;
         border-radius: 12px;
@@ -135,7 +133,6 @@
         box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
     }
 
-    /* Date Picker */
     .date-picker-container {
         background: white;
         border-radius: 16px;
@@ -159,7 +156,6 @@
         outline: none;
     }
 
-    /* Stats Grid */
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -225,7 +221,6 @@
         background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.2));
     }
 
-    /* Tabs */
     .tabs-container {
         background: white;
         border-radius: 20px;
@@ -284,14 +279,12 @@
         color: white;
     }
 
-    /* Main Layout */
     .main-layout {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 2rem;
     }
 
-    /* Card Sections */
     .card-section {
         background: white;
         border-radius: 16px;
@@ -351,13 +344,11 @@
         overflow-y: auto;
     }
 
-    /* Map */
     #map {
         height: 400px;
         border-radius: 0 0 16px 16px;
     }
 
-    /* Livraison Cards */
     .livraisons-list {
         display: flex;
         flex-direction: column;
@@ -458,7 +449,6 @@
         color: #991b1b;
     }
 
-    /* Route Cards */
     .routes-list {
         display: flex;
         flex-direction: column;
@@ -617,7 +607,6 @@
         gap: 0.375rem;
     }
 
-    /* Empty States */
     .empty-state {
         text-align: center;
         padding: 3rem 1rem;
@@ -630,7 +619,6 @@
         opacity: 0.5;
     }
 
-    /* Modals */
     .modal-overlay {
         position: fixed;
         inset: 0;
@@ -741,7 +729,6 @@
         flex: 1;
     }
 
-    /* Checkbox */
     .checkbox-container {
         position: absolute;
         top: 1rem;
@@ -756,7 +743,6 @@
         accent-color: var(--success-color);
     }
 
-    /* Sortable */
     .sortable-ghost {
         opacity: 0.4;
         background: var(--bg-light);
@@ -766,7 +752,6 @@
         opacity: 0.8;
     }
 
-    /* Responsive */
     @media (max-width: 1024px) {
         .main-layout {
             grid-template-columns: 1fr;
@@ -815,7 +800,6 @@
 {% block content %}
 <div x-data="dashboardData()" x-init="init()">
     
-    <!-- Header -->
     <div class="dashboard-container">
         <div class="header-section">
             <div class="header-content">
@@ -863,9 +847,6 @@
             </div>
         </div>
         
-        
-        
-        <!-- Statistiques -->
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-card-content">
@@ -891,8 +872,6 @@
                 </div>
             </div>
             
-            
-            
             <div class="stat-card">
                 <div class="stat-card-content">
                     <div class="stat-info">
@@ -917,7 +896,7 @@
                 </div>
             </div>
         </div>
-        <!-- Date Picker -->
+
         <div class="date-picker-container">
             <input 
                 type="date" 
@@ -925,7 +904,7 @@
                 @change="changerDate()"
                 class="form-input">
         </div>
-        <!-- Onglets périodes -->
+
         <div class="tabs-container">
             <div class="tabs-nav">
                 <button 
@@ -957,13 +936,10 @@
             </div>
         </div>
         
-        <!-- Layout principal -->
         <div class="main-layout">
             
-            <!-- Colonne Gauche : Carte + Livraisons -->
             <div style="display: flex; flex-direction: column; gap: 2rem;">
                 
-                <!-- Carte -->
                 <div class="card-section">
                     <div class="card-header gradient-blue">
                         <h3 class="card-title">
@@ -974,7 +950,6 @@
                     <div id="map"></div>
                 </div>
                 
-                <!-- Pool de livraisons -->
                 <div class="card-section">
                     <div class="card-header gradient-orange">
                         <h3 class="card-title">
@@ -1051,7 +1026,6 @@
                 </div>
             </div>
             
-            <!-- Colonne Droite : Routes -->
             <div style="display: flex; flex-direction: column; gap: 2rem;">
                 
                 <button 
@@ -1408,8 +1382,8 @@
     
 </div>
 
-<!-- Google Maps -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC2GqoZLMIMuAihXl8271sJN3kJ_57smdM&libraries=places,geometry"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
 <script>
 function dashboardData() {
@@ -1694,15 +1668,18 @@ function dashboardData() {
         },
 
         initDragAndDrop() {
+            console.log('🎬 Initialisation Drag & Drop...');
+            
             // Détruire les instances existantes
             Object.values(this.sortableInstances).forEach(instance => {
                 if (instance) instance.destroy();
             });
             this.sortableInstances = {};
             
-            // Pool de livraisons - Configuration CORRIGÉE
+            // ====== POOL DE LIVRAISONS ======
             const poolContainer = document.querySelector('#livraisons-pool .livraisons-list');
             if (poolContainer) {
+                console.log('📦 Initialisation du pool');
                 this.sortableInstances['pool'] = new Sortable(poolContainer, {
                     group: {
                         name: 'livraisons',
@@ -1712,41 +1689,95 @@ function dashboardData() {
                     animation: 150,
                     sort: false,
                     draggable: '.livraison-card',
-                    onEnd: (evt) => {
-                        // Supprimer le clone qui reste dans le pool
-                        if (evt.clone) {
-                            evt.clone.remove();
+                    
+                    // IMPORTANT: Copier le data-id sur le clone
+                    onClone: (evt) => {
+                        console.log('📋 Clone créé');
+                        const original = evt.item;
+                        const clone = evt.clone;
+                        const livraisonId = original.dataset.id;
+                        
+                        if (livraisonId) {
+                            clone.setAttribute('data-id', livraisonId);
+                            console.log('✅ data-id copié sur le clone:', livraisonId);
+                        } else {
+                            console.error('❌ Pas de data-id sur l\'original');
                         }
-                        this.chargerLivraisons();
+                    },
+                    
+                    onStart: (evt) => {
+                        console.log('🎯 Début drag depuis pool:', evt.item.dataset.id);
+                    },
+                    
+                    onEnd: (evt) => {
+                        console.log('✅ Fin drag');
+                        console.log('  From:', evt.from);
+                        console.log('  To:', evt.to);
+                        console.log('  Item:', evt.item);
+                        console.log('  Clone:', evt.clone);
+                        
+                        // Nettoyer les clones orphelins dans le pool
+                        setTimeout(() => {
+                            const clones = poolContainer.querySelectorAll('.livraison-card:not([data-id])');
+                            console.log(`🧹 Nettoyage de ${clones.length} clone(s) orphelin(s)`);
+                            clones.forEach(clone => clone.remove());
+                        }, 100);
                     }
                 });
             }
             
-            // Routes - Configuration pour les zones de dépôt
+            // ====== ROUTES - ZONES DE DÉPÔT ======
             document.querySelectorAll('.route-zone').forEach(zone => {
                 const routeId = zone.dataset.routeId;
                 const deliveriesContainer = zone.querySelector('.route-deliveries');
                 
                 if (!deliveriesContainer) return;
                 
+                console.log(`🚚 Initialisation route: ${routeId}`);
+                
                 this.sortableInstances[routeId] = new Sortable(deliveriesContainer, {
                     group: 'livraisons',
                     animation: 150,
                     draggable: '.livraison-card, .route-delivery-item',
+                    
                     onAdd: async (evt) => {
-                        const livraisonId = evt.item.dataset.id;
+                        console.log('🎉 ========== onAdd DÉCLENCHÉ ==========');
+                        console.log('📦 Route:', routeId);
+                        console.log('📦 Evt.item:', evt.item);
+                        console.log('📦 Evt.item.dataset:', evt.item.dataset);
                         
-                        // Supprimer visuellement l'élément ajouté temporairement
+                        const livraisonId = evt.item.dataset.id;
+                        console.log('🔑 ID livraison récupéré:', livraisonId);
+                        
+                        if (!livraisonId) {
+                            console.error('❌ Pas d\'ID trouvé sur l\'élément');
+                            console.error('   Classes:', evt.item.className);
+                            console.error('   Dataset:', evt.item.dataset);
+                            evt.item.remove();
+                            return;
+                        }
+                        
+                        // Supprimer immédiatement l'élément visuel cloné
                         evt.item.remove();
+                        console.log('🗑️ Clone supprimé visuellement');
                         
                         // Ajouter via API
+                        console.log('🌐 Appel API ajouterLivraisonRoute...');
                         await this.ajouterLivraisonRoute(routeId, livraisonId);
                     },
+                    
                     onUpdate: async (evt) => {
+                        console.log('🔄 Réorganisation dans route:', routeId);
                         await this.reordonnerRoute(routeId);
+                    },
+                    
+                    onRemove: (evt) => {
+                        console.log('➖ Élément retiré de route:', routeId);
                     }
                 });
             });
+            
+            console.log('✅ Drag & Drop initialisé pour', Object.keys(this.sortableInstances).length, 'zones');
         },
         
         async reordonnerRoute(routeId) {
@@ -1855,41 +1886,60 @@ function dashboardData() {
         },
         
         async ajouterLivraisonRoute(routeId, livraisonId) {
+            console.log('📤 ajouterLivraisonRoute appelé');
+            console.log('  Route ID:', routeId);
+            console.log('  Livraison ID:', livraisonId);
+            
             try {
+                const requestBody = {
+                    route_id: routeId,
+                    livraison_id: livraisonId
+                };
+                
+                console.log('📨 Envoi requête:', requestBody);
+                
                 const response = await fetch('/livraison/api/routes/ajouter-livraison/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': this.getCookie('csrftoken')
                     },
-                    body: JSON.stringify({
-                        route_id: routeId,
-                        livraison_id: livraisonId
-                    })
+                    body: JSON.stringify(requestBody)
                 });
                 
+                console.log('📬 Réponse status:', response.status);
+                
                 const data = await response.json();
+                console.log('📬 Réponse data:', data);
                 
                 if (response.ok && data.success) {
-                    // Recharger les données
+                    console.log('✅ Livraison ajoutée avec succès!');
+                    
                     await this.chargerLivraisons();
                     await this.chargerRoutes();
                     
-                    // Réinitialiser le drag and drop après le rechargement
                     this.$nextTick(() => {
                         this.initDragAndDrop();
                     });
                 } else {
+                    console.error('❌ Erreur API:', data.error);
                     alert('Erreur: ' + (data.error || 'Impossible d\'ajouter la livraison'));
-                    // Recharger en cas d'erreur
+                    
                     await this.chargerLivraisons();
                     await this.chargerRoutes();
+                    this.$nextTick(() => {
+                        this.initDragAndDrop();
+                    });
                 }
             } catch (error) {
-                console.error('Erreur:', error);
-                alert('Erreur lors de l\'ajout de la livraison');
+                console.error('❌ Erreur catch:', error);
+                alert('Erreur lors de l\'ajout de la livraison: ' + error.message);
+                
                 await this.chargerLivraisons();
                 await this.chargerRoutes();
+                this.$nextTick(() => {
+                    this.initDragAndDrop();
+                });
             }
         },
         
