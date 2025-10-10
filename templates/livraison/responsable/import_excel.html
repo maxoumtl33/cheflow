@@ -286,6 +286,11 @@
         to { transform: rotate(360deg); }
     }
 
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
     .progress-title {
         font-size: 1.5rem;
         font-weight: 700;
@@ -491,6 +496,23 @@
 </style>
 {% endblock %}
 
+{% block extra_js %}
+<!-- Google Maps API avec Places - Chargement prioritaire -->
+<script>
+// Variable globale pour indiquer que Google Maps est chargé
+window.googleMapsLoaded = false;
+
+function initGoogleMaps() {
+    window.googleMapsLoaded = true;
+    console.log('✅ Google Maps API chargée et prête');
+    
+    // Déclencher un événement personnalisé
+    window.dispatchEvent(new Event('google-maps-loaded'));
+}
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places&callback=initGoogleMaps" async defer></script>
+{% endblock %}
+
 {% block content %}
 <div class="dashboard-container">
     
@@ -651,6 +673,167 @@
                 </div>
             </div>
         </div>
+        
+        <!-- ✨ Modal de résumé après import -->
+        <div x-show="importComplete" 
+             x-cloak
+             class="modal-overlay"
+             @click.self="goToDashboard()"
+             style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 1.5rem; z-index: 9999; overflow-y: auto;">
+            
+            <div class="modal-content" 
+                 @click.stop
+                 style="background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 700px; width: 100%; max-height: 85vh; overflow-y: auto; padding: 2rem; margin: auto;">
+                
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <div style="display: inline-flex; padding: 1.5rem; background: #ecfdf5; border-radius: 50%; margin-bottom: 1rem;">
+                        <i class="fas fa-check-circle" style="font-size: 3rem; color: #10b981;"></i>
+                    </div>
+                    <h2 style="font-size: 1.75rem; font-weight: 700; color: var(--text-dark); margin: 0 0 0.5rem 0;">
+                        Import terminé avec succès !
+                    </h2>
+                    <p style="color: var(--text-light); font-size: 0.95rem;">
+                        Voici le résumé de l'opération
+                    </p>
+                </div>
+                
+                <!-- Résumé des statistiques -->
+                <div style="background: var(--bg-light); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+                        <div>
+                            <p style="font-size: 2rem; font-weight: 700; color: #3b82f6; margin: 0;" x-text="stats.lignes"></p>
+                            <p style="font-size: 0.75rem; color: var(--text-light); margin: 0.25rem 0 0 0;">Total lignes</p>
+                        </div>
+                        <div>
+                            <p style="font-size: 2rem; font-weight: 700; color: #10b981; margin: 0;" x-text="stats.importees"></p>
+                            <p style="font-size: 0.75rem; color: var(--text-light); margin: 0.25rem 0 0 0;">Importées</p>
+                        </div>
+                        <div>
+                            <p style="font-size: 2rem; font-weight: 700; color: #ef4444; margin: 0;" x-text="stats.erreurs"></p>
+                            <p style="font-size: 0.75rem; color: var(--text-light); margin: 0.25rem 0 0 0;">Erreurs</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Alerte géocodage si nécessaire -->
+                <div x-show="stats.geocoding_failed && stats.geocoding_failed.length > 0"
+                     style="background: #fff7ed; border: 2px solid #fed7aa; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                        <i class="fas fa-exclamation-triangle" style="color: #f97316; font-size: 1.5rem;"></i>
+                        <div>
+                            <p style="font-weight: 700; color: #92400e; margin: 0;" x-text="`${stats.geocoding_failed.length} livraison(s) non géocodée(s)`"></p>
+                            <p style="font-size: 0.875rem; color: #92400e; margin: 0.25rem 0 0 0;">Ces livraisons nécessitent une attention manuelle</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Liste des livraisons à géocoder -->
+                    <div style="max-height: 300px; overflow-y: auto; margin-top: 0.75rem;">
+                        <template x-for="(item, index) in stats.geocoding_failed" :key="item.numero">
+                            <div style="padding: 0.75rem; margin-bottom: 0.75rem; background: white; border-radius: 8px; border-left: 3px solid #f97316;">
+                                <!-- Mode affichage -->
+                                <div x-show="!item.editing">
+                                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                                        <div style="flex: 1;">
+                                            <p style="font-weight: 600; margin: 0; color: var(--text-dark);">
+                                                #<span x-text="item.numero"></span> - <span x-text="item.nom"></span>
+                                            </p>
+                                            <p style="font-size: 0.875rem; color: var(--text-light); margin: 0.25rem 0;">
+                                                📍 <span x-text="item.adresse"></span>
+                                            </p>
+                                            <p style="font-size: 0.875rem; color: #92400e; font-style: italic; margin: 0.25rem 0;">
+                                                ⚠️ <span x-text="item.raison"></span>
+                                            </p>
+                                        </div>
+                                        <button @click="startEditGeocode(item)" 
+                                                class="btn btn-primary"
+                                                style="padding: 0.5rem 0.75rem; font-size: 0.75rem; margin-left: 0.5rem;">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            Géocoder
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Mode édition -->
+                                <div x-show="item.editing" style="animation: fadeIn 0.3s;">
+                                    <p style="font-weight: 600; margin: 0 0 0.75rem 0; color: var(--text-dark);">
+                                        #<span x-text="item.numero"></span> - <span x-text="item.nom"></span>
+                                    </p>
+                                    
+                                    <div style="margin-bottom: 0.75rem;">
+                                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 0.25rem;">
+                                            Adresse complète
+                                        </label>
+                                        <input type="text" 
+                                               x-model="item.newAddress"
+                                               @input.debounce.300ms="searchAddress(item)"
+                                               @focus="console.log('🎯 Focus sur le champ')"
+                                               placeholder="Ex: 123 Rue Saint-Denis, Montréal, QC"
+                                               style="width: 100%; padding: 0.625rem; border: 2px solid var(--border-color); border-radius: 8px; font-size: 0.875rem;">
+                                        
+                                        <!-- Debug info -->
+                                        <div x-show="item.newAddress && item.newAddress.length >= 3" 
+                                             style="margin-top: 0.25rem; font-size: 0.75rem; color: var(--text-light);">
+                                            🔍 Recherche: <span x-text="item.newAddress"></span>
+                                            <span x-show="item.suggestions">
+                                                - <span x-text="item.suggestions.length"></span> résultat(s)
+                                            </span>
+                                        </div>
+                                        
+                                        <!-- Suggestions d'adresses -->
+                                        <div x-show="item.suggestions && item.suggestions.length > 0" 
+                                             x-transition
+                                             style="margin-top: 0.5rem; background: white; border: 2px solid var(--primary-color); border-radius: 8px; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; position: relative;">
+                                            <template x-for="(suggestion, idx) in item.suggestions" :key="idx">
+                                                <div @click="selectSuggestion(item, suggestion)"
+                                                     style="padding: 0.625rem 0.75rem; cursor: pointer; font-size: 0.875rem; border-bottom: 1px solid var(--border-color); transition: background 0.2s;"
+                                                     @mouseenter="$el.style.background = '#eff6ff'"
+                                                     @mouseleave="$el.style.background = 'white'">
+                                                    <i class="fas fa-map-marker-alt" style="color: var(--primary-color); margin-right: 0.5rem;"></i>
+                                                    <span x-text="suggestion.description"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        
+                                        <!-- Message si aucun résultat -->
+                                        <div x-show="item.newAddress && item.newAddress.length >= 3 && (!item.suggestions || item.suggestions.length === 0)"
+                                             style="margin-top: 0.5rem; padding: 0.5rem; background: #fef3c7; border: 1px solid #fbbf24; border-radius: 6px; font-size: 0.75rem; color: #92400e;">
+                                            ℹ️ Aucune adresse trouvée. Essayez d'être plus précis.
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button @click="cancelEditGeocode(item)"
+                                                style="flex: 1; padding: 0.5rem; border: 2px solid var(--border-color); background: white; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; color: var(--text-dark);">
+                                            Annuler
+                                        </button>
+                                        <button @click="saveGeocode(item, index)"
+                                                :disabled="!item.selectedPlace"
+                                                class="btn btn-success"
+                                                style="flex: 2; padding: 0.5rem; font-size: 0.875rem; justify-content: center;"
+                                                :style="!item.selectedPlace ? 'opacity: 0.5; cursor: not-allowed;' : ''">
+                                            <span x-show="!item.geocoding">
+                                                <i class="fas fa-check"></i> Enregistrer
+                                            </span>
+                                            <span x-show="item.geocoding">
+                                                <i class="fas fa-spinner fa-spin"></i> Géocodage...
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- Bouton de confirmation -->
+                <button @click="goToDashboard()"
+                        class="btn btn-success"
+                        style="width: 100%; padding: 1rem; font-size: 1rem; justify-content: center;">
+                    <i class="fas fa-check"></i>
+                    Retourner au dashboard
+                </button>
+            </div>
+        </div>
     </div>
     
     <!-- Historique des imports -->
@@ -727,6 +910,7 @@ function importData() {
         minDate: '',
         maxDate: '',
         importing: false,
+        importComplete: false,
         progress: 0,
         progressMessage: '',
         stats: {
@@ -735,6 +919,8 @@ function importData() {
             erreurs: 0,
             geocoding_failed: []
         },
+        geocodeService: null,
+        autocompleteService: null,
         
         init() {
             // Date par défaut = aujourd'hui
@@ -748,6 +934,47 @@ function importData() {
             const maxDate = new Date();
             maxDate.setDate(maxDate.getDate() + 90);
             this.maxDate = maxDate.toISOString().split('T')[0];
+            
+            // Initialiser Google Maps API
+            this.initGoogleMaps();
+        },
+        
+        initGoogleMaps() {
+            // Vérifier si Google Maps est déjà chargé
+            if (window.googleMapsLoaded && typeof google !== 'undefined' && google.maps && google.maps.places) {
+                this.geocodeService = new google.maps.Geocoder();
+                this.autocompleteService = new google.maps.places.AutocompleteService();
+                console.log('✅ Google Maps API initialisée immédiatement');
+                return;
+            }
+            
+            // Sinon, attendre l'événement
+            window.addEventListener('google-maps-loaded', () => {
+                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+                    this.geocodeService = new google.maps.Geocoder();
+                    this.autocompleteService = new google.maps.places.AutocompleteService();
+                    console.log('✅ Google Maps API initialisée après chargement');
+                }
+            });
+            
+            // Backup: polling si l'événement ne se déclenche pas
+            let attempts = 0;
+            const maxAttempts = 50;
+            
+            const checkGoogleMaps = setInterval(() => {
+                attempts++;
+                
+                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+                    this.geocodeService = new google.maps.Geocoder();
+                    this.autocompleteService = new google.maps.places.AutocompleteService();
+                    console.log('✅ Google Maps API initialisée via polling');
+                    clearInterval(checkGoogleMaps);
+                } else if (attempts >= maxAttempts) {
+                    console.error('❌ Timeout: Google Maps API n\'a pas pu être chargée après 5 secondes');
+                    alert('⚠️ Erreur de chargement de Google Maps. Veuillez recharger la page.');
+                    clearInterval(checkGoogleMaps);
+                }
+            }, 100);
         },
         
         formatDate(dateStr) {
@@ -779,11 +1006,165 @@ function importData() {
             }
         },
         
-        async startImport(event) {
-            console.log('startImport appelé');
-            console.log('Fichier sélectionné:', this.selectedFile);
-            console.log('Date de livraison:', this.dateLivraison);
+        goToDashboard() {
+            window.location.href = "{% url 'livraison:dashboard_responsable' %}";
+        },
+        
+        // ✨ FONCTIONS DE GÉOCODAGE MANUEL
+        
+        startEditGeocode(item) {
+            item.editing = true;
+            item.newAddress = item.adresse || '';
+            item.suggestions = [];
+            item.selectedPlace = null;
+            item.geocoding = false;
+        },
+        
+        cancelEditGeocode(item) {
+            item.editing = false;
+            item.newAddress = '';
+            item.suggestions = [];
+            item.selectedPlace = null;
+        },
+        
+        async searchAddress(item) {
+            if (!item.newAddress || item.newAddress.length < 3) {
+                item.suggestions = [];
+                return;
+            }
             
+            if (!this.autocompleteService) {
+                console.error('❌ Autocomplete service non initialisé');
+                console.log('État de Google Maps:', {
+                    googleDefined: typeof google !== 'undefined',
+                    mapsExists: typeof google !== 'undefined' && google.maps,
+                    placesExists: typeof google !== 'undefined' && google.maps && google.maps.places
+                });
+                alert('⚠️ Le service de recherche d\'adresse n\'est pas encore prêt. Veuillez patienter quelques secondes et réessayer.');
+                return;
+            }
+            
+            try {
+                const request = {
+                    input: item.newAddress,
+                    componentRestrictions: { country: 'ca' },
+                    types: ['address']
+                };
+                
+                console.log('🔍 Recherche d\'adresse:', item.newAddress);
+                
+                this.autocompleteService.getPlacePredictions(request, (predictions, status) => {
+                    console.log('📥 Réponse Google Places:', { status, predictions });
+                    
+                    if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+                        item.suggestions = predictions;
+                        console.log(`✅ ${predictions.length} suggestions trouvées`);
+                    } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+                        item.suggestions = [];
+                        console.log('ℹ️ Aucune suggestion trouvée');
+                    } else {
+                        item.suggestions = [];
+                        console.error('❌ Erreur de recherche:', status);
+                    }
+                    
+                    // Force Alpine à mettre à jour l'affichage
+                    this.$nextTick(() => {
+                        console.log('🔄 Mise à jour Alpine terminée');
+                    });
+                });
+            } catch (error) {
+                console.error('❌ Erreur recherche adresse:', error);
+                item.suggestions = [];
+            }
+        },
+        
+        selectSuggestion(item, suggestion) {
+            item.newAddress = suggestion.description;
+            item.selectedPlace = suggestion;
+            item.suggestions = [];
+        },
+        
+        async saveGeocode(item, index) {
+            if (!item.selectedPlace) {
+                alert('Veuillez sélectionner une adresse dans les suggestions');
+                return;
+            }
+            
+            item.geocoding = true;
+            
+            try {
+                const request = {
+                    placeId: item.selectedPlace.place_id
+                };
+                
+                this.geocodeService.geocode(request, async (results, status) => {
+                    if (status === 'OK' && results[0]) {
+                        const location = results[0].geometry.location;
+                        const addressComponents = results[0].address_components;
+                        
+                        // Extraire les composants d'adresse
+                        let rue = '';
+                        let ville = '';
+                        let codePostal = '';
+                        
+                        addressComponents.forEach(component => {
+                            if (component.types.includes('street_number')) {
+                                rue = component.long_name + ' ';
+                            }
+                            if (component.types.includes('route')) {
+                                rue += component.long_name;
+                            }
+                            if (component.types.includes('locality')) {
+                                ville = component.long_name;
+                            }
+                            if (component.types.includes('postal_code')) {
+                                codePostal = component.long_name;
+                            }
+                        });
+                        
+                        // Envoyer au serveur pour mise à jour
+                        const response = await fetch("{% url 'livraison:update_geocode' %}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                            },
+                            body: JSON.stringify({
+                                numero: item.numero,
+                                latitude: location.lat(),
+                                longitude: location.lng(),
+                                adresse: rue,
+                                ville: ville,
+                                code_postal: codePostal
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            // Retirer de la liste
+                            this.stats.geocoding_failed.splice(index, 1);
+                            this.stats.importees++;
+                            this.stats.erreurs--;
+                            
+                            alert(`✅ Livraison #${item.numero} géocodée avec succès !`);
+                        } else {
+                            alert(`❌ Erreur: ${data.error}`);
+                        }
+                    } else {
+                        alert('❌ Impossible de géocoder cette adresse');
+                    }
+                    
+                    item.geocoding = false;
+                });
+            } catch (error) {
+                console.error('❌ Erreur lors du géocodage:', error);
+                alert('❌ Erreur lors du géocodage');
+                item.geocoding = false;
+            }
+        },
+        
+        async startImport(event) {
             if (!this.selectedFile) {
                 alert('Aucun fichier sélectionné');
                 return;
@@ -800,15 +1181,9 @@ function importData() {
             
             const formData = new FormData(event.target);
             
-            console.log('FormData créé');
-            for (let pair of formData.entries()) {
-                console.log(pair[0] + ': ' + pair[1]);
-            }
-            
             this.simulateProgress();
             
             try {
-                console.log('Envoi de la requête...');
                 const response = await fetch(window.location.href, {
                     method: 'POST',
                     body: formData,
@@ -817,18 +1192,13 @@ function importData() {
                     }
                 });
                 
-                console.log('Réponse reçue, status:', response.status);
-                console.log('Content-Type:', response.headers.get('Content-Type'));
-                
                 const text = await response.text();
-                console.log('Réponse brute:', text.substring(0, 500));
-                
                 let data;
+                
                 try {
                     data = JSON.parse(text);
-                    console.log('Données JSON:', data);
                 } catch (e) {
-                    console.error('Erreur parse JSON:', e);
+                    console.error('❌ Erreur parse JSON:', e);
                     alert('La réponse n\'est pas du JSON valide. Voir console.');
                     this.importing = false;
                     return;
@@ -840,18 +1210,28 @@ function importData() {
                     this.stats.lignes = data.total || 0;
                     this.stats.importees = data.livraisons_creees || 0;
                     this.stats.erreurs = data.erreurs || 0;
-                    this.stats.geocoding_failed = data.geocoding_failed || [];
+                    
+                    // Ajouter les propriétés nécessaires pour le géocodage
+                    this.stats.geocoding_failed = (data.geocoding_failed || []).map(item => ({
+                        ...item,
+                        editing: false,
+                        newAddress: '',
+                        suggestions: [],
+                        selectedPlace: null,
+                        geocoding: false
+                    }));
                     
                     setTimeout(() => {
-                        window.location.href = "{% url 'livraison:dashboard_responsable' %}";
-                    }, 2000);
+                        this.importing = false;
+                        this.importComplete = true;
+                    }, 1000);
                 } else {
-                    alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+                    alert('❌ Erreur: ' + (data.error || 'Erreur inconnue'));
                     this.importing = false;
                 }
             } catch (error) {
-                console.error('Erreur complète:', error);
-                alert('Erreur: ' + error.message);
+                console.error('❌ Erreur complète:', error);
+                alert('❌ Erreur: ' + error.message);
                 this.importing = false;
             }
         },

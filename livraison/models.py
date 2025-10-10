@@ -55,6 +55,7 @@ class Livraison(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     place_id = models.CharField(max_length=200, blank=True, null=True,)  # ← NOUVEAU (Google Place ID)
     code_postal = models.CharField(max_length=10, blank=True)
+    numero = models.CharField(max_length=10, blank=True)
     ville = models.CharField(max_length=100, default='Montréal')
     app = models.CharField(max_length=20, blank=True, verbose_name="Appartement")
     ligne_adresse_2 = models.CharField(max_length=255, blank=True, verbose_name="Ligne adresse 2")
@@ -78,6 +79,16 @@ class Livraison(models.Model):
     autres_besoins = models.CharField(max_length=200, blank=True)
     informations_supplementaires = models.TextField(blank=True)
     
+    geocode_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'En attente'),
+            ('success', 'Réussi'),
+            ('failed', 'Échoué')
+        ],
+        default='pending'
+    )
+    geocode_attempts = models.IntegerField(default=0)
 
     nom_conseiller = models.CharField(max_length=100, blank=True)
 
@@ -473,6 +484,12 @@ class DisponibiliteLivreur(models.Model):
     date_debut = models.DateField()
     date_fin = models.DateField()
     type_dispo = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    heure_debut_shift = models.TimeField(
+    null=True, 
+    blank=True,
+    verbose_name="Heure de début de shift",
+    help_text="Heure à laquelle le livreur commence sa journée"
+)
     
     notes = models.TextField(blank=True)
     

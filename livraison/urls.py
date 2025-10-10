@@ -43,6 +43,7 @@ urlpatterns = [
     path('api/livraisons/<uuid:livraison_id>/besoins/', views.sauvegarder_besoins_livraison, name='sauvegarder_besoins'),
     path('api/livraisons/<uuid:livraison_id>/status/', views.changer_status_livraison, name='changer_status_livraison'),
     path('api/fusionner-livraisons/', views.fusionner_livraisons, name='fusionner_livraisons'),
+    path('api/update-geocode/', views.update_geocode, name='update_geocode'),
     
     # ==========================================
     # API - ROUTES
@@ -63,11 +64,16 @@ urlpatterns = [
     path('api/livreurs/<int:livreur_id>/', views.get_livreur_details, name='get_livreur_details'),
     path('api/livreurs/<int:livreur_id>/modifier/', views.modifier_livreur, name='modifier_livreur'),
     path('api/livreurs/<int:livreur_id>/supprimer/', views.supprimer_livreur, name='supprimer_livreur'),
-    
+    path('livreur/shift-info/', views.get_shift_info, name='get_shift_info'),
     path('api/disponibilites/', views.disponibilites_json, name='disponibilites_json'),
     path('api/disponibilites/ajouter/', views.ajouter_disponibilite, name='ajouter_disponibilite'),
+    path('api/disponibilites/creer/', views.creer_disponibilite, name='creer_disponibilite'),
+    path('api/disponibilites/<uuid:dispo_id>/modifier/', views.modifier_disponibilite, name='modifier_disponibilite'),
     path('api/disponibilites/<uuid:dispo_id>/supprimer/', views.supprimer_disponibilite, name='supprimer_disponibilite'),
-
+    path('api/livreurs/<uuid:livreur_id>/disponibilites/', views.disponibilites_livreur, name='disponibilites_livreur'),
+    path('api/disponibilites/date/', views.disponibilites_par_date, name='disponibilites_par_date'),
+    path('api/routes/date/', views.routes_par_date, name='routes_par_date'),
+    path('api/routes/month/', views.routes_du_mois, name='routes_du_mois'),
     # ==========================================
 # LIVREUR - INTERFACE
 # ==========================================

@@ -6,6 +6,8 @@ from .models import Livraison, ImportExcel
 from .services import ExcelImportService
 from datetime import datetime, timedelta
 from django.utils import timezone
+from django.conf import settings
+
 
 @login_required
 def dashboard_responsable(request):
@@ -193,8 +195,8 @@ def import_excel(request):
     
     context = {
         'date_aujourd_hui': date.today().isoformat(),
-        # Si vous avez un modèle ImportExcel pour l'historique
-        # 'imports_recents': ImportExcel.objects.order_by('-date_import')[:10]
+        'GOOGLE_MAPS_API_KEY': settings.GOOGLE_MAPS_API_KEY,
+        'imports_recents': ImportExcel.objects.order_by('-date_import')[:10]
     }
     
     return render(request, 'livraison/responsable/import_excel.html', context)
@@ -436,13 +438,13 @@ def livreurs_json(request):
     return JsonResponse({'livreurs': data})
 
 
-
 import re
+from django.db import transaction
 
 @login_required
 @require_http_methods(["POST"])
 def fusionner_livraisons(request):
-    """Fusionner plusieurs livraisons en une seule"""
+    """Fusionner plusieurs livraisons avec logique de priorité et regroupement intelligent des noms"""
     try:
         data = json.loads(request.body)
         livraison_ids = data.get('livraison_ids', [])
@@ -457,7 +459,7 @@ def fusionner_livraisons(request):
         livraisons = list(Livraison.objects.filter(
             id__in=livraison_ids,
             status='non_assignee'
-        ).order_by('date_creation'))
+        ).select_related('mode_envoi', 'checklist').order_by('date_creation'))
         
         if len(livraisons) != len(livraison_ids):
             return JsonResponse({
@@ -465,64 +467,59 @@ def fusionner_livraisons(request):
                 'error': 'Certaines livraisons sont déjà assignées ou introuvables'
             }, status=400)
         
-        # Extraire le nom de base (sans le .1, .2, etc.)
-        def extraire_nom_base(nom_evenement):
-            """Extrait le nom sans les numéros de version"""
-            if not nom_evenement:
-                return nom_evenement
+        # ========================================
+        # ÉTAPE 1: Déterminer la livraison principale selon la hiérarchie
+        # ========================================
+        livraison_principale = determiner_livraison_principale(livraisons)
+        autres_livraisons = [l for l in livraisons if l.id != livraison_principale.id]
+        
+        # ========================================
+        # ÉTAPE 2: Générer le nom fusionné intelligent
+        # ========================================
+        nom_fusionne = generer_nom_fusionne([l.nom_evenement for l in livraisons])
+        
+        # ========================================
+        # ÉTAPE 3: Fusionner les données
+        # ========================================
+        with transaction.atomic():
+            # Collecter les modes d'envoi uniques
+            modes_envoi = []
+            total_convives = 0
             
-            # Pattern: "Nom 1.1" ou "Nom 2.2" -> retourne "Nom 1" ou "Nom 2"
-            match = re.match(r'^(.+?\s+\d+)(?:\.\d+)?$', nom_evenement.strip())
-            if match:
-                return match.group(1)
+            for liv in livraisons:
+                if liv.mode_envoi:
+                    mode_nom = liv.mode_envoi.nom
+                    if mode_nom not in modes_envoi:
+                        modes_envoi.append(mode_nom)
+                total_convives += liv.nb_convives
             
-            return nom_evenement
-        
-        # La première devient la principale
-        livraison_principale = livraisons[0]
-        autres_livraisons = livraisons[1:]
-        
-        # Extraire et définir le nom de base
-        nom_base = extraire_nom_base(livraison_principale.nom_evenement)
-        
-        # Collecter les modes d'envoi uniques
-        modes_envoi = []
-        total_convives = 0
-        
-        for liv in livraisons:
-            if liv.mode_envoi:
-                mode_nom = liv.mode_envoi.nom
-                if mode_nom not in modes_envoi:
-                    modes_envoi.append(mode_nom)
-            total_convives += liv.nb_convives
-        
-        # Mettre à jour la livraison principale
-        notes = livraison_principale.notes_internes or ''
-        if notes:
-            notes += '\n\n'
-        notes += f"═══ FUSION DE {len(livraisons)} LIVRAISONS ═══\n"
-        notes += f"Date fusion: {timezone.now().strftime('%Y-%m-%d %H:%M')}\n"
-        notes += f"Modes d'envoi: {' + '.join(modes_envoi)}\n"
-        notes += f"Total convives: {total_convives}\n"
-        notes += "\nLivraisons fusionnées:\n"
-        
-        for liv in livraisons:
-            notes += f"  • {liv.numero_livraison} - {liv.nom_evenement}\n"
-        
-        livraison_principale.nom_evenement = nom_base
-        livraison_principale.notes_internes = notes
-        livraison_principale.nb_convives = total_convives
-        livraison_principale.save()
-        
-        # Supprimer les autres livraisons
-        for liv in autres_livraisons:
-            liv.delete()
+            # Mettre à jour la livraison principale
+            notes = livraison_principale.notes_internes or ''
+            if notes:
+                notes += '\n\n'
+            notes += f"═══ FUSION DE {len(livraisons)} LIVRAISONS ═══\n"
+            notes += f"Date fusion: {timezone.now().strftime('%Y-%m-%d %H:%M')}\n"
+            notes += f"Modes d'envoi: {' + '.join(modes_envoi)}\n"
+            notes += f"Total convives: {total_convives}\n"
+            notes += "\nLivraisons fusionnées:\n"
+            
+            for liv in livraisons:
+                notes += f"  • {liv.numero_livraison} - {liv.nom_evenement}\n"
+            
+            livraison_principale.nom_evenement = nom_fusionne
+            livraison_principale.notes_internes = notes
+            livraison_principale.nb_convives = total_convives
+            livraison_principale.save()
+            
+            # Supprimer les autres livraisons
+            for liv in autres_livraisons:
+                liv.delete()
         
         return JsonResponse({
             'success': True,
-            'message': f'{len(livraisons)} livraisons fusionnées en "{nom_base}"',
+            'message': f'{len(livraisons)} livraisons fusionnées',
             'livraison_id': str(livraison_principale.id),
-            'nom_evenement': nom_base
+            'nom_evenement': nom_fusionne
         })
         
     except Exception as e:
@@ -532,7 +529,107 @@ def fusionner_livraisons(request):
             'success': False,
             'error': str(e)
         }, status=400)
+
+
+def determiner_livraison_principale(livraisons):
+    """
+    Détermine quelle livraison doit devenir la principale selon la hiérarchie:
+    1. Checklist + Mode récupérable
+    2. Checklist seule
+    3. Mode récupérable seul
+    4. Première livraison
+    """
     
+    # Niveau 1: Checklist + Mode récupérable
+    for liv in livraisons:
+        if (liv.checklist and 
+            liv.mode_envoi and 
+            liv.mode_envoi.permet_recuperation):
+            print(f"✅ Principale (Checklist + Récup): {liv.numero_livraison}")
+            return liv
+    
+    # Niveau 2: Checklist seule
+    for liv in livraisons:
+        if liv.checklist:
+            print(f"✅ Principale (Checklist): {liv.numero_livraison}")
+            return liv
+    
+    # Niveau 3: Mode récupérable seul
+    for liv in livraisons:
+        if liv.mode_envoi and liv.mode_envoi.permet_recuperation:
+            print(f"✅ Principale (Récup): {liv.numero_livraison}")
+            return liv
+    
+    # Niveau 4: Première livraison
+    print(f"✅ Principale (Première): {livraisons[0].numero_livraison}")
+    return livraisons[0]
+
+
+def generer_nom_fusionne(noms_evenements):
+    """
+    Génère un nom fusionné intelligent.
+    
+    Exemples:
+    - ["Sandrine Lima 1", "Sandrine Lima 1.1", "Sandrine Lima 1.3"] 
+      -> "Sandrine Lima 1+1.1+1.3 @ZONE 9"
+    
+    - ["Louigi 2.1 @ZONE 5", "Louigi 2.2 @ZONE 5"]
+      -> "Louigi 2.1+2.2 @ZONE 5"
+    
+    - ["Marie 1", "Marie 2", "Marie 3"]
+      -> "Marie 1+2+3"
+    """
+    
+    if not noms_evenements:
+        return ''
+    
+    # Pattern: "Nom Base + Numéro (+ sous-numéro optionnel) + Zone optionnelle"
+    # Ex: "Sandrine Lima 1.1 @ZONE 9"
+    pattern = r'^(.+?)\s+(\d+)(?:\.(\d+))?\s*(@.+)?$'
+    
+    parsed = []
+    nom_base = ''
+    zone = ''
+    
+    for nom in noms_evenements:
+        if not nom:
+            continue
+            
+        match = re.match(pattern, nom.strip())
+        
+        if match:
+            base, numero_principal, sous_numero, zone_match = match.groups()
+            
+            if not nom_base:
+                nom_base = base.strip()
+            
+            if zone_match and not zone:
+                zone = zone_match.strip()
+            
+            # Stocker le numéro complet
+            if sous_numero:
+                parsed.append(f"{numero_principal}.{sous_numero}")
+            else:
+                parsed.append(numero_principal)
+        else:
+            # Si le pattern ne match pas, utiliser tel quel
+            if not nom_base:
+                nom_base = nom.strip()
+    
+    if not parsed:
+        # Aucun pattern trouvé -> concaténer simplement
+        return ' + '.join(noms_evenements)
+    
+    # Construire le nom final
+    numeros_fusionnes = '+'.join(parsed)
+    
+    result = f"{nom_base} {numeros_fusionnes}"
+    
+    if zone:
+        result += f" {zone}"
+    
+    return result.strip()
+
 @login_required
 @require_http_methods(["DELETE"])
 def supprimer_route(request, route_id):
@@ -571,10 +668,14 @@ def supprimer_route(request, route_id):
 @login_required
 @require_http_methods(["POST"])
 def sauvegarder_besoins_livraison(request, livraison_id):
-    """Sauvegarder les besoins spéciaux d'une livraison"""
+    """Sauvegarder les besoins spéciaux d'une livraison + nom d'événement"""
     try:
         livraison = Livraison.objects.get(id=livraison_id)
         data = json.loads(request.body)
+        
+        # ✨ NOUVEAU: Modifier le nom d'événement
+        if 'nom_evenement' in data:
+            livraison.nom_evenement = data['nom_evenement'].strip()
         
         # MODIFIER L'HEURE
         if data.get('heure'):
@@ -628,7 +729,8 @@ def sauvegarder_besoins_livraison(request, livraison_id):
         
         return JsonResponse({
             'success': True,
-            'message': 'Besoins sauvegardés'
+            'message': 'Informations sauvegardées',
+            'nom_evenement': livraison.nom_evenement  # ✨ Retourner le nouveau nom
         })
         
     except Livraison.DoesNotExist:
@@ -641,6 +743,7 @@ def sauvegarder_besoins_livraison(request, livraison_id):
             'success': False,
             'error': str(e)
         }, status=400)
+
 @login_required
 @require_http_methods(["POST"])
 def reordonner_livraisons_route(request, route_id):
@@ -1020,18 +1123,26 @@ def gestion_livreurs(request):
 @login_required
 @require_http_methods(["POST"])
 def ajouter_disponibilite(request):
-    """Ajouter une disponibilité pour un livreur"""
+    """Ajouter une disponibilité pour un livreur avec heure de shift optionnelle"""
     try:
         data = json.loads(request.body)
-        
         livreur = CustomUser.objects.get(id=data['livreur_id'], role='livreur')
         
-        # Créer la disponibilité
+        # ✨ Gérer l'heure de début de shift
+        heure_debut_shift = None
+        if data.get('heure_debut_shift'):
+            try:
+                from datetime import datetime
+                heure_debut_shift = datetime.strptime(data['heure_debut_shift'], '%H:%M').time()
+            except:
+                pass
+        
         dispo = DisponibiliteLivreur.objects.create(
             livreur=livreur,
             date_debut=data['date_debut'],
             date_fin=data['date_fin'],
             type_dispo=data['type_dispo'],
+            heure_debut_shift=heure_debut_shift,
             notes=data.get('notes', '')
         )
         
@@ -1043,23 +1154,12 @@ def ajouter_disponibilite(request):
                 'date_fin': str(dispo.date_fin),
                 'type_dispo': dispo.type_dispo,
                 'type_display': dispo.get_type_dispo_display(),
+                'heure_debut_shift': dispo.heure_debut_shift.strftime('%H:%M') if dispo.heure_debut_shift else None,
                 'notes': dispo.notes
             }
         })
-        
-    except CustomUser.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Livreur introuvable'
-        }, status=404)
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=400)
-
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 @login_required
 @require_http_methods(["DELETE"])
@@ -1083,8 +1183,7 @@ def supprimer_disponibilite(request, dispo_id):
 
 @login_required
 def disponibilites_json(request):
-    """API pour récupérer les disponibilités"""
-    
+    """API pour récupérer les disponibilités avec heures de shift"""
     livreur_id = request.GET.get('livreur_id')
     date_debut = request.GET.get('date_debut')
     date_fin = request.GET.get('date_fin')
@@ -1093,10 +1192,8 @@ def disponibilites_json(request):
     
     if livreur_id:
         dispos = dispos.filter(livreur_id=livreur_id)
-    
     if date_debut:
         dispos = dispos.filter(date_fin__gte=date_debut)
-    
     if date_fin:
         dispos = dispos.filter(date_debut__lte=date_fin)
     
@@ -1110,11 +1207,11 @@ def disponibilites_json(request):
             'date_fin': dispo.date_fin.strftime('%Y-%m-%d'),
             'type_dispo': dispo.type_dispo,
             'type_display': dispo.get_type_dispo_display(),
+            'heure_debut_shift': dispo.heure_debut_shift.strftime('%H:%M') if dispo.heure_debut_shift else None,
             'notes': dispo.notes
         })
     
     return JsonResponse({'disponibilites': data})
-
 
 # ==========================================
 # RÉSUMÉ JOURNALIER
@@ -1782,18 +1879,34 @@ def demarrer_route(request, route_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
     
-    route = get_object_or_404(Route, id=route_id, livreurs=request.user)
+    try:
+        route = Route.objects.get(id=route_id, livreurs=request.user)
+    except Route.DoesNotExist:
+        return JsonResponse({
+            'error': 'Route introuvable ou vous n\'êtes pas assigné à cette route'
+        }, status=404)
     
-    # Vérifier qu'aucune autre route n'est déjà en cours pour ce livreur
+    # Vérifier le statut actuel de la route
+    if route.status == 'en_cours':
+        # La route est déjà démarrée, c'est OK
+        return JsonResponse({'success': True})
+    
+    if route.status == 'terminee':
+        return JsonResponse({
+            'error': 'Cette route est déjà terminée'
+        }, status=400)
+    
+    # Vérifier qu'aucune autre route n'est en cours pour ce livreur
     routes_en_cours = Route.objects.filter(
         livreurs=request.user,
-        status='en_cours'
+        status='en_cours',
+        date=route.date  # Même date uniquement
     ).exclude(id=route_id)
     
     if routes_en_cours.exists():
         route_en_cours = routes_en_cours.first()
         return JsonResponse({
-            'error': f'Vous avez déjà une route en cours : {route_en_cours.nom}. Terminez-la avant d\'en démarrer une nouvelle.'
+            'error': f'Vous avez déjà une route en cours : "{route_en_cours.nom}". Terminez-la avant d\'en démarrer une nouvelle.'
         }, status=400)
     
     # Démarrer la route
@@ -1808,10 +1921,14 @@ def demarrer_route(request, route_id):
                 livraison_route.livraison.status = 'en_cours'
                 livraison_route.livraison.save()
         
-        return JsonResponse({'success': True})
+        return JsonResponse({
+            'success': True,
+            'message': 'Route démarrée avec succès'
+        })
     
-    return JsonResponse({'error': 'La route ne peut pas être démarrée'}, status=400)
-
+    return JsonResponse({
+        'error': f'La route ne peut pas être démarrée (statut actuel: {route.get_status_display()})'
+    }, status=400)
 @login_required
 def selection_vehicule(request, route_id):
     """Étape 2: Sélection du véhicule"""
@@ -1868,10 +1985,32 @@ def assigner_vehicule(request, route_id):
 
 @login_required
 def livraisons_route(request, route_id):
-    route = get_object_or_404(Route, id=route_id, livreurs=request.user)
+    """Afficher les livraisons d'une route avec gestion d'erreur"""
+    print(f"📦 LIVRAISONS_ROUTE - User: {request.user.username}, Route ID: {route_id}")
+    
+    try:
+        # Essayer de récupérer la route
+        route = Route.objects.get(id=route_id, livreurs=request.user)
+        print(f"✅ Route trouvée: {route.nom}, Status: {route.status}")
+    except Route.DoesNotExist:
+        print(f"❌ Route introuvable ou user non assigné")
+        messages.error(request, 'Route introuvable ou vous n\'êtes pas assigné à cette route')
+        return redirect('livraison:dashboard_livreur')
+    
+    # Vérifier que la route est bien en cours
+    if route.status != 'en_cours':
+        print(f"⚠️ Route pas en cours (status: {route.status})")
+        messages.warning(request, f'Cette route n\'est pas en cours (statut: {route.get_status_display()})')
+        return redirect('livraison:dashboard_livreur')
+    
+    # Récupérer les livraisons
     livraisons = route.livraisonroute_set.select_related(
-        'livraison'
+        'livraison__mode_envoi'
+    ).prefetch_related(
+        'livraison__photos'
     ).order_by('ordre')
+    
+    print(f"📦 {livraisons.count()} livraisons trouvées")
     
     context = {
         'route': route,
@@ -2182,3 +2321,433 @@ def liste_livraisons(request):
     }
     
     return render(request, 'livraison/liste_livraisons.html', context)
+
+@login_required
+@require_http_methods(["POST"])
+def update_geocode(request):
+    """Vue pour mettre à jour manuellement le géocodage d'une livraison"""
+    try:
+        # Parser le JSON du body
+        data = json.loads(request.body)
+        
+        numero = data.get('numero')
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
+        adresse = data.get('adresse')
+        ville = data.get('ville')
+        code_postal = data.get('code_postal')
+        
+        print(f"🔍 DEBUG update_geocode:")
+        print(f"  - Numéro reçu: {numero}")
+        print(f"  - Latitude: {latitude}")
+        print(f"  - Longitude: {longitude}")
+        print(f"  - Adresse: {adresse}")
+        print(f"  - Ville: {ville}")
+        print(f"  - Code postal: {code_postal}")
+        
+        # Validation
+        if not all([numero, latitude, longitude]):
+            return JsonResponse({
+                'success': False,
+                'error': 'Données manquantes (numéro, latitude ou longitude)'
+            }, status=400)
+        
+        # Trouver la livraison par numero_livraison
+        try:
+            livraison = Livraison.objects.get(numero_livraison=numero)
+            print(f"✅ Livraison trouvée: {livraison.id}")
+        except Livraison.DoesNotExist:
+            print(f"❌ Livraison #{numero} introuvable")
+            print(f"   Livraisons existantes:")
+            for liv in Livraison.objects.all()[:5]:
+                print(f"   - {liv.numero_livraison}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Livraison #{numero} introuvable'
+            }, status=404)
+        
+        # Mettre à jour les coordonnées et l'adresse
+        livraison.latitude = float(latitude)
+        livraison.longitude = float(longitude)
+        
+        if adresse:
+            livraison.adresse_complete = adresse
+        if ville:
+            livraison.ville = ville
+        if code_postal:
+            livraison.code_postal = code_postal
+        
+        # Marquer comme géocodée
+        livraison.geocode_status = 'success'
+        livraison.geocode_attempts = 0
+        
+        livraison.save()
+        
+        print(f"✅ Livraison {numero} géocodée avec succès")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Livraison #{numero} géocodée avec succès',
+            'livraison': {
+                'numero': livraison.numero_livraison,
+                'nom': livraison.client_nom,
+                'adresse': livraison.adresse_complete,
+                'ville': livraison.ville,
+                'code_postal': livraison.code_postal,
+                'latitude': float(livraison.latitude) if livraison.latitude else None,
+                'longitude': float(livraison.longitude) if livraison.longitude else None
+            }
+        })
+        
+    except json.JSONDecodeError as e:
+        print(f"❌ Erreur JSON: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Format JSON invalide'
+        }, status=400)
+    except Exception as e:
+        print(f"❌ Erreur inattendue: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+    
+
+@login_required
+def get_shift_info(request):
+    """API pour récupérer l'info de shift d'un livreur pour une date donnée"""
+    try:
+        date_str = request.GET.get('date')
+        if not date_str:
+            date_obj = timezone.now().date()
+        else:
+            from datetime import datetime
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        dispo = DisponibiliteLivreur.objects.filter(
+            livreur=request.user,
+            date_debut__lte=date_obj,
+            date_fin__gte=date_obj,
+            type_dispo='disponible',
+            heure_debut_shift__isnull=False
+        ).first()
+        
+        if dispo and dispo.heure_debut_shift:
+            return JsonResponse({
+                'success': True,
+                'heure_debut_shift': dispo.heure_debut_shift.strftime('%H:%M'),
+                'has_shift': True
+            })
+        
+        return JsonResponse({'success': True, 'has_shift': False})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
+from .models import DisponibiliteLivreur, Livreur
+import json
+from datetime import datetime
+
+@login_required
+@require_http_methods(["POST"])
+def creer_disponibilite(request):
+    """Crée une nouvelle disponibilité pour un livreur"""
+    try:
+        data = json.loads(request.body)
+        
+        livreur = Livreur.objects.get(id=data['livreur_id'])
+        
+        disponibilite = DisponibiliteLivreur.objects.create(
+            livreur=livreur,
+            date_debut=datetime.fromisoformat(data['date_debut'].replace('Z', '+00:00')),
+            date_fin=datetime.fromisoformat(data['date_fin'].replace('Z', '+00:00')),
+            type_dispo=data.get('type_dispo', 'disponible'),
+            notes=data.get('notes', '')
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'disponibilite': {
+                'id': str(disponibilite.id),
+                'date_debut': disponibilite.date_debut.isoformat(),
+                'date_fin': disponibilite.date_fin.isoformat(),
+                'type_dispo': disponibilite.type_dispo,
+                'notes': disponibilite.notes
+            }
+        })
+        
+    except Livreur.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Livreur introuvable'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@login_required
+@require_http_methods(["PUT"])
+def modifier_disponibilite(request, dispo_id):
+    """Modifie une disponibilité existante"""
+    try:
+        data = json.loads(request.body)
+        
+        disponibilite = DisponibiliteLivreur.objects.get(id=dispo_id)
+        
+        if 'date_debut' in data:
+            disponibilite.date_debut = datetime.fromisoformat(data['date_debut'].replace('Z', '+00:00'))
+        if 'date_fin' in data:
+            disponibilite.date_fin = datetime.fromisoformat(data['date_fin'].replace('Z', '+00:00'))
+        if 'type_dispo' in data:
+            disponibilite.type_dispo = data['type_dispo']
+        if 'notes' in data:
+            disponibilite.notes = data['notes']
+        
+        disponibilite.save()
+        
+        return JsonResponse({
+            'success': True,
+            'disponibilite': {
+                'id': str(disponibilite.id),
+                'date_debut': disponibilite.date_debut.isoformat(),
+                'date_fin': disponibilite.date_fin.isoformat(),
+                'type_dispo': disponibilite.type_dispo,
+                'notes': disponibilite.notes
+            }
+        })
+        
+    except DisponibiliteLivreur.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Disponibilité introuvable'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@login_required
+@require_http_methods(["DELETE"])
+def supprimer_disponibilite(request, dispo_id):
+    """Supprime une disponibilité"""
+    try:
+        disponibilite = DisponibiliteLivreur.objects.get(id=dispo_id)
+        disponibilite.delete()
+        
+        return JsonResponse({'success': True})
+        
+    except DisponibiliteLivreur.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Disponibilité introuvable'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@login_required
+@require_http_methods(["GET"])
+def disponibilites_livreur(request, livreur_id):
+    """Récupère toutes les disponibilités d'un livreur"""
+    try:
+        disponibilites = DisponibiliteLivreur.objects.filter(livreur_id=livreur_id).order_by('date_debut')
+        
+        return JsonResponse({
+            'success': True,
+            'disponibilites': [
+                {
+                    'id': str(d.id),
+                    'date_debut': d.date_debut.isoformat(),
+                    'date_fin': d.date_fin.isoformat(),
+                    'type_dispo': d.type_dispo,
+                    'notes': d.notes
+                }
+                for d in disponibilites
+            ]
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
+from datetime import datetime
+from .models import DisponibiliteLivreur, Livreur, Route
+import traceback
+
+@login_required
+@require_http_methods(["GET"])
+def disponibilites_par_date(request):
+    """Récupère les disponibilités de TOUS les livreurs pour une date donnée"""
+    try:
+        date_str = request.GET.get('date')
+        if not date_str:
+            date_recherche = datetime.now().date()
+        else:
+            date_recherche = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Récupérer tous les livreurs actifs
+        livreurs = Livreur.objects.filter(is_active=True).select_related('user')
+        
+        result = []
+        for livreur in livreurs:
+            # Chercher les disponibilités qui couvrent cette date
+            dispos = DisponibiliteLivreur.objects.filter(
+                livreur=livreur.user,
+                date_debut__lte=date_recherche,
+                date_fin__gte=date_recherche
+            ).order_by('date_debut')
+            
+            # Nom complet du livreur
+            nom_complet = livreur.user.get_full_name() or livreur.user.username
+            
+            result.append({
+                'id': str(livreur.id),
+                'nom': nom_complet,
+                'telephone': livreur.telephone or '',
+                'dispos': [
+                    {
+                        'id': str(d.id),
+                        'type_dispo': d.type_dispo,
+                        'date_debut': d.date_debut.isoformat() + 'T' + (d.heure_debut_shift.isoformat() if d.heure_debut_shift else '00:00:00'),
+                        'date_fin': d.date_fin.isoformat() + 'T23:59:59',
+                        'notes': d.notes or ''
+                    }
+                    for d in dispos
+                ]
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'disponibilites': result
+        })
+        
+    except Exception as e:
+        print(f"❌ Erreur disponibilites_par_date: {e}")
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+# views.py
+@login_required
+@require_http_methods(["GET"])
+def routes_par_date(request):
+    """Récupère toutes les routes pour une date donnée avec leurs livraisons et besoins"""
+    try:
+        date_str = request.GET.get('date')
+        if not date_str:
+            return JsonResponse({'success': False, 'error': 'Date requise'}, status=400)
+        
+        date_recherche = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        routes = Route.objects.filter(
+            date=date_recherche
+        ).select_related('vehicule').prefetch_related(
+            'livreurs',
+            'livraisonroute_set__livraison'
+        ).order_by('heure_depart')
+        
+        result = []
+        for route in routes:
+            # Livreur
+            livreurs = route.livreurs.all()
+            nom_livreur = livreurs[0].get_full_name() if livreurs else 'Non assigné'
+            
+            # Livraisons de la route
+            livraisons_route = route.livraisonroute_set.select_related('livraison').order_by('ordre')
+            
+            total_livraisons = livraisons_route.count()
+            livraisons_livrees = sum(1 for lr in livraisons_route if lr.livraison.status == 'livree')
+            livraisons_restantes = total_livraisons - livraisons_livrees
+            progression = round((livraisons_livrees / total_livraisons * 100) if total_livraisons > 0 else 0, 1)
+            
+            # Besoins spécifiques globaux de la route (dédupliqués)
+            besoins_route = set()
+            
+            # Liste des livraisons
+            livraisons_data = []
+            for lr in livraisons_route:
+                liv = lr.livraison
+                
+                # Besoins de cette livraison
+                besoins_livraison = []
+                if liv.besoin_cafe:
+                    besoins_livraison.append('Café')
+                    besoins_route.add('Café')
+                if liv.besoin_the:
+                    besoins_livraison.append('Thé')
+                    besoins_route.add('Thé')
+                if liv.besoin_sac_glace:
+                    besoins_livraison.append('Sac glace')
+                    besoins_route.add('Sac glace')
+                if liv.besoin_part_chaud:
+                    besoins_livraison.append('Part chaud')
+                    besoins_route.add('Part chaud')
+                if liv.checklist:
+                    besoins_livraison.append('Checklist')
+                    besoins_route.add('Checklist')
+                
+                livraisons_data.append({
+                    'id': str(liv.id),
+                    'nom': liv.nom_evenement or f"Livraison #{str(liv.id)[:8]}",
+                    'heure': liv.heure_souhaitee.strftime('%H:%M') if liv.heure_souhaitee else 'N/A',
+                    'status': liv.status,
+                    'ordre': lr.ordre,
+                    'besoins': besoins_livraison
+                })
+            
+            result.append({
+                'id': str(route.id),
+                'nom': route.nom,
+                'status': route.status,
+                'statusDisplay': route.get_status_display(),
+                'livreur_nom': nom_livreur,
+                'heure_depart': route.heure_depart.strftime('%H:%M') if route.heure_depart else 'N/A',
+                'vehicule': f"{route.vehicule.marque} {route.vehicule.modele}" if route.vehicule else None,
+                'commentaire': route.commentaire or '',
+                'total_livraisons': total_livraisons,
+                'livraisons_livrees': livraisons_livrees,
+                'livraisons_restantes': livraisons_restantes,
+                'progression': progression,
+                'livraisons': livraisons_data,
+                'besoins': list(besoins_route)  # Liste des besoins uniques de la route
+            })
+        
+        return JsonResponse({'success': True, 'routes': result})
+        
+    except Exception as e:
+        print(f"❌ Erreur routes_par_date: {e}")
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@login_required
+@require_http_methods(["GET"])
+def routes_du_mois(request):
+    """Récupère les dates qui ont des routes pour le mois"""
+    try:
+        start_str = request.GET.get('start')
+        end_str = request.GET.get('end')
+        
+        if not start_str or not end_str:
+            return JsonResponse({
+                'success': True,
+                'dates': []
+            })
+        
+        start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+        
+        # IMPORTANT: Le champ s'appelle 'date' pas 'date_route'
+        routes = Route.objects.filter(
+            date__gte=start_date,
+            date__lte=end_date
+        ).values_list('date', flat=True).distinct()
+        
+        dates_with_routes = [date.strftime('%Y-%m-%d') for date in routes if date]
+        
+        return JsonResponse({
+            'success': True,
+            'dates': dates_with_routes
+        })
+        
+    except Exception as e:
+        print(f"❌ Erreur routes_du_mois: {e}")
+        traceback.print_exc()
+        return JsonResponse({
+            'success': True,
+            'dates': []
+        })

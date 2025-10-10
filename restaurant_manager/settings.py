@@ -57,7 +57,7 @@ INSTALLED_APPS = [
 # Crispy forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
-
+GOOGLE_MAPS_API_KEY = 'AIzaSyC2GqoZLMIMuAihXl8271sJN3kJ_57smdM'
 # Auth
 AUTH_USER_MODEL = 'users.CustomUser'
 LOGIN_URL = 'login'

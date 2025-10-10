@@ -524,7 +524,7 @@
 
     .route-zone {
         padding: 1.25rem;
-        min-height: 200px; /* ✨ Augmenté de 120px à 200px */
+        min-height: 200px;
     }
 
     .route-zone.empty {
@@ -535,14 +535,14 @@
         justify-content: center;
         text-align: center;
         color: var(--text-light);
-        min-height: 250px; /* ✨ Zone vide encore plus grande */
+        min-height: 250px;
     }
 
     .route-deliveries {
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
-        min-height: 180px; /* ✨ Hauteur minimale pour la zone de drop */
+        min-height: 180px;
     }
 
     .route-delivery-item {
@@ -810,21 +810,6 @@
                 </div>
                 
                 <div class="header-actions">
-                    <button @click="toggleModeFusion()"
-                            :class="modeFusion ? 'btn-orange' : 'btn-purple'"
-                            class="btn">
-                        <i class="fas fa-object-group"></i>
-                        <span x-text="modeFusion ? 'Annuler fusion' : 'Fusionner livraisons'"></span>
-                    </button>
-                    
-                    <button x-show="modeFusion && livraisonsSelectionnees.length >= 2"
-                            x-cloak
-                            @click="fusionnerLivraisons()"
-                            class="btn btn-success">
-                        <i class="fas fa-compress-arrows-alt"></i>
-                        Fusionner (<span x-text="livraisonsSelectionnees.length"></span>)
-                    </button>
-                    
                     <a href="{% url 'livraison:import_excel' %}" class="btn btn-success">
                         <i class="fas fa-file-excel"></i>
                         Importer Excel
@@ -953,11 +938,32 @@
                 
                 <div class="card-section">
                     <div class="card-header gradient-orange">
-                        <h3 class="card-title">
-                            <i class="fas fa-box-open"></i>
-                            Livraisons à assigner
-                        </h3>
-                        <span class="card-count" x-text="livraisonsNonAssignees.length"></span>
+                        <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
+                            <h3 class="card-title">
+                                <i class="fas fa-box-open"></i>
+                                Livraisons à assigner
+                            </h3>
+                            <span class="card-count" x-text="livraisonsNonAssignees.length"></span>
+                        </div>
+                        
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button @click="toggleModeFusion()"
+                                    :class="modeFusion ? 'btn-orange' : 'btn-purple'"
+                                    class="btn"
+                                    style="padding: 0.625rem 1rem; font-size: 0.875rem;">
+                                <i class="fas fa-object-group"></i>
+                                <span x-text="modeFusion ? 'Annuler' : 'Fusionner'"></span>
+                            </button>
+                            
+                            <button x-show="modeFusion && livraisonsSelectionnees.length >= 2"
+                                    x-cloak
+                                    @click="fusionnerLivraisons()"
+                                    class="btn btn-success"
+                                    style="padding: 0.625rem 1rem; font-size: 0.875rem;">
+                                <i class="fas fa-compress-arrows-alt"></i>
+                                Fusionner (<span x-text="livraisonsSelectionnees.length"></span>)
+                            </button>
+                        </div>
                     </div>
                     
                     <div id="livraisons-pool" class="card-body">
@@ -1259,6 +1265,14 @@
                     <form @submit.prevent="sauvegarderBesoins()">
                         <div class="form-group">
                             <label class="form-label">
+                                <i class="fas fa-tag" style="color: #8b5cf6;"></i>
+                                Nom de l'événement
+                            </label>
+                            <input type="text" x-model="besoins.nom_evenement" class="form-input" placeholder="Ex: Sandrine Lima 1 @ZONE 9">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
                                 <i class="fas fa-clock" style="color: #3b82f6;"></i>
                                 Heure de livraison
                             </label>
@@ -1414,6 +1428,7 @@ function dashboardData() {
         modeFusion: false,
         
         besoins: {
+            nom_evenement: '',
             heure: '',
             informations_supplementaires: '',
             cafe: false,
@@ -1685,13 +1700,12 @@ function dashboardData() {
                     group: {
                         name: 'livraisons',
                         pull: 'clone',
-                        put: true  // ✨ CHANGÉ: Permet de recevoir des éléments
+                        put: true
                     },
                     animation: 150,
                     sort: false,
-                    draggable: '.livraison-card, .route-delivery-item', // ✨ Accepte les deux types
+                    draggable: '.livraison-card, .route-delivery-item',
                     
-                    // IMPORTANT: Copier le data-id sur le clone
                     onClone: (evt) => {
                         console.log('📋 Clone créé');
                         const original = evt.item;
@@ -1710,7 +1724,6 @@ function dashboardData() {
                         console.log('🎯 Début drag depuis pool:', evt.item.dataset.id);
                     },
                     
-                    // ✨ NOUVEAU: Gérer le retour vers le pool
                     onAdd: async (evt) => {
                         console.log('🔙 Livraison retournée au pool');
                         const livraisonId = evt.item.dataset.id;
@@ -1721,7 +1734,6 @@ function dashboardData() {
                             return;
                         }
                         
-                        // Retirer de la route
                         evt.item.remove();
                         await this.retirerLivraisonRoute(livraisonId);
                     },
@@ -1729,7 +1741,6 @@ function dashboardData() {
                     onEnd: (evt) => {
                         console.log('✅ Fin drag');
                         
-                        // Nettoyer les clones orphelins dans le pool
                         setTimeout(() => {
                             const clones = poolContainer.querySelectorAll('.livraison-card:not([data-id])');
                             console.log(`🧹 Nettoyage de ${clones.length} clone(s) orphelin(s)`);
@@ -1770,11 +1781,9 @@ function dashboardData() {
                             return;
                         }
                         
-                        // Supprimer immédiatement l'élément visuel cloné
                         evt.item.remove();
                         console.log('🗑️ Clone supprimé visuellement');
                         
-                        // Ajouter via API
                         console.log('🌐 Appel API ajouterLivraisonRoute...');
                         await this.ajouterLivraisonRoute(routeId, livraisonId);
                     },
@@ -1843,7 +1852,15 @@ function dashboardData() {
                 return;
             }
             
-            if (!confirm(`Fusionner ${this.livraisonsSelectionnees.length} livraisons en une seule ?`)) {
+            // Récupérer les détails des livraisons sélectionnées
+            const livraisonsDetails = this.livraisonsSelectionnees.map(id => 
+                this.livraisonsNonAssignees.find(l => l.id === id)
+            ).filter(Boolean);
+            
+            // Générer l'aperçu du nom fusionné
+            const nomFusionne = this.genererNomFusionne(livraisonsDetails);
+            
+            if (!confirm(`Fusionner ${this.livraisonsSelectionnees.length} livraisons en:\n"${nomFusionne}" ?`)) {
                 return;
             }
             
@@ -1862,16 +1879,74 @@ function dashboardData() {
                 const data = await response.json();
                 
                 if (data.success) {
-                    alert('Livraisons fusionnées avec succès!');
+                    alert(`✅ ${data.message}`);
                     this.modeFusion = false;
                     this.livraisonsSelectionnees = [];
                     await this.chargerLivraisons();
                 } else {
-                    alert('Erreur: ' + data.error);
+                    alert('❌ Erreur: ' + data.error);
                 }
             } catch (error) {
                 console.error('Erreur:', error);
                 alert('Erreur lors de la fusion');
+            }
+        },
+        
+        genererNomFusionne(livraisons) {
+            if (livraisons.length === 0) return '';
+            
+            // Extraire le nom de base et les numéros de version
+            // Ex: "Sandrine Lima 1.1 @ZONE 9" -> base: "Sandrine Lima", numero: "1.1", zone: "@ZONE 9"
+            const pattern = /^(.+?)\s+(\d+(?:\.\d+)?)\s*(@.+)?$/;
+            
+            let nomBase = '';
+            let numerosPrincipaux = new Set();
+            let sousNumeros = [];
+            let zone = '';
+            
+            livraisons.forEach(liv => {
+                const nom = liv.nom_evenement || liv.numero;
+                const match = nom.match(pattern);
+                
+                if (match) {
+                    const [, base, numero, zoneMatch] = match;
+                    
+                    if (!nomBase) {
+                        nomBase = base.trim();
+                    }
+                    
+                    // Séparer numéro principal et sous-numéro
+                    const [principal, sous] = numero.split('.');
+                    numerosPrincipaux.add(principal);
+                    
+                    if (sous) {
+                        sousNumeros.push(sous);
+                    } else {
+                        sousNumeros.push(principal);
+                    }
+                    
+                    if (zoneMatch && !zone) {
+                        zone = zoneMatch.trim();
+                    }
+                } else {
+                    // Si le pattern ne match pas, utiliser le nom tel quel
+                    if (!nomBase) {
+                        nomBase = nom;
+                    }
+                }
+            });
+            
+            // Construire le nom fusionné
+            if (numerosPrincipaux.size === 1) {
+                // Même numéro principal -> "Sandrine Lima 1+1.1+1.3 @ZONE 9"
+                const principal = Array.from(numerosPrincipaux)[0];
+                const numerosFormattes = sousNumeros.map(n => 
+                    n === principal ? principal : `${principal}.${n}`
+                );
+                return `${nomBase} ${principal}+${sousNumeros.join('+')} ${zone}`.trim();
+            } else {
+                // Numéros principaux différents -> "Sandrine Lima 1+2+3 @ZONE 9"
+                return `${nomBase} ${sousNumeros.join('+')} ${zone}`.trim();
             }
         },
         
@@ -1928,7 +2003,6 @@ function dashboardData() {
                 if (response.ok && data.success) {
                     console.log('✅ Livraison ajoutée avec succès!');
                     
-                    // ✨ REFRESH AUTOMATIQUE
                     await this.chargerLivraisons();
                     await this.chargerRoutes();
                     
@@ -1957,7 +2031,6 @@ function dashboardData() {
             }
         },
         
-        // ✨ NOUVELLE FONCTION: Retirer une livraison d'une route
         async retirerLivraisonRoute(livraisonId) {
             console.log('🔙 retirerLivraisonRoute appelé');
             console.log('  Livraison ID:', livraisonId);
@@ -1979,7 +2052,6 @@ function dashboardData() {
                 if (response.ok && data.success) {
                     console.log('✅ Livraison retirée avec succès!');
                     
-                    // ✨ REFRESH AUTOMATIQUE
                     await this.chargerLivraisons();
                     await this.chargerRoutes();
                     
@@ -2056,6 +2128,7 @@ function dashboardData() {
                 this.livraisonSelectionnee = livraison;
                 
                 this.besoins = {
+                    nom_evenement: livraison.nom_evenement || '',
                     heure: livraison.heure || '',
                     informations_supplementaires: livraison.informations_supplementaires || '',
                     cafe: livraison.cafe || false,
@@ -2086,11 +2159,26 @@ function dashboardData() {
                     body: JSON.stringify(this.besoins)
                 });
                 
+                const data = await response.json();
+                
                 if (response.ok) {
-                    alert('Informations sauvegardées!');
+                    alert('✅ Informations sauvegardées!');
                     this.modalDetailLivraison = false;
+                    
+                    // Mettre à jour le nom localement
+                    if (data.nom_evenement) {
+                        const livraison = this.livraisonsNonAssignees.find(
+                            l => l.id === this.livraisonSelectionnee.id
+                        );
+                        if (livraison) {
+                            livraison.nom_evenement = data.nom_evenement;
+                        }
+                    }
+                    
                     await this.chargerLivraisons();
                     await this.chargerRoutes();
+                } else {
+                    alert('❌ Erreur: ' + (data.error || 'Erreur inconnue'));
                 }
             } catch (error) {
                 console.error('Erreur:', error);
