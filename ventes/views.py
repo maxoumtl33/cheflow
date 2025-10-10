@@ -989,24 +989,36 @@ def vendeuse_delete(request, pk):
         messages.error(request, f"Erreur lors de la suppression : {str(e)}")
         return redirect('ventes:dashboard_responsable')
 
+# ventes/views.py
+
 @login_required
 def supprimer_item_checklist(request, item_id):
-    """Supprimer un item (avec protection)"""
+    """Supprimer un item d'une checklist avec confirmation si vérifié"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
     
     item = get_object_or_404(ItemChecklist, id=item_id)
-    checklist = item.checklist
+    objet_nom = item.objet.nom
+    statut = item.statut_verification
     
-    # Vérifier si l'item est verrouillé
-    if item.statut_verification in ['valide', 'refuse']:
-        messages.error(
-            request, 
-            f"❌ Impossible de supprimer cet item : il a déjà été {item.get_statut_verification_display().lower()} par le vérificateur."
-        )
-        return redirect('ventes:modifier_checklist', checklist_id=checklist.id)
+    # ✅ Si l'item a été vérifié (validé ou refusé), demander confirmation
+    if item.date_verification and not request.POST.get('force_delete'):
+        return JsonResponse({
+            'success': False,
+            'needs_confirmation': True,
+            'message': f"⚠️ L'item '{objet_nom}' a été {item.get_statut_verification_display().lower()}.\n\nSa suppression créera une alerte pour le vérificateur.\n\nÊtes-vous sûr de vouloir continuer ?",
+            'item_id': item_id,
+            'statut': statut
+        })
     
-    item.delete()
-    messages.success(request, "✅ Item supprimé avec succès")
-    return redirect('ventes:modifier_checklist', checklist_id=checklist.id)
+    # Suppression confirmée ou item jamais vérifié
+    item.delete()  # Le signal post_delete gère l'historique automatiquement
+    
+    return JsonResponse({
+        'success': True,
+        'message': f"Item '{objet_nom}' supprimé avec succès"
+    })
 
 # ============ CRUD CONTRATS - Ajout à ventes/views.py ============
 

@@ -395,7 +395,9 @@
                     </thead>
                     <tbody id="itemsTableBody">
                         {% for item in items %}
-                        <tr data-item-id="{{ item.objet.id }}" data-quantity="{{ item.quantite|stringformat:'g' }}">
+                        <tr data-item-id="{{ item.objet.id }}" 
+                            data-db-item-id="{{ item.id }}"
+                            data-quantity="{{ item.quantite|stringformat:'g' }}">
                             <td><strong>{{ item.objet.nom }}</strong></td>
                             <td>{{ item.objet.categorie.nom }}</td>
                             <td>
@@ -475,7 +477,7 @@
     // Suivre les objets dans la liste
     const itemsInList = new Set();
 
-    // Initialiser avec les objets existants ET DEBUG
+    // Initialiser avec les objets existants
     document.querySelectorAll('#itemsTableBody tr').forEach(row => {
         const objectId = row.dataset.itemId;
         const qtyInput = row.querySelector('.qty-input');
@@ -553,6 +555,7 @@
 
         const row = document.createElement('tr');
         row.dataset.itemId = objectIdStr;
+        // Pas de data-db-item-id car c'est un nouvel item
         row.innerHTML = `
             <td><strong>${objectName}</strong></td>
             <td>${categoryName}</td>
@@ -583,12 +586,94 @@
         updateItemCount();
     }
 
-    function removeItem(objectId) {
-        if (confirm('Voulez-vous vraiment supprimer cet objet de la checklist ?')) {
-            const objectIdStr = objectId.toString();
-            const row = document.querySelector(`#itemsTableBody tr[data-item-id="${objectIdStr}"]`);
-            if (row) {
-                // Sauvegarder la quantité avant suppression
+    async function removeItem(objectId) {
+        const objectIdStr = objectId.toString();
+        const row = document.querySelector(`#itemsTableBody tr[data-item-id="${objectIdStr}"]`);
+        
+        if (!row) return;
+        
+        // ✅ Vérifier si l'item existe en base de données
+        const dbItemId = row.dataset.dbItemId;
+        
+        if (dbItemId) {
+            // ✅ Item existant en base → Appeler l'API pour supprimer avec confirmation
+            try {
+                // Première confirmation locale
+                if (!confirm('Voulez-vous vraiment supprimer cet objet de la checklist ?')) {
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                
+                const response = await fetch(`/ventes/item/${dbItemId}/supprimer/`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.needs_confirmation) {
+                    // ✅ Double confirmation pour items vérifiés
+                    if (confirm(data.message)) {
+                        // Refaire la requête avec force_delete
+                        const formData2 = new FormData();
+                        formData2.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                        formData2.append('force_delete', 'true');
+                        
+                        const response2 = await fetch(`/ventes/item/${dbItemId}/supprimer/`, {
+                            method: 'POST',
+                            body: formData2
+                        });
+                        
+                        const data2 = await response2.json();
+                        
+                        if (data2.success) {
+                            // Supprimer visuellement
+                            const qtyInput = row.querySelector('.qty-input');
+                            if (qtyInput) {
+                                objectQuantities[objectIdStr] = qtyInput.value;
+                            }
+                            
+                            row.style.transition = 'opacity 0.3s';
+                            row.style.opacity = '0';
+                            setTimeout(() => {
+                                row.remove();
+                                itemsInList.delete(objectIdStr);
+                                updateObjectAvailability(objectIdStr);
+                                updateItemCount();
+                                checkEmptyState();
+                            }, 300);
+                        } else {
+                            alert('❌ Erreur: ' + (data2.message || 'Erreur inconnue'));
+                        }
+                    }
+                } else if (data.success) {
+                    // ✅ Suppression réussie sans confirmation
+                    const qtyInput = row.querySelector('.qty-input');
+                    if (qtyInput) {
+                        objectQuantities[objectIdStr] = qtyInput.value;
+                    }
+                    
+                    row.style.transition = 'opacity 0.3s';
+                    row.style.opacity = '0';
+                    setTimeout(() => {
+                        row.remove();
+                        itemsInList.delete(objectIdStr);
+                        updateObjectAvailability(objectIdStr);
+                        updateItemCount();
+                        checkEmptyState();
+                    }, 300);
+                } else {
+                    alert('❌ Erreur: ' + (data.message || 'Erreur inconnue'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('❌ Une erreur est survenue lors de la suppression');
+            }
+        } else {
+            // ✅ Item nouvellement ajouté (pas encore en base) → Suppression locale simple
+            if (confirm('Voulez-vous vraiment supprimer cet objet de la checklist ?')) {
                 const qtyInput = row.querySelector('.qty-input');
                 if (qtyInput) {
                     objectQuantities[objectIdStr] = qtyInput.value;
@@ -598,18 +683,21 @@
                 itemsInList.delete(objectIdStr);
                 updateObjectAvailability(objectIdStr);
                 updateItemCount();
-                
-                // Afficher l'état vide si plus d'objets
-                const tbody = document.getElementById('itemsTableBody');
-                if (tbody && tbody.children.length === 0) {
-                    const tableContainer = document.getElementById('tableContainer');
-                    tableContainer.innerHTML = `
-                        <div class="empty-state" id="emptyState">
-                            <p>Aucun objet dans cette checklist. Ajoutez-en depuis la colonne de droite.</p>
-                        </div>
-                    `;
-                }
+                checkEmptyState();
             }
+        }
+    }
+
+    // ✅ Fonction helper pour vérifier si le tableau est vide
+    function checkEmptyState() {
+        const tbody = document.getElementById('itemsTableBody');
+        if (tbody && tbody.children.length === 0) {
+            const tableContainer = document.getElementById('tableContainer');
+            tableContainer.innerHTML = `
+                <div class="empty-state" id="emptyState">
+                    <p>Aucun objet dans cette checklist. Ajoutez-en depuis la colonne de droite.</p>
+                </div>
+            `;
         }
     }
 

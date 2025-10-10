@@ -18,6 +18,7 @@ urlpatterns = [
     path('checklist/<uuid:pk>/edit/', views.checklist_edit, name='checklist_edit'),
     path('checklist/<uuid:pk>/delete/', views.checklist_delete, name='checklist_delete'),
     path('checklist/<uuid:pk>/duplicate/', views.checklist_duplicate, name='checklist_duplicate'),
+    path('item/<int:item_id>/supprimer/', views.supprimer_item_checklist, name='supprimer_item'),  # ✅ NOUVEAU
 
     # CRUD Objets
     path('objets/create/', views.objet_create, name='objet_create'),

@@ -2566,6 +2566,8 @@ from datetime import datetime
 from .models import DisponibiliteLivreur, Livreur, Route
 import traceback
 
+# Dans views.py, modifier la fonction disponibilites_par_date
+
 @login_required
 @require_http_methods(["GET"])
 def disponibilites_par_date(request):
@@ -2592,20 +2594,25 @@ def disponibilites_par_date(request):
             # Nom complet du livreur
             nom_complet = livreur.user.get_full_name() or livreur.user.username
             
+            # Construire la liste des disponibilités
+            dispos_data = []
+            for d in dispos:
+                dispos_data.append({
+                    'id': str(d.id),
+                    'type_dispo': d.type_dispo,
+                    'heure_debut_shift': d.heure_debut_shift.strftime('%H:%M') if d.heure_debut_shift else None,
+                    'notes': d.notes or ''
+                })
+            
+            # Si le livreur n'a AUCUNE dispo pour cette date, il est considéré en congé
+            if not dispos_data:
+                dispos_data = []  # Liste vide = badge congé
+            
             result.append({
                 'id': str(livreur.id),
                 'nom': nom_complet,
                 'telephone': livreur.telephone or '',
-                'dispos': [
-                    {
-                        'id': str(d.id),
-                        'type_dispo': d.type_dispo,
-                        'date_debut': d.date_debut.isoformat() + 'T' + (d.heure_debut_shift.isoformat() if d.heure_debut_shift else '00:00:00'),
-                        'date_fin': d.date_fin.isoformat() + 'T23:59:59',
-                        'notes': d.notes or ''
-                    }
-                    for d in dispos
-                ]
+                'dispos': dispos_data
             })
         
         return JsonResponse({
@@ -2621,133 +2628,126 @@ def disponibilites_par_date(request):
             'error': str(e)
         }, status=500)
 
-
-# views.py
 @login_required
-@require_http_methods(["GET"])
 def routes_par_date(request):
-    """Récupère toutes les routes pour une date donnée avec leurs livraisons et besoins"""
+    """API pour récupérer les routes d'une date spécifique pour le livreur connecté"""
+    date_str = request.GET.get('date')
+    
+    if not date_str:
+        return JsonResponse({'success': False, 'error': 'Date requise'})
+    
     try:
-        date_str = request.GET.get('date')
-        if not date_str:
-            return JsonResponse({'success': False, 'error': 'Date requise'}, status=400)
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({'success': False, 'error': 'Format de date invalide'})
+    
+    # Filtrer les routes du livreur connecté
+    routes = Route.objects.filter(
+        date=date_obj,
+        livreurs=request.user
+    ).order_by('heure_depart')
+    
+    routes_data = []
+    for route in routes:
+        livraisons_route = route.livraisonroute_set.all().order_by('ordre')
+        livraisons_data = []
         
-        date_recherche = datetime.strptime(date_str, '%Y-%m-%d').date()
-        
-        routes = Route.objects.filter(
-            date=date_recherche
-        ).select_related('vehicule').prefetch_related(
-            'livreurs',
-            'livraisonroute_set__livraison'
-        ).order_by('heure_depart')
-        
-        result = []
-        for route in routes:
-            # Livreur
-            livreurs = route.livreurs.all()
-            nom_livreur = livreurs[0].get_full_name() if livreurs else 'Non assigné'
-            
-            # Livraisons de la route
-            livraisons_route = route.livraisonroute_set.select_related('livraison').order_by('ordre')
-            
-            total_livraisons = livraisons_route.count()
-            livraisons_livrees = sum(1 for lr in livraisons_route if lr.livraison.status == 'livree')
-            livraisons_restantes = total_livraisons - livraisons_livrees
-            progression = round((livraisons_livrees / total_livraisons * 100) if total_livraisons > 0 else 0, 1)
-            
-            # Besoins spécifiques globaux de la route (dédupliqués)
-            besoins_route = set()
-            
-            # Liste des livraisons
-            livraisons_data = []
-            for lr in livraisons_route:
-                liv = lr.livraison
-                
-                # Besoins de cette livraison
-                besoins_livraison = []
-                if liv.besoin_cafe:
-                    besoins_livraison.append('Café')
-                    besoins_route.add('Café')
-                if liv.besoin_the:
-                    besoins_livraison.append('Thé')
-                    besoins_route.add('Thé')
-                if liv.besoin_sac_glace:
-                    besoins_livraison.append('Sac glace')
-                    besoins_route.add('Sac glace')
-                if liv.besoin_part_chaud:
-                    besoins_livraison.append('Part chaud')
-                    besoins_route.add('Part chaud')
-                if liv.checklist:
-                    besoins_livraison.append('Checklist')
-                    besoins_route.add('Checklist')
-                
-                livraisons_data.append({
-                    'id': str(liv.id),
-                    'nom': liv.nom_evenement or f"Livraison #{str(liv.id)[:8]}",
-                    'heure': liv.heure_souhaitee.strftime('%H:%M') if liv.heure_souhaitee else 'N/A',
-                    'status': liv.status,
-                    'ordre': lr.ordre,
-                    'besoins': besoins_livraison
-                })
-            
-            result.append({
-                'id': str(route.id),
-                'nom': route.nom,
-                'status': route.status,
-                'statusDisplay': route.get_status_display(),
-                'livreur_nom': nom_livreur,
-                'heure_depart': route.heure_depart.strftime('%H:%M') if route.heure_depart else 'N/A',
-                'vehicule': f"{route.vehicule.marque} {route.vehicule.modele}" if route.vehicule else None,
-                'commentaire': route.commentaire or '',
-                'total_livraisons': total_livraisons,
-                'livraisons_livrees': livraisons_livrees,
-                'livraisons_restantes': livraisons_restantes,
-                'progression': progression,
-                'livraisons': livraisons_data,
-                'besoins': list(besoins_route)  # Liste des besoins uniques de la route
+        for lr in livraisons_route:
+            livraison = lr.livraison
+            livraisons_data.append({
+                'id': str(livraison.id),
+                'nom': livraison.nom_evenement or livraison.numero_livraison,
+                'adresse': livraison.adresse_complete,
+                'heure': livraison.heure_souhaitee.strftime('%H:%M') if livraison.heure_souhaitee else '',
+                'status': livraison.status,
+                'informations_supplementaires': livraison.informations_supplementaires or '',  # 🔥 AJOUT
+                'besoins': []  # Gardé pour compatibilité, mais non utilisé dans l'affichage individuel
             })
+            
+            # Construire la liste des besoins (pour l'agrégation au niveau route)
+            besoins = []
+            if livraison.besoin_cafe:
+                besoins.append('Café')
+            if livraison.besoin_the:
+                besoins.append('Thé')
+            if livraison.besoin_sac_glace:
+                besoins.append('Sac glace')
+            if livraison.besoin_part_chaud:
+                besoins.append('Part chaud')
+            if livraison.autres_besoins:
+                besoins.append(livraison.autres_besoins)
+            
+            livraisons_data[-1]['besoins'] = besoins
         
-        return JsonResponse({'success': True, 'routes': result})
+        # Récupérer le premier livreur
+        livreur_principal = route.livreurs.first()
+        livreur_nom = livreur_principal.get_full_name() if livreur_principal else 'Non assigné'
         
-    except Exception as e:
-        print(f"❌ Erreur routes_par_date: {e}")
-        traceback.print_exc()
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
+        # Construire les besoins de la route (agrégés de toutes les livraisons)
+        besoins_route = set()
+        for lr in livraisons_route:
+            livraison = lr.livraison
+            if livraison.besoin_cafe:
+                besoins_route.add('Café')
+            if livraison.besoin_the:
+                besoins_route.add('Thé')
+            if livraison.besoin_sac_glace:
+                besoins_route.add('Sac glace')
+            if livraison.besoin_part_chaud:
+                besoins_route.add('Part chaud')
+        
+        # Compter les livraisons par statut
+        total_livraisons = livraisons_route.count()
+        livraisons_livrees = sum(1 for lr in livraisons_route if lr.livraison.status == 'livree')
+        livraisons_restantes = total_livraisons - livraisons_livrees
+        
+        routes_data.append({
+            'id': str(route.id),
+            'nom': route.nom,
+            'date': route.date.strftime('%Y-%m-%d'),
+            'heure_depart': route.heure_depart.strftime('%H:%M') if route.heure_depart else '',
+            'status': route.status,
+            'statusDisplay': route.get_status_display(),
+            'livreur_nom': livreur_nom,
+            'vehicule': f"{route.vehicule.marque} {route.vehicule.modele}" if route.vehicule else None,
+            'commentaire': route.commentaire,
+            'besoins': list(besoins_route),
+            'total_livraisons': total_livraisons,
+            'livraisons_livrees': livraisons_livrees,
+            'livraisons_restantes': livraisons_restantes,
+            'progression': round((livraisons_livrees / total_livraisons * 100) if total_livraisons > 0 else 0),
+            'livraisons': livraisons_data
+        })
+    
+    return JsonResponse({
+        'success': True,
+        'routes': routes_data
+    })
 @login_required
-@require_http_methods(["GET"])
 def routes_du_mois(request):
-    """Récupère les dates qui ont des routes pour le mois"""
+    """API pour récupérer les dates qui ont des routes pour le livreur connecté"""
+    start_date = request.GET.get('start')
+    end_date = request.GET.get('end')
+    
+    if not start_date or not end_date:
+        return JsonResponse({'success': False, 'error': 'Dates requises'})
+    
     try:
-        start_str = request.GET.get('start')
-        end_str = request.GET.get('end')
-        
-        if not start_str or not end_str:
-            return JsonResponse({
-                'success': True,
-                'dates': []
-            })
-        
-        start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
-        end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
-        
-        # IMPORTANT: Le champ s'appelle 'date' pas 'date_route'
-        routes = Route.objects.filter(
-            date__gte=start_date,
-            date__lte=end_date
-        ).values_list('date', flat=True).distinct()
-        
-        dates_with_routes = [date.strftime('%Y-%m-%d') for date in routes if date]
-        
-        return JsonResponse({
-            'success': True,
-            'dates': dates_with_routes
-        })
-        
-    except Exception as e:
-        print(f"❌ Erreur routes_du_mois: {e}")
-        traceback.print_exc()
-        return JsonResponse({
-            'success': True,
-            'dates': []
-        })
+        start = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({'success': False, 'error': 'Format de date invalide'})
+    
+    # 🔥 CORRECTION : date au lieu de date_route
+    routes = Route.objects.filter(
+        date__gte=start,  # 🔥 CHANGÉ
+        date__lte=end,    # 🔥 CHANGÉ
+        livreurs=request.user
+    ).values_list('date', flat=True).distinct()  # 🔥 CHANGÉ
+    
+    dates = [date.strftime('%Y-%m-%d') for date in routes]
+    
+    return JsonResponse({
+        'success': True,
+        'dates': dates
+    })

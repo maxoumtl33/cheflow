@@ -4,9 +4,6 @@
 {% block title %}Livraisons - {{ route.nom }}{% endblock %}
 
 {% block content %}
-<style>
-    
-</style>
 <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
     
     <!-- Header sticky -->
@@ -88,14 +85,14 @@
                                     {% elif livraison_route.livraison.status == 'en_attente' %}bg-orange-500
                                     {% else %}bg-slate-300{% endif %} 
                                     text-white text-sm font-bold">
-                                    {{ livraison_route.ordre }}
+                                    {{ livraison_route.ordre|default:forloop.counter }}
                                 </span>
                                 <div>
                                     <h3 class="font-bold text-slate-900">
                                         {% if livraison_route.livraison.nom_evenement %}
                                             {{ livraison_route.livraison.nom_evenement }}
                                         {% else %}
-                                            Livraison #{{ forloop.counter }}
+                                            Livraison #{{ livraison_route.ordre|default:forloop.counter }}
                                         {% endif %}
                                     </h3>
                                     <span class="px-2 py-0.5 rounded-full text-xs font-medium

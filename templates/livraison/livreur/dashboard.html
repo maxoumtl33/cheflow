@@ -320,7 +320,7 @@
         }
     }
 
-    /* Routes cards - Style du dashboard 2 */
+    /* Routes cards */
     .route-card {
         background: white;
         border: 2px solid var(--border-color);
@@ -480,6 +480,71 @@
     .status-badge.conge { background: #fef3c7; color: #78350f; }
     .status-badge.indisponible { background: #fee2e2; color: #991b1b; }
     .status-badge.maladie { background: #fce7f3; color: #831843; }
+
+    /* Badges besoins spécifiques */
+    .besoin-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        border: 1.5px solid;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .besoin-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+
+    .besoin-badge-mini {
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        border: 1.5px solid;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+
+    /* Café - Tons marron chauds */
+    .besoin-cafe {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        color: #92400e;
+        border-color: #f59e0b;
+    }
+
+    /* Thé - Tons verts naturels */
+    .besoin-the {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        color: #065f46;
+        border-color: #10b981;
+    }
+
+    /* Sac glace - Tons bleus froids */
+    .besoin-sac-glace {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        color: #1e40af;
+        border-color: #3b82f6;
+    }
+
+    /* Part chaud - Tons rouges/orangés */
+    .besoin-part-chaud {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        color: #991b1b;
+        border-color: #ef4444;
+    }
+
+    /* Checklist - Tons violets professionnels */
+    .besoin-checklist {
+        background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%);
+        color: #6b21a8;
+        border-color: #a855f7;
+    }
 
     .action-button {
         width: 100%;
@@ -725,10 +790,9 @@
                                     <span x-text="route.livreur_nom"></span>
                                 </p>
                                 <!-- Besoins spécifiques -->
-                                <div x-show="route.besoins && route.besoins.length > 0" style="display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: 0.5rem;">
+                                <div x-show="route.besoins && route.besoins.length > 0" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
                                     <template x-for="besoin in route.besoins" :key="besoin">
-                                        <span style="padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.7rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;"
-                                              :style="getBesoinStyle(besoin)">
+                                        <span class="besoin-badge" :class="'besoin-' + getBesoinClass(besoin)">
                                             <span x-html="getBesoinIcon(besoin)"></span>
                                             <span x-text="besoin"></span>
                                         </span>
@@ -795,14 +859,9 @@
                                                x-text="livraison.nom"></p>
                                             <p style="margin: 0.125rem 0 0 0; font-size: 0.75rem; color: var(--text-light);" 
                                                x-text="'⏰ ' + livraison.heure"></p>
-                                            <!-- Besoins de cette livraison -->
-                                            <div x-show="livraison.besoins && livraison.besoins.length > 0" style="display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.375rem;">
-                                                <template x-for="besoin in livraison.besoins" :key="besoin">
-                                                    <span style="font-size: 0.65rem; padding: 0.125rem 0.375rem; border-radius: 8px; font-weight: 600;"
-                                                          :style="getBesoinStyle(besoin)">
-                                                        <span x-html="getBesoinIcon(besoin)"></span>
-                                                    </span>
-                                                </template>
+                                            <!-- Informations supplémentaires de cette livraison -->
+                                            <div x-show="livraison.informations_supplementaires" style="margin-top: 0.375rem; padding: 0.375rem 0.5rem; background: #f0f9ff; border-left: 2px solid #3b82f6; border-radius: 4px;">
+                                                <p style="margin: 0; font-size: 0.7rem; color: #1e40af; font-weight: 500;" x-text="livraison.informations_supplementaires"></p>
                                             </div>
                                         </div>
                                         <div style="flex-shrink: 0;">
@@ -887,6 +946,7 @@
     <div x-show="afficherDisponibilites" 
          x-cloak
          @click.self="afficherDisponibilites = false"
+         x-init="$watch('afficherDisponibilites', value => { if(value) chargerDisponibilites() })"
          class="modal-overlay">
         
         <div @click.stop class="modal-content">
@@ -927,7 +987,7 @@
                     <template x-if="disponibilites.length === 0">
                         <div class="empty-state">
                             <div class="empty-state-icon">👥</div>
-                            <p>Aucune disponibilité à afficher pour cette date</p>
+                            <p>Aucun livreur disponible pour cette date</p>
                         </div>
                     </template>
                     
@@ -945,6 +1005,14 @@
 
                             <!-- Disponibilités du livreur -->
                             <div style="margin-top: 0.75rem;">
+                                <template x-if="livreur.dispos.length === 0">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <span class="status-badge conge">
+                                            🏖️ Congé / Indisponible
+                                        </span>
+                                    </div>
+                                </template>
+                                
                                 <template x-for="dispo in livreur.dispos" :key="dispo.id">
                                     <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
                                         <!-- Status badge -->
@@ -1213,7 +1281,19 @@ function dashboardLivreur() {
             return nom.substring(0, 2).toUpperCase();
         },
         
+        getBesoinClass(besoin) {
+            const classes = {
+                'Café': 'cafe',
+                'Thé': 'the',
+                'Sac glace': 'sac-glace',
+                'Part chaud': 'part-chaud',
+                'Checklist': 'checklist'
+            };
+            return classes[besoin] || 'cafe';
+        },
+        
         getBesoinStyle(besoin) {
+            // Fonction legacy, peut être supprimée si plus utilisée
             const styles = {
                 'Café': 'background: #fef3c7; color: #92400e;',
                 'Thé': 'background: #d1fae5; color: #065f46;',

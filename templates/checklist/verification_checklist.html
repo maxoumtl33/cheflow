@@ -247,12 +247,13 @@
                                             </span>
                                             {% endif %}
                                             
+                                            
                                             <!-- Badge modification si applicable -->
-                                            {% if item.modifie_depuis_verification %}
-                                            <span class="status-badge" style="background: #fef3c7; color: #92400e;">
-                                                <i class="fas fa-exclamation-triangle"></i> MODIFIÉ
-                                            </span>
-                                            {% endif %}
+{% if item.modifie_depuis_verification and item.date_verification %}
+<span class="status-badge" style="background: #fef3c7; color: #92400e;">
+    <i class="fas fa-exclamation-triangle"></i> MODIFIÉ
+</span>
+{% endif %}
                                         </h3>
                                         <div style="font-size: 1rem; color: #6b7280;">
                                             <span style="font-weight: 600; color: #3b82f6;">
@@ -315,17 +316,8 @@
                 </button>
             </div>
             
-            <!-- Statistiques -->
-<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
-    {% if items_ajoutes > 0 %}
-    <div style="background: #dbeafe; border: 2px solid #3b82f6; border-radius: 12px; padding: 1rem;">
-        <div style="font-size: 0.75rem; color: #1e40af; font-weight: 600; text-transform: uppercase; margin-bottom: 0.25rem;">
-            <i class="fas fa-plus-circle"></i> Ajoutés
-        </div>
-        <div style="font-size: 2rem; font-weight: 700; color: #1e40af;">{{ items_ajoutes }}</div>
-    </div>
-    {% endif %}
-    
+<!-- Statistiques -->
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
     {% if items_modifies > 0 %}
     <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 1rem;">
         <div style="font-size: 0.75rem; color: #92400e; font-weight: 600; text-transform: uppercase; margin-bottom: 0.25rem;">

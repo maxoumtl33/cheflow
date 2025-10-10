@@ -106,8 +106,7 @@
                     <div class="flex-1">
                         <p class="text-xs text-slate-600 mb-1">Horaire</p>
                         <p class="text-base font-semibold text-slate-900">
-                            {{ livraison.get_periode_display }}
-                            {% if livraison.heure_souhaitee %} - {{ livraison.heure_souhaitee|time:"H:i" }}{% endif %}
+                            {% if livraison.heure_souhaitee %} {{ livraison.heure_souhaitee|time:"H:i" }}{% endif %}
                         </p>
                         <p class="text-sm text-slate-600">{{ livraison.date_livraison|date:"l d F Y" }}</p>
                     </div>

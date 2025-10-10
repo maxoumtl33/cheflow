@@ -197,6 +197,12 @@ from django.conf import settings
 from django.utils import timezone
 
 
+# ventes/models.py
+
+# ventes/models.py
+
+# ventes/models.py
+
 class ItemChecklistHistorique(models.Model):
     """Historique des modifications d'items de checklist"""
     
@@ -206,11 +212,22 @@ class ItemChecklistHistorique(models.Model):
         ('suppression', 'Item supprimé'),
     ]
     
+    # ✅ CRITIQUE: item doit pouvoir être NULL
     item = models.ForeignKey(
         'ItemChecklist', 
-        on_delete=models.CASCADE, 
+        on_delete=models.SET_NULL,  # ✅ SET_NULL au lieu de CASCADE
+        null=True,  # ✅ Permet NULL
+        blank=True,
         related_name='historique',
-        help_text="Item concerné par la modification"
+        help_text="Item concerné par la modification (NULL si supprimé)"
+    )
+    
+    # ✅ OBLIGATOIRE : Référence directe à la checklist
+    checklist = models.ForeignKey(
+        'Checklist',
+        on_delete=models.CASCADE,
+        related_name='historique_items',
+        help_text="Checklist à laquelle appartient cet item"
     )
     
     # Quantités
@@ -247,6 +264,21 @@ class ItemChecklistHistorique(models.Model):
         help_text="Date et heure de la modification"
     )
     
+    # ✅ OBLIGATOIRE : Garder les infos même après suppression de l'item
+    objet_nom = models.CharField(
+        max_length=200,
+        help_text="Nom de l'objet (sauvegardé en cas de suppression)"
+    )
+    objet_unite = models.CharField(
+        max_length=50,
+        default='unité',
+        help_text="Unité de l'objet"
+    )
+    categorie_nom = models.CharField(
+        max_length=100,
+        help_text="Nom de la catégorie"
+    )
+    
     # Notes optionnelles
     notes = models.TextField(
         blank=True,
@@ -258,16 +290,17 @@ class ItemChecklistHistorique(models.Model):
         verbose_name = 'Historique de modification'
         verbose_name_plural = 'Historiques de modifications'
         indexes = [
-            models.Index(fields=['item', '-date_modification']),
+            models.Index(fields=['checklist', '-date_modification']),
+            models.Index(fields=['type_modification', '-date_modification']),
         ]
     
     def __str__(self):
         if self.type_modification == 'quantite':
-            return f"{self.item.objet.nom}: {self.quantite_avant} → {self.quantite_apres}"
+            return f"{self.objet_nom}: {self.quantite_avant} → {self.quantite_apres}"
         elif self.type_modification == 'ajout':
-            return f"{self.item.objet.nom}: Ajouté ({self.quantite_apres})"
+            return f"{self.objet_nom}: Ajouté ({self.quantite_apres})"
         else:
-            return f"{self.item.objet.nom}: Supprimé"
+            return f"{self.objet_nom}: Supprimé"
     
     def difference(self):
         """Retourne la différence de quantité"""

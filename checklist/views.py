@@ -58,9 +58,9 @@ def dashboard_verificateur(request):
     return render(request, 'checklist/dashboard_verificateur.html', context)
 
 
-# checklist/views.py
 
-# checklist/views.py - VERSION COMPLÈTE
+
+# checklist/views.py - Partie à modifier
 
 @login_required
 def verification_checklist(request, checklist_id):
@@ -74,13 +74,11 @@ def verification_checklist(request, checklist_id):
         id=checklist_id
     )
     
-    # Passer en statut "en_cours" si c'est la première fois
     if checklist.status == 'en_attente':
         checklist.status = 'en_cours'
         checklist.verificateur = request.user
         checklist.save(update_fields=['status', 'verificateur'])
     
-    # Compter les items validés
     items_verifies_count = checklist.items.filter(statut_verification='valide').count()
     
     # Grouper items par catégorie
@@ -94,86 +92,73 @@ def verification_checklist(request, checklist_id):
             }
         items_par_categorie[cat_nom]['items'].append(item)
     
-    # ✨ NOUVEAU : Détecter TOUS les changements (modifications, ajouts ET suppressions)
+    # ✨ DÉTECTER TOUS LES CHANGEMENTS
     from ventes.models import ItemChecklistHistorique
+    from datetime import timedelta
     
     changements = []
     items_modifies = 0
-    items_ajoutes = 0
     items_supprimes = 0
     
-    # 1. Récupérer les items actuels avec modifications
-    for item in checklist.items.all():
-        if item.modifie_depuis_verification:
-            # Récupérer le dernier historique de cet item
-            dernier_historique = item.historique.first()
-            
-            if dernier_historique and dernier_historique.type_modification == 'quantite':
-                # Item modifié avec historique de quantité
-                difference = float(dernier_historique.quantite_apres - dernier_historique.quantite_avant)
-                
-                changements.append({
-                    'type': 'modification',
-                    'objet': item.objet.nom,
-                    'objet_id': item.objet.id,
-                    'quantite_avant': float(dernier_historique.quantite_avant),
-                    'quantite_apres': float(dernier_historique.quantite_apres),
-                    'difference': difference,
-                    'unite': item.objet.unite,
-                    'categorie': item.objet.categorie.nom,
-                    'date_modification': dernier_historique.date_modification,
-                    'modifie_par': dernier_historique.modifie_par,
-                })
-                items_modifies += 1
-                
-            elif not item.date_verification:
-                # Nouvel item ajouté
-                changements.append({
-                    'type': 'ajout',
-                    'objet': item.objet.nom,
-                    'objet_id': item.objet.id,
-                    'quantite': float(item.quantite),
-                    'unite': item.objet.unite,
-                    'categorie': item.objet.categorie.nom,
-                })
-                items_ajoutes += 1
-    
-    # 2. Récupérer les items SUPPRIMÉS depuis l'historique
-    # On cherche tous les historiques de type 'suppression' pour cette checklist
-    historiques_suppression = ItemChecklistHistorique.objects.filter(
-        item__checklist=checklist,
-        type_modification='suppression'
-    ).select_related('item__objet', 'item__objet__categorie', 'modifie_par').order_by('-date_modification')
-    
-    # Pour éviter les doublons, on ne prend que les suppressions récentes
-    # (depuis la dernière vérification ou les 7 derniers jours)
-    from datetime import timedelta
     date_limite = timezone.now() - timedelta(days=7)
     if checklist.date_verification:
         date_limite = checklist.date_verification
     
-    for hist in historiques_suppression:
-        if hist.date_modification >= date_limite:
-            # Vérifier que l'item n'existe plus dans la checklist
-            if not checklist.items.filter(objet=hist.item.objet).exists():
-                changements.append({
-                    'type': 'suppression',
-                    'objet': hist.item.objet.nom,
-                    'quantite_avant': float(hist.quantite_avant) if hist.quantite_avant else 0,
-                    'unite': hist.item.objet.unite,
-                    'categorie': hist.item.objet.categorie.nom,
-                    'date_modification': hist.date_modification,
-                    'modifie_par': hist.modifie_par,
-                })
-                items_supprimes += 1
+    # 1. Items modifiés
+    for item in checklist.items.filter(modifie_depuis_verification=True):
+        dernier_historique = item.historique.filter(
+            type_modification='quantite',
+            date_modification__gte=date_limite
+        ).first()
+        
+        if dernier_historique:
+            difference = float(dernier_historique.quantite_apres - dernier_historique.quantite_avant)
+            
+            changements.append({
+                'type': 'modification',
+                'objet': dernier_historique.objet_nom,
+                'quantite_avant': float(dernier_historique.quantite_avant),
+                'quantite_apres': float(dernier_historique.quantite_apres),
+                'difference': difference,
+                'unite': dernier_historique.objet_unite,
+                'categorie': dernier_historique.categorie_nom,
+                'date_modification': dernier_historique.date_modification,
+                'modifie_par': dernier_historique.modifie_par,
+            })
+            items_modifies += 1
     
-    # Trier les changements : suppressions d'abord, puis ajouts, puis modifications
+    # 2. Items supprimés ✅ CORRECTION ICI
+    historiques_suppression = ItemChecklistHistorique.objects.filter(
+        checklist=checklist,
+        type_modification='suppression',
+        date_modification__gte=date_limite
+    ).select_related('modifie_par')
+    
+    # IDs des objets actuellement dans la checklist (via le nom de l'objet sauvegardé)
+    objets_actuels_noms = set(checklist.items.values_list('objet__nom', flat=True))
+    
+    for hist in historiques_suppression:
+        # ✅ Utiliser objet_nom au lieu de hist.item.objet_id
+        # Si l'objet n'est plus dans la checklist = vraie suppression
+        if hist.objet_nom not in objets_actuels_noms:
+            changements.append({
+                'type': 'suppression',
+                'objet': hist.objet_nom,
+                'quantite_avant': float(hist.quantite_avant) if hist.quantite_avant else 0,
+                'unite': hist.objet_unite,
+                'categorie': hist.categorie_nom,
+                'date_modification': hist.date_modification,
+                'modifie_par': hist.modifie_par,
+            })
+            items_supprimes += 1
+    
+    # Trier
     changements.sort(key=lambda x: (
-        0 if x['type'] == 'suppression' else (1 if x['type'] == 'ajout' else 2),
+        0 if x['type'] == 'suppression' else 1,
         x.get('date_modification', timezone.now())
     ), reverse=True)
     
-    total_changements = items_modifies + items_ajoutes + items_supprimes
+    total_changements = items_modifies + items_supprimes
     
     context = {
         'checklist': checklist,
@@ -182,13 +167,11 @@ def verification_checklist(request, checklist_id):
         'changements': changements,
         'total_changements': total_changements,
         'items_modifies': items_modifies,
-        'items_ajoutes': items_ajoutes,
+        'items_ajoutes': 0,
         'items_supprimes': items_supprimes,
     }
     
     return render(request, 'checklist/verification_checklist.html', context)
-# checklist/views.py
-
 @login_required
 def valider_item(request, item_id):
     """Valider/Refuser un item via AJAX"""
