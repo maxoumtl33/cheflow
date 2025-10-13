@@ -1,0 +1,571 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #6366f1;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --bg-light: #f9fafb;
+        --border-color: #e5e7eb;
+        --text-dark: #1f2937;
+        --text-light: #6b7280;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+
+    .detail-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+
+    .detail-header {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .header-info h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .header-subtitle {
+        color: var(--text-light);
+        font-size: 0.95rem;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .status-section {
+        display: flex;
+        gap: 1rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid var(--border-color);
+    }
+
+    .status-item {
+        flex: 1;
+        padding: 1rem;
+        background: var(--bg-light);
+        border-radius: 12px;
+        text-align: center;
+    }
+
+    .status-label {
+        font-size: 0.8rem;
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+    }
+
+    .status-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-dark);
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .badge-en_cours {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .badge-envoye {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-accepte {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge-refuse {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .content-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .info-grid {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .info-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-light);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .info-value {
+        font-size: 0.95rem;
+        color: var(--text-dark);
+        font-weight: 500;
+    }
+
+    .info-value.empty {
+        color: var(--text-light);
+        font-style: italic;
+    }
+
+    .options-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .option-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        background: var(--bg-light);
+        border-radius: 10px;
+    }
+
+    .option-icon {
+        width: 20px;
+        height: 20px;
+        color: var(--success-color);
+    }
+
+    .option-icon.disabled {
+        color: var(--text-light);
+    }
+
+    .btn {
+        padding: 0.75rem 1.25rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-color), #4f46e5);
+        color: white;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, var(--success-color), #059669);
+        color: white;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-secondary {
+        background: white;
+        color: var(--text-dark);
+        border: 2px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+
+    .btn-danger {
+        background: linear-gradient(135deg, var(--danger-color), #dc2626);
+        color: white;
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-sm {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    .notes-section {
+        background: var(--bg-light);
+        padding: 1rem;
+        border-radius: 10px;
+        margin-top: 1rem;
+    }
+
+    .notes-section p {
+        margin: 0;
+        color: var(--text-dark);
+        line-height: 1.6;
+    }
+
+    @media (max-width: 968px) {
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .status-section {
+            flex-direction: column;
+        }
+
+        .header-actions {
+            width: 100%;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+    <!-- En-tête -->
+    <div class="detail-header">
+        <div class="header-top">
+            <div class="header-info">
+                <h1>{{ soumission.numero_soumission }}</h1>
+                <p class="header-subtitle">{{ soumission.nom_compagnie }} • Créée le {{ soumission.cree_a|date:"d/m/Y à H:i" }}</p>
+            </div>
+            
+            <div class="header-actions">
+                {% if soumission.statut == 'en_cours' %}
+                <form method="post" action="{% url 'ventes:soumission_envoyer' soumission.pk %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                        </svg>
+                        Marquer comme envoyé
+                    </button>
+                </form>
+                {% elif soumission.statut == 'envoye' %}
+                <form method="post" action="{% url 'ventes:soumission_accepter' soumission.pk %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Marquer accepté
+                    </button>
+                </form>
+                <form method="post" action="{% url 'ventes:soumission_refuser' soumission.pk %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        Marquer refusé
+                    </button>
+                </form>
+                {% endif %}
+                
+                {% if can_edit %}
+                <a href="{% url 'ventes:soumission_edit' soumission.pk %}" class="btn btn-primary btn-sm">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                    Modifier
+                </a>
+                
+                <a href="{% url 'ventes:soumission_duplicate' soumission.pk %}" class="btn btn-secondary btn-sm">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                    Dupliquer
+                </a>
+                {% endif %}
+                
+                {% if user.role == 'resp_ventes' %}
+                <a href="{% url 'ventes:dashboard_responsable' %}" class="btn btn-secondary btn-sm">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Retour Dashboard
+                </a>
+                {% else %}
+                <a href="{% url 'ventes:dashboard_vendeuse' %}" class="btn btn-secondary btn-sm">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Retour Dashboard
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="status-section">
+            <div class="status-item">
+                <div class="status-label">Statut</div>
+                <div class="status-value">
+                    <span class="badge badge-{{ soumission.statut }}">
+                        {{ soumission.get_statut_display }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="status-item">
+                <div class="status-label">Date de l'événement</div>
+                <div class="status-value">{{ soumission.date_evenement|date:"d/m/Y" }}</div>
+            </div>
+            
+            <div class="status-item">
+                <div class="status-label">Nombre de personnes</div>
+                <div class="status-value">{{ soumission.nombre_personnes }} convives</div>
+            </div>
+            
+            {% if soumission.date_soumission %}
+            <div class="status-item">
+                <div class="status-label">Envoyée le</div>
+                <div class="status-value">{{ soumission.date_soumission|date:"d/m/Y" }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Contenu principal -->
+    <div class="content-grid">
+        <!-- Colonne principale -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- Informations de l'événement -->
+            <div class="card">
+                <div class="card-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    Détails de l'événement
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Adresse</div>
+                        <div class="info-value">{{ soumission.adresse }}</div>
+                    </div>
+                </div>
+
+                <div class="options-list">
+                    <div class="option-item">
+                        <svg class="option-icon {% if not soumission.avec_service %}disabled{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span>Avec service</span>
+                    </div>
+
+                    <div class="option-item">
+                        <svg class="option-icon {% if not soumission.location_materiel %}disabled{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span>Location matériel</span>
+                    </div>
+
+                    <div class="option-item">
+                        <svg class="option-icon {% if not soumission.avec_alcool %}disabled{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span>Avec alcool</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coordonnées de contact -->
+            <div class="card">
+                <div class="card-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    Coordonnées de contact
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Commandé par</div>
+                        <div class="info-value">{{ soumission.commande_par }}</div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-label">Téléphone</div>
+                        <div class="info-value">
+                            <a href="tel:{{ soumission.telephone }}" style="color: var(--primary-color); text-decoration: none;">
+                                {{ soumission.telephone }}
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-label">Email</div>
+                        <div class="info-value">
+                            <a href="mailto:{{ soumission.email }}" style="color: var(--primary-color); text-decoration: none;">
+                                {{ soumission.email }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if soumission.notes %}
+            <div class="card">
+                <div class="card-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Notes internes
+                </div>
+
+                <div class="info-item">
+                    <div class="notes-section">
+                        <p>{{ soumission.notes }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Colonne latérale -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- Métadonnées -->
+            <div class="card">
+                <div class="card-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Informations
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Créée par</div>
+                        <div class="info-value">
+                            {{ soumission.cree_par.get_full_name|default:soumission.cree_par.username }}
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-label">Créée le</div>
+                        <div class="info-value">{{ soumission.cree_a|date:"d/m/Y à H:i" }}</div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-label">Dernière modification</div>
+                        <div class="info-value">{{ soumission.date_modification|date:"d/m/Y à H:i" }}</div>
+                    </div>
+
+                    {% if soumission.date_reponse %}
+                    <div class="info-item">
+                        <div class="info-label">Réponse le</div>
+                        <div class="info-value">{{ soumission.date_reponse|date:"d/m/Y à H:i" }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions rapides -->
+            {% if can_edit %}
+            <div class="card">
+                <div class="card-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    Actions rapides
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <a href="{% url 'ventes:soumission_edit' soumission.pk %}" class="btn btn-secondary" style="width: 100%; justify-content: center;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Modifier
+                    </a>
+
+                    <a href="{% url 'ventes:soumission_duplicate' soumission.pk %}" class="btn btn-secondary" style="width: 100%; justify-content: center;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        Dupliquer
+                    </a>
+
+                    <a href="{% url 'ventes:soumission_delete' soumission.pk %}" class="btn btn-danger" style="width: 100%; justify-content: center;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Supprimer
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

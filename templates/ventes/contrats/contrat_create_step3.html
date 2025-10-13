@@ -41,7 +41,7 @@
 {% block content %}
 <div class="wizard-container">
     <div class="wizard-header">
-        <h1 style="margin: 0 0 2rem 0;">🎉 Nouveau Contrat</h1>
+        <h1 style="margin: 0 0 2rem 0;">🎉 Nouvel Événement MD</h1>
         
         <div class="wizard-steps">
             <div class="wizard-step completed">
@@ -86,7 +86,7 @@
         <!-- Résumé des informations -->
         <div style="border-top: 2px solid #e5e7eb; padding-top: 2rem; margin-top: 2rem;">
             <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.5rem; color: #1f2937;">
-                📋 Résumé du contrat
+                📋 Résumé de l'Événement MD
             </h3>
 
             <div class="summary-grid">
@@ -96,8 +96,8 @@
                         🆔 Identifiants
                     </div>
                     <div class="summary-item">
-                        <div class="summary-label">N° Contrat:</div>
-                        <div class="summary-value">{{ step1.numero_contrat }}</div>
+                        <div class="summary-label">N° Événement MD:</div>
+                        <div class="summary-value">CMD-{{ step1.numero_contrat }}</div>
                     </div>
                     <div class="summary-item">
                         <div class="summary-label">Événement:</div>
@@ -191,7 +191,7 @@
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                 </svg>
-                Créer le contrat
+                Créer l'Événement MD
             </button>
         </div>
     </form>

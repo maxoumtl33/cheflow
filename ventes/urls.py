@@ -46,4 +46,17 @@ urlpatterns = [
     path('contrat/<uuid:pk>/', views.contrat_detail, name='contrat_detail'),
     path('contrat/<uuid:pk>/edit/', views.contrat_edit, name='contrat_edit'),
     path('contrat/<uuid:pk>/delete/', views.contrat_delete, name='contrat_delete'),
+    path('checklist/<uuid:checklist_id>/create-contrat/', 
+         views.contrat_from_checklist, 
+         name='contrat_from_checklist'),
+
+    path('soumissions/', views.soumission_list, name='soumission_list'),
+    path('soumission/create/', views.soumission_create, name='soumission_create'),
+    path('soumission/<uuid:pk>/', views.soumission_detail, name='soumission_detail'),
+    path('soumission/<uuid:pk>/edit/', views.soumission_edit, name='soumission_edit'),
+    path('soumission/<uuid:pk>/delete/', views.soumission_delete, name='soumission_delete'),
+    path('soumission/<uuid:pk>/duplicate/', views.soumission_duplicate, name='soumission_duplicate'),
+    path('soumission/<uuid:pk>/envoyer/', views.soumission_envoyer, name='soumission_envoyer'),
+    path('soumission/<uuid:pk>/accepter/', views.soumission_accepter, name='soumission_accepter'),
+    path('soumission/<uuid:pk>/refuser/', views.soumission_refuser, name='soumission_refuser'),
 ]

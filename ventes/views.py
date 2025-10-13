@@ -10,10 +10,11 @@ from django.contrib import messages
 import json
 from hotel.models import Contrat
 from django.contrib.auth import get_user_model
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 @login_required
 def dashboard_vendeuse(request):
-    """Dashboard principal avec calendrier"""
+    """Dashboard principal avec calendrier et pagination"""
     today = timezone.now().date()
     start_date = today.replace(day=1)
     
@@ -29,7 +30,9 @@ def dashboard_vendeuse(request):
     ).select_related('creee_par').prefetch_related('items')
     
     # TOUTES les checklists pour le tableau
-    all_checklists = Checklist.objects.select_related('creee_par').prefetch_related('items').order_by('-date_evenement')
+    all_checklists = Checklist.objects.select_related(
+        'creee_par', 'contrat'
+    ).prefetch_related('items').order_by('-date_evenement')
     
     checklists_par_date = {}
     for checklist in checklists_mois:
@@ -43,26 +46,35 @@ def dashboard_vendeuse(request):
             'progression': checklist.progression()
         })
     
-    # ============ AJOUT POUR CONTRATS ============
+    # ============ CONTRATS ============
     from hotel.models import Contrat
     from django.contrib.auth import get_user_model
     
     User = get_user_model()
     
-    # Récupérer tous les contrats pour l'onglet Contrats
+    # Récupérer tous les contrats
     contrats = Contrat.objects.select_related(
         'maitre_hotel', 'cree_par'
     ).order_by('-date_evenement')
     
     # Liste des maîtres d'hôtel pour les filtres
     maitres_hotel = User.objects.filter(role='maitre_hotel', is_active=True)
-    # ============================================
+    
+    # ============ SOUMISSIONS ============
+    from ventes.models import Soumission
+    
+    # Récupérer toutes les soumissions
+    soumissions = Soumission.objects.select_related(
+        'cree_par'
+    ).order_by('-date_evenement')
+    # =====================================
     
     context = {
         'checklists_data': json.dumps(checklists_par_date),
         'all_checklists': all_checklists,
-        'contrats': contrats,  # ← NOUVEAU
-        'maitres_hotel': maitres_hotel,  # ← NOUVEAU
+        'contrats': contrats,
+        'maitres_hotel': maitres_hotel,
+        'soumissions': soumissions,
         'today': today.strftime('%Y-%m-%d'),
     }
     
@@ -120,7 +132,7 @@ def checklist_detail(request, pk):
     
     # Calculer les statistiques
     total_items = items.count()
-    verified_items = items.filter(verifie=True).count()
+    verified_items = items.filter(statut_verification = 'valide').count()
     pending_items = total_items - verified_items
     
     # Vérifier les permissions
@@ -525,7 +537,7 @@ def dashboard_responsable(request):
     # Récupérer toutes les checklists
     checklists = Checklist.objects.select_related(
         'creee_par'
-    ).order_by('-date_creation')[:50]
+    ).order_by('-date_evenement')[:50]
     
     # Récupérer tous les objets
     objets = ObjetChecklist.objects.select_related(
@@ -548,6 +560,13 @@ def dashboard_responsable(request):
     contrats = Contrat.objects.select_related(
         'maitre_hotel', 'cree_par'
     ).order_by('-date_evenement')
+
+    contrats_by_date = {}
+    for contrat in contrats:
+        date_key = contrat.date_evenement.strftime('%Y-%m-%d')
+        if date_key not in contrats_by_date:
+            contrats_by_date[date_key] = []
+        contrats_by_date[date_key].append(contrat)
     
     # Organiser les checklists par date pour le calendrier
     checklists_by_date = defaultdict(list)
@@ -556,6 +575,16 @@ def dashboard_responsable(request):
     for checklist in all_checklists:
         date_str = checklist.date_evenement.strftime('%Y-%m-%d')
         checklists_by_date[date_str].append(checklist)
+
+    soumissions = Soumission.objects.select_related('cree_par').order_by('-date_evenement')
+    
+    # Organiser les soumissions par date pour le calendrier
+    soumissions_by_date = {}
+    for soumission in soumissions:
+        date_key = soumission.date_evenement.strftime('%Y-%m-%d')
+        if date_key not in soumissions_by_date:
+            soumissions_by_date[date_key] = []
+        soumissions_by_date[date_key].append(soumission)
     
     # Statistiques
     stats = {
@@ -563,6 +592,7 @@ def dashboard_responsable(request):
         'total_objets': ObjetChecklist.objects.filter(actif=True).count(),
         'total_categories': CategorieObjet.objects.filter(actif=True).count(),
         'total_vendeuses': User.objects.filter(role='vendeur', is_active=True).count(),
+        'total_soumissions': Soumission.objects.count(),
     }
     
     context = {
@@ -571,12 +601,17 @@ def dashboard_responsable(request):
         'categories': categories,
         'vendeuses': vendeuses,
         'contrats': contrats,
+        'soumissions': soumissions,
         'stats': stats,
         'checklists_by_date': dict(checklists_by_date),
         'today': date.today().strftime('%Y-%m-%d'),
+        'contrats_by_date': contrats_by_date,
+        'soumissions_by_date': soumissions_by_date,
     }
     
     return render(request, 'ventes/responsable/dashboard_responsable.html', context)
+
+
 # views.py
 
 from django.contrib.auth.decorators import login_required
@@ -1060,6 +1095,14 @@ def contrat_list(request):
 def contrat_create_step1(request):
     """Étape 1: Identifiants + associer un maître d'hôtel"""
     
+    # ✅ NETTOYER LA SESSION au début si c'est une nouvelle création
+    if request.method == 'GET' and 'new' in request.GET:
+        # Supprimer les données de session si on commence une nouvelle création
+        if 'contrat_step1' in request.session:
+            del request.session['contrat_step1']
+        if 'contrat_step2' in request.session:
+            del request.session['contrat_step2']
+    
     if request.method == 'POST':
         # Récupérer les données du formulaire
         numero_contrat_input = request.POST.get('numero_contrat', '').strip()
@@ -1110,6 +1153,9 @@ def contrat_create_step1(request):
     }
     
     return render(request, 'ventes/contrats/contrat_create_step1.html', context)
+# Dans ventes/views.py - Remplacer la fonction contrat_create_step2
+
+from django.conf import settings
 
 @login_required
 def contrat_create_step2(request):
@@ -1144,7 +1190,10 @@ def contrat_create_step2(request):
         
         if not all(step2_data.get(field) for field in required_fields):
             messages.error(request, "Veuillez remplir tous les champs obligatoires")
-            context = {'form_data': step2_data}
+            context = {
+                'form_data': step2_data,
+                'google_api_key': settings.GOOGLE_PLACES_API_KEY,  # ✅ Ajouter la clé API
+            }
             return render(request, 'ventes/contrats/contrat_create_step2.html', context)
         
         # Stocker en session
@@ -1154,19 +1203,29 @@ def contrat_create_step2(request):
     
     # GET - Afficher le formulaire
     # Pré-remplir avec les données de la checklist si disponible
-    form_data = {}
-    step1 = request.session.get('contrat_step1', {})
+    form_data = request.session.get('contrat_step2', {})
     
-    if step1.get('checklist_id'):
-        try:
-            checklist = Checklist.objects.get(pk=step1['checklist_id'])
-            form_data['date_evenement'] = checklist.date_evenement
-        except:
-            pass
+    # ✅ Si pas de données en session, utiliser les valeurs par défaut de la checklist (si existe)
+    if not form_data:
+        step1 = request.session.get('contrat_step1', {})
+        if step1.get('checklist_id'):
+            try:
+                from .models import Checklist
+                checklist = Checklist.objects.get(pk=step1['checklist_id'])
+                form_data = {
+                    'date_evenement': checklist.date_evenement.strftime('%Y-%m-%d'),
+                    'ville': 'Montréal',
+                    'informations_supplementaires': checklist.notes if checklist.notes else '',
+                }
+            except:
+                pass
     
-    context = {'form_data': form_data}
+    context = {
+        'form_data': form_data,
+        'google_api_key': settings.GOOGLE_MAPS_API_KEY,  # ✅ Ajouter la clé API
+    }
+    
     return render(request, 'ventes/contrats/contrat_create_step2.html', context)
-
 
 @login_required
 def contrat_create_step3(request):
@@ -1364,3 +1423,324 @@ def contrat_delete(request, pk):
     
     context = {'contrat': contrat}
     return render(request, 'ventes/contrats/contrat_confirm_delete.html', context)
+
+
+# Ajouter cette vue dans ventes/views.py
+
+@login_required
+def contrat_from_checklist(request, checklist_id):
+    """Créer un contrat à partir d'une checklist existante"""
+    
+    checklist = get_object_or_404(Checklist, pk=checklist_id)
+    
+    # Extraire le numéro (avec ou sans préfixe)
+    numero_commande = checklist.numero_commande.strip()
+    
+    # Si le numéro commence déjà par CMD-, on le garde tel quel
+    # Sinon, on l'ajoute
+    if not numero_commande.startswith('CMD-'):
+        numero_avec_prefix = f"CMD-{numero_commande}"
+    else:
+        numero_avec_prefix = numero_commande
+    
+    request.session['contrat_step1'] = {
+        'numero_contrat': numero_avec_prefix,  # ✅ AVEC le préfixe CMD-
+        'nom_evenement': checklist.nom,
+        'maitre_hotel_id': None,
+        'checklist_id': str(checklist.id),
+        'livraison_id': str(checklist.livraison.id) if checklist.livraison else None,
+    }
+    
+    # Pré-remplir l'étape 2 avec la date de l'événement
+    request.session['contrat_step2'] = {
+        'client_nom': '',
+        'client_telephone': '',
+        'client_email': '',
+        'contact_sur_site': '',
+        'adresse_complete': '',
+        'ville': 'Montréal',
+        'code_postal': '',
+        'date_evenement': checklist.date_evenement.strftime('%Y-%m-%d'),
+        'heure_debut_prevue': '',
+        'heure_fin_prevue': '',
+        'nb_convives': 0,
+        'informations_supplementaires': checklist.notes if checklist.notes else '',
+        'instructions_speciales': '',
+    }
+    
+    messages.info(request, f"Création d'un contrat basé sur la checklist {checklist.numero_commande}")
+    
+    # Rediriger vers l'étape 2 (puisque l'étape 1 est déjà pré-remplie)
+    return redirect('ventes:contrat_create_step2')
+
+# ventes/views.py - Ajouter à la fin du fichier
+
+from .models import Soumission
+
+# ============ CRUD SOUMISSIONS ============
+
+@login_required
+def soumission_list(request):
+    """Liste des soumissions (pour l'onglet dans dashboard_responsable)"""
+    soumissions = Soumission.objects.select_related('cree_par').order_by('-date_evenement')
+    
+    # Filtres optionnels
+    statut_filter = request.GET.get('statut')
+    if statut_filter:
+        soumissions = soumissions.filter(statut=statut_filter)
+    
+    context = {
+        'soumissions': soumissions,
+        'statut_choices': Soumission.STATUT_CHOICES,
+    }
+    
+    return render(request, 'ventes/soumissions/soumission_list.html', context)
+
+
+
+# ventes/views.py
+
+from django.conf import settings
+
+@login_required
+def soumission_create(request):
+    """Créer une nouvelle soumission"""
+    if request.user.role not in ['resp_ventes', 'vendeur']:
+        messages.error(request, "Vous n'avez pas la permission de créer une soumission")
+        return redirect('ventes:dashboard_responsable')
+    
+    if request.method == 'POST':
+        nom_compagnie = request.POST.get('nom_compagnie')
+        date_evenement = request.POST.get('date_evenement')
+        nombre_personnes = request.POST.get('nombre_personnes')
+        adresse = request.POST.get('adresse')
+        avec_service = request.POST.get('avec_service') == 'on'
+        location_materiel = request.POST.get('location_materiel') == 'on'
+        avec_alcool = request.POST.get('avec_alcool') == 'on'
+        commande_par = request.POST.get('commande_par')
+        email = request.POST.get('email')
+        telephone = request.POST.get('telephone')
+        notes = request.POST.get('notes', '')
+        # notes_client supprimé
+        
+        # Validation
+        if not all([nom_compagnie, date_evenement, nombre_personnes, 
+                   adresse, commande_par, email, telephone]):
+            messages.error(request, "Veuillez remplir tous les champs obligatoires")
+            context = {
+                'form_data': request.POST,
+                'google_api_key': settings.GOOGLE_MAPS_API_KEY,  # ✅ AJOUTÉ
+            }
+            return render(request, 'ventes/soumissions/soumission_form.html', context)
+        
+        try:
+            soumission = Soumission.objects.create(
+                nom_compagnie=nom_compagnie,
+                date_evenement=date_evenement,
+                nombre_personnes=int(nombre_personnes),
+                adresse=adresse,
+                avec_service=avec_service,
+                location_materiel=location_materiel,
+                avec_alcool=avec_alcool,
+                commande_par=commande_par,
+                email=email,
+                telephone=telephone,
+                notes=notes,
+                # notes_client supprimé
+                cree_par=request.user,
+                statut='en_cours'
+            )
+            
+            messages.success(request, f"✅ Soumission {soumission.numero_soumission} créée avec succès!")
+            return redirect('ventes:soumission_detail', pk=soumission.pk)
+        
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la création: {str(e)}")
+            import traceback
+            traceback.print_exc()
+    
+    context = {
+        'google_api_key': settings.GOOGLE_MAPS_API_KEY,  # ✅ AJOUTÉ
+    }
+    return render(request, 'ventes/soumissions/soumission_form.html', context)
+
+
+@login_required
+def soumission_edit(request, pk):
+    """Modifier une soumission"""
+    soumission = get_object_or_404(Soumission, pk=pk)
+    
+    # Vérifier permissions
+    if request.user.role not in ['resp_ventes', 'vendeur']:
+        messages.error(request, "Vous n'avez pas la permission de modifier cette soumission")
+        return redirect('ventes:soumission_detail', pk=pk)
+    
+    if request.method == 'POST':
+        nom_compagnie = request.POST.get('nom_compagnie')
+        date_evenement = request.POST.get('date_evenement')
+        nombre_personnes = request.POST.get('nombre_personnes')
+        adresse = request.POST.get('adresse')
+        avec_service = request.POST.get('avec_service') == 'on'
+        location_materiel = request.POST.get('location_materiel') == 'on'
+        avec_alcool = request.POST.get('avec_alcool') == 'on'
+        commande_par = request.POST.get('commande_par')
+        email = request.POST.get('email')
+        telephone = request.POST.get('telephone')
+        notes = request.POST.get('notes', '')
+        # notes_client supprimé
+        statut = request.POST.get('statut', soumission.statut)
+        
+        # Validation
+        if not all([nom_compagnie, date_evenement, nombre_personnes, adresse, 
+                   commande_par, email, telephone]):
+            messages.error(request, "Veuillez remplir tous les champs obligatoires")
+            context = {
+                'soumission': soumission,
+                'google_api_key': settings.GOOGLE_MAPS_API_KEY,  # ✅ AJOUTÉ
+            }
+            return render(request, 'ventes/soumissions/soumission_form.html', context)
+        
+        try:
+            soumission.nom_compagnie = nom_compagnie
+            soumission.date_evenement = date_evenement
+            soumission.nombre_personnes = int(nombre_personnes)
+            soumission.adresse = adresse
+            soumission.avec_service = avec_service
+            soumission.location_materiel = location_materiel
+            soumission.avec_alcool = avec_alcool
+            soumission.commande_par = commande_par
+            soumission.email = email
+            soumission.telephone = telephone
+            soumission.notes = notes
+            # notes_client supprimé
+            soumission.statut = statut
+            soumission.save()
+            
+            messages.success(request, "✅ Soumission modifiée avec succès!")
+            return redirect('ventes:soumission_detail', pk=pk)
+        
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la modification: {str(e)}")
+    
+    context = {
+        'soumission': soumission,
+        'google_api_key': settings.GOOGLE_MAPS_API_KEY,  # ✅ AJOUTÉ
+    }
+    return render(request, 'ventes/soumissions/soumission_form.html', context)
+
+@login_required
+def soumission_detail(request, pk):
+    """Détail d'une soumission"""
+    soumission = get_object_or_404(
+        Soumission.objects.select_related('cree_par'),
+        pk=pk
+    )
+    
+    context = {
+        'soumission': soumission,
+        'can_edit': request.user.role in ['resp_ventes', 'vendeur'],
+    }
+    
+    return render(request, 'ventes/soumissions/soumission_detail.html', context)
+
+
+
+
+@login_required
+def soumission_delete(request, pk):
+    """Supprimer une soumission"""
+    soumission = get_object_or_404(Soumission, pk=pk)
+    
+    # Vérifier permissions
+    if request.user.role != 'resp_ventes':
+        messages.error(request, "Seuls les responsables peuvent supprimer une soumission")
+        return redirect('ventes:soumission_detail', pk=pk)
+    
+    if request.method == 'POST':
+        numero = soumission.numero_soumission
+        soumission.delete()
+        messages.success(request, f"Soumission {numero} supprimée avec succès")
+        return redirect('ventes:dashboard_responsable')
+    
+    context = {'soumission': soumission}
+    return render(request, 'ventes/soumissions/soumission_confirm_delete.html', context)
+
+
+@login_required
+def soumission_duplicate(request, pk):
+    """Dupliquer une soumission"""
+    original = get_object_or_404(Soumission, pk=pk)
+    
+    try:
+        # ✅ Ne pas spécifier de numéro, il sera auto-généré
+        nouvelle_soumission = Soumission.objects.create(
+            # numero_soumission sera auto-généré
+            nom_compagnie=original.nom_compagnie,
+            date_evenement=original.date_evenement,
+            nombre_personnes=original.nombre_personnes,
+            adresse=original.adresse,
+            avec_service=original.avec_service,
+            location_materiel=original.location_materiel,
+            avec_alcool=original.avec_alcool,
+            commande_par=original.commande_par,
+            email=original.email,
+            telephone=original.telephone,
+            notes=original.notes,
+            notes_client=original.notes_client,
+            cree_par=request.user,
+            statut='en_cours'
+        )
+        
+        messages.success(request, f"Soumission dupliquée avec succès! Nouveau numéro: {nouvelle_soumission.numero_soumission}")
+        return redirect('ventes:soumission_detail', pk=nouvelle_soumission.pk)
+    
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la duplication: {str(e)}")
+        return redirect('ventes:soumission_detail', pk=pk)
+
+@login_required
+def soumission_envoyer(request, pk):
+    """Marquer une soumission comme envoyée"""
+    soumission = get_object_or_404(Soumission, pk=pk)
+    
+    if request.method == 'POST':
+        soumission.envoyer()
+        messages.success(request, f"Soumission {soumission.numero_soumission} marquée comme envoyée!")
+        return redirect('ventes:soumission_detail', pk=pk)
+    
+    return redirect('ventes:soumission_detail', pk=pk)
+
+@login_required
+def soumission_accepter(request, pk):
+    """Marquer une soumission comme acceptée"""
+    if request.method == 'POST':
+        soumission = get_object_or_404(Soumission, pk=pk)
+        
+        # Vérifier permissions
+        if request.user.role not in ['resp_ventes', 'vendeur']:
+            messages.error(request, "Vous n'avez pas la permission de modifier cette soumission")
+            return redirect('ventes:soumission_detail', pk=pk)
+        
+        soumission.accepter()
+        messages.success(request, f"✅ Soumission {soumission.numero_soumission} marquée comme acceptée!")
+        return redirect('ventes:soumission_detail', pk=pk)
+    
+    return redirect('ventes:soumission_detail', pk=pk)
+
+
+@login_required
+def soumission_refuser(request, pk):
+    """Marquer une soumission comme refusée"""
+    if request.method == 'POST':
+        soumission = get_object_or_404(Soumission, pk=pk)
+        
+        # Vérifier permissions
+        if request.user.role not in ['resp_ventes', 'vendeur']:
+            messages.error(request, "Vous n'avez pas la permission de modifier cette soumission")
+            return redirect('ventes:soumission_detail', pk=pk)
+        
+        soumission.refuser()
+        messages.warning(request, f"❌ Soumission {soumission.numero_soumission} marquée comme refusée")
+        return redirect('ventes:soumission_detail', pk=pk)
+    
+    return redirect('ventes:soumission_detail', pk=pk)

@@ -182,6 +182,27 @@
         background: rgba(16, 185, 129, 0.1);
     }
 
+    .calendar-day.has-en-cours {
+        border-color: var(--warning-color);
+        background: rgba(245, 158, 11, 0.1);
+    }
+
+    .calendar-day.has-incomplete {
+        border-color: var(--danger-color);
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    /* Priorité des styles : incomplete > en_cours > validee */
+    .calendar-day.has-checklists.has-incomplete {
+        border-color: var(--danger-color) !important;
+        background: rgba(239, 68, 68, 0.15) !important;
+    }
+
+    .calendar-day.has-checklists.has-en-cours:not(.has-incomplete) {
+        border-color: var(--warning-color) !important;
+        background: rgba(245, 158, 11, 0.15) !important;
+    }
+
     .calendar-day.selected {
         background: var(--primary-color);
         color: white;
@@ -1279,9 +1300,25 @@
         if (dateStr === today) dayDiv.classList.add('today');
         if (dateStr === selectedDate) dayDiv.classList.add('selected');
 
-        const hasChecklists = allChecklists.some(c => c.date === dateStr);
+        // Vérifier les statuts des checklists pour cette date
+        const checklistsDate = allChecklists.filter(c => c.date === dateStr);
+        const hasChecklists = checklistsDate.length > 0;
+        
         if (hasChecklists) {
             dayDiv.classList.add('has-checklists');
+            
+            // Vérifier s'il y a des checklists incomplètes (priorité rouge)
+            const hasIncomplete = checklistsDate.some(c => c.status === 'incomplete');
+            if (hasIncomplete) {
+                dayDiv.classList.add('has-incomplete');
+            }
+            
+            // Vérifier s'il y a des checklists en cours (priorité orange)
+            const hasEnCours = checklistsDate.some(c => c.status === 'en_cours' || c.status === 'en_attente');
+            if (hasEnCours && !hasIncomplete) {
+                dayDiv.classList.add('has-en-cours');
+            }
+            
             dayDiv.innerHTML = `${day}<div class="checklist-indicator"></div>`;
         } else {
             dayDiv.textContent = day;
@@ -1300,5 +1337,10 @@
     }
 
     renderCalendar();
+    // ✅ RECHARGEMENT AUTOMATIQUE TOUTES LES 10 MINUTES
+    setInterval(function() {
+        console.log('Rechargement automatique de la page...');
+        window.location.reload();
+    }, 10 * 60 * 1000); // 10 minutes * 60 secondes * 1000 millisecondes
 </script>
 {% endblock %}

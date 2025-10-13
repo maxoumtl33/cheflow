@@ -164,6 +164,7 @@
 
     input[type="text"],
     input[type="date"],
+    input[type="number"],
     textarea {
         width: 100%;
         padding: 0.875rem;
@@ -180,9 +181,51 @@
         box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     }
 
+    input.error {
+        border-color: #ef4444;
+    }
+
     textarea {
         resize: vertical;
         min-height: 80px;
+    }
+
+    .input-with-prefix {
+        position: relative;
+    }
+
+    .input-prefix {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6b7280;
+        font-weight: 600;
+        pointer-events: none;
+        font-size: 1rem;
+    }
+
+    .input-with-prefix input {
+        padding-left: 4.5rem;
+    }
+
+    .input-hint {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: block;
+    }
+
+    .error-message {
+        color: #ef4444;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: none;
+        font-weight: 500;
+    }
+
+    .error-message.show {
+        display: block;
     }
 
     .search-bar {
@@ -192,6 +235,7 @@
         z-index: 10;
         padding: 1rem 0;
         margin-bottom: 1.5rem;
+        border-radius: 12px;
     }
 
     .search-input-wrapper {
@@ -205,6 +249,7 @@
         border-radius: 12px;
         font-size: 1rem;
         transition: all 0.3s ease;
+        background: white;
     }
 
     .search-input:focus {
@@ -219,10 +264,15 @@
         top: 50%;
         transform: translateY(-50%);
         color: #6b7280;
+        pointer-events: none;
     }
 
     .category-section {
         margin-bottom: 2rem;
+    }
+
+    .category-section.hidden {
+        display: none;
     }
 
     .category-header {
@@ -248,10 +298,23 @@
         color: #374151;
     }
 
+    .category-toggle-icon {
+        transition: transform 0.3s ease;
+    }
+
+    .category-header.collapsed .category-toggle-icon {
+        transform: rotate(-90deg);
+    }
+
     .objects-container {
         max-height: 400px;
         overflow-y: auto;
         padding-right: 0.5rem;
+        display: none;
+    }
+
+    .objects-container.show {
+        display: block;
     }
 
     .objects-container::-webkit-scrollbar {
@@ -278,6 +341,10 @@
         justify-content: space-between;
         align-items: center;
         transition: all 0.3s ease;
+    }
+
+    .object-item.hidden {
+        display: none;
     }
 
     .object-item:hover {
@@ -327,12 +394,21 @@
         cursor: not-allowed;
     }
 
-    .qty-display {
-        min-width: 40px;
+    .qty-input {
+        width: 50px;
         text-align: center;
         font-weight: 700;
         color: #1f2937;
-        font-size: 1.125rem;
+        font-size: 1rem;
+        padding: 0.25rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .qty-input:focus {
+        outline: none;
+        border-color: #6366f1;
     }
 
     .btn-add {
@@ -537,6 +613,12 @@
         font-size: 3rem;
         margin-bottom: 1rem;
     }
+
+    .no-results {
+        text-align: center;
+        padding: 2rem;
+        color: #6b7280;
+    }
 </style>
 {% endblock %}
 
@@ -570,7 +652,7 @@
             </div>
         </div>
 
-        <form method="post" id="checklistForm">
+        <form method="post" id="checklistForm" novalidate>
             {% csrf_token %}
 
             <!-- Étape 1: Informations de base -->
@@ -581,16 +663,33 @@
                 <div class="form-group">
                     <label for="nom">Nom de la checklist *</label>
                     <input type="text" id="nom" name="nom" required placeholder="Ex: Mariage Dupont">
+                    <span class="error-message" id="nom-error">Veuillez entrer un nom pour la checklist</span>
                 </div>
 
                 <div class="form-group">
                     <label for="numero_commande">Numéro de commande *</label>
-                    <input type="text" id="numero_commande" name="numero_commande" required placeholder="Entrez seulement les chiffres (ex: 49589 devient CMD-49589)">
+                    <div class="input-with-prefix">
+                        <span class="input-prefix">CMD-</span>
+                        <input 
+                            type="text" 
+                            id="numero_commande" 
+                            name="numero_commande" 
+                            required 
+                            placeholder="12345"
+                            pattern="[0-9]+"
+                            title="Veuillez entrer uniquement des chiffres"
+                        >
+                    </div>
+                    <small class="input-hint">
+                        Entrez uniquement les chiffres (ex: 12345 devient CMD-12345)
+                    </small>
+                    <span class="error-message" id="numero_commande-error">Veuillez entrer un numéro de commande valide (chiffres uniquement)</span>
                 </div>
 
                 <div class="form-group">
                     <label for="date_evenement">Date de l'événement *</label>
                     <input type="date" id="date_evenement" name="date_evenement" required>
+                    <span class="error-message" id="date_evenement-error">Veuillez sélectionner une date pour l'événement</span>
                 </div>
 
                 <div class="form-group">
@@ -626,9 +725,14 @@
                 <div id="categoriesContainer">
                     {% for categorie in categories %}
                     <div class="category-section" data-category="{{ categorie.id }}">
-                        <div class="category-header" onclick="toggleCategory(this)">
+                        <div class="category-header collapsed" onclick="toggleCategory(this)">
                             <span>{{ categorie.nom }}</span>
-                            <span class="category-count">0 sélectionné(s)</span>
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <span class="category-count">0 sélectionné(s)</span>
+                                <svg class="category-toggle-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
                         </div>
                         <div class="objects-container">
                             {% for objet in categorie.objets.all %}
@@ -636,7 +740,14 @@
                                 <div class="object-name">{{ objet.nom }}</div>
                                 <div class="quantity-controls">
                                     <button type="button" class="qty-btn" onclick="decreaseQty(this)">−</button>
-                                    <span class="qty-display">1</span>
+                                    <input 
+                                        type="number" 
+                                        class="qty-input" 
+                                        value="1" 
+                                        min="1" 
+                                        max="999"
+                                        onchange="validateQty(this)"
+                                    >
                                     <button type="button" class="qty-btn" onclick="increaseQty(this)">+</button>
                                     <button type="button" class="btn-add" onclick="addItem(this)">Ajouter</button>
                                 </div>
@@ -645,6 +756,11 @@
                         </div>
                     </div>
                     {% endfor %}
+                </div>
+
+                <div id="noResultsMessage" class="no-results" style="display: none;">
+                    <div class="empty-state-icon">🔍</div>
+                    <p>Aucun objet trouvé pour cette recherche</p>
                 </div>
 
                 <div class="selected-items" id="selectedItemsContainer" style="display: none;">
@@ -728,6 +844,47 @@
     let currentStep = 1;
     const selectedItems = new Map();
 
+    // Gestion du champ numéro de commande - accepter uniquement les chiffres
+    document.getElementById('numero_commande').addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+        hideError(this);
+    });
+
+    // Empêcher la saisie de caractères non numériques
+    document.getElementById('numero_commande').addEventListener('keypress', function(e) {
+        if (e.which < 48 || e.which > 57) {
+            e.preventDefault();
+        }
+    });
+
+    // Cacher les erreurs quand on tape dans les champs
+    document.getElementById('nom').addEventListener('input', function() {
+        hideError(this);
+    });
+
+    document.getElementById('date_evenement').addEventListener('change', function() {
+        hideError(this);
+    });
+
+    function showError(input, message) {
+        input.classList.add('error');
+        const errorElement = document.getElementById(input.id + '-error');
+        if (errorElement) {
+            if (message) {
+                errorElement.textContent = message;
+            }
+            errorElement.classList.add('show');
+        }
+    }
+
+    function hideError(input) {
+        input.classList.remove('error');
+        const errorElement = document.getElementById(input.id + '-error');
+        if (errorElement) {
+            errorElement.classList.remove('show');
+        }
+    }
+
     // Gestion des étapes
     function updateStepper() {
         document.querySelectorAll('.step').forEach((step, index) => {
@@ -775,29 +932,62 @@
     }
 
     function validateStep1() {
-        const nom = document.getElementById('nom').value;
-        const numero = document.getElementById('numero_commande').value;
-        const date = document.getElementById('date_evenement').value;
+        const nom = document.getElementById('nom');
+        const numero = document.getElementById('numero_commande');
+        const date = document.getElementById('date_evenement');
+        
+        let isValid = true;
 
-        if (!nom || !numero || !date) {
-            alert('Veuillez remplir tous les champs obligatoires');
+        if (!nom.value.trim()) {
+            showError(nom);
+            isValid = false;
+        }
+
+        if (!numero.value.trim()) {
+            showError(numero);
+            isValid = false;
+        }
+
+        if (!date.value) {
+            showError(date);
+            isValid = false;
+        }
+
+        if (!isValid) {
             return false;
         }
+
+        if (!numero.value.startsWith('CMD-')) {
+            numero.value = 'CMD-' + numero.value;
+        }
+
         return true;
+    }
+
+    // Validation de la quantité
+    function validateQty(input) {
+        let value = parseInt(input.value);
+        if (isNaN(value) || value < 1) {
+            input.value = 1;
+        } else if (value > 999) {
+            input.value = 999;
+        }
     }
 
     // Gestion des quantités
     function increaseQty(btn) {
-        const qtyDisplay = btn.previousElementSibling;
-        let qty = parseInt(qtyDisplay.textContent);
-        qtyDisplay.textContent = qty + 1;
+        const qtyInput = btn.previousElementSibling;
+        let qty = parseInt(qtyInput.value);
+        if (qty < 999) {
+            qtyInput.value = qty + 1;
+        }
     }
 
     function decreaseQty(btn) {
-        const qtyDisplay = btn.nextElementSibling;
-        let qty = parseInt(qtyDisplay.textContent);
+        const qtyInput = btn.nextElementSibling;
+        let qty = parseInt(qtyInput.value);
         if (qty > 1) {
-            qtyDisplay.textContent = qty - 1;
+            qtyInput.value = qty - 1;
         }
     }
 
@@ -807,7 +997,13 @@
         const objectId = objectItem.dataset.objectId;
         const objectName = objectItem.dataset.objectName;
         const categoryName = objectItem.dataset.categoryName;
-        const qty = parseInt(objectItem.querySelector('.qty-display').textContent);
+        const qtyInput = objectItem.querySelector('.qty-input');
+        const qty = parseInt(qtyInput.value);
+
+        if (isNaN(qty) || qty < 1) {
+            alert('Veuillez entrer une quantité valide');
+            return;
+        }
 
         selectedItems.set(objectId, {
             name: objectName,
@@ -875,24 +1071,81 @@
     // Toggle catégorie
     function toggleCategory(header) {
         const container = header.nextElementSibling;
-        header.classList.toggle('collapsed');
-        container.style.display = container.style.display === 'none' ? 'block' : 'none';
+        const isCollapsed = header.classList.contains('collapsed');
+        
+        if (isCollapsed) {
+            header.classList.remove('collapsed');
+            container.classList.add('show');
+        } else {
+            header.classList.add('collapsed');
+            container.classList.remove('show');
+        }
     }
 
-    // Recherche
+    // Recherche améliorée
     document.getElementById('searchInput')?.addEventListener('input', function(e) {
-        const search = e.target.value.toLowerCase();
-        document.querySelectorAll('.object-item').forEach(item => {
-            const name = item.dataset.objectName.toLowerCase();
-            const match = name.includes(search);
-            item.style.display = match ? 'flex' : 'none';
+        const search = e.target.value.toLowerCase().trim();
+        const noResultsMsg = document.getElementById('noResultsMessage');
+        
+        if (search === '') {
+            document.querySelectorAll('.category-section').forEach(section => {
+                section.classList.remove('hidden');
+                const header = section.querySelector('.category-header');
+                const container = section.querySelector('.objects-container');
+                header.classList.add('collapsed');
+                container.classList.remove('show');
+                
+                section.querySelectorAll('.object-item').forEach(item => {
+                    item.classList.remove('hidden');
+                });
+            });
+            noResultsMsg.style.display = 'none';
+            return;
+        }
+
+        let hasResults = false;
+
+        document.querySelectorAll('.category-section').forEach(section => {
+            const objects = section.querySelectorAll('.object-item');
+            let categoryHasMatch = false;
+
+            objects.forEach(item => {
+                const name = item.dataset.objectName.toLowerCase();
+                const match = name.includes(search);
+                
+                if (match) {
+                    item.classList.remove('hidden');
+                    categoryHasMatch = true;
+                    hasResults = true;
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+
+            const header = section.querySelector('.category-header');
+            const container = section.querySelector('.objects-container');
+            
+            if (categoryHasMatch) {
+                section.classList.remove('hidden');
+                header.classList.remove('collapsed');
+                container.classList.add('show');
+            } else {
+                section.classList.add('hidden');
+            }
         });
+
+        noResultsMsg.style.display = hasResults ? 'none' : 'block';
     });
 
     // Vérification finale
     function updateVerification() {
         document.getElementById('verify-nom').textContent = document.getElementById('nom').value;
-        document.getElementById('verify-numero').textContent = document.getElementById('numero_commande').value;
+        
+        let numero = document.getElementById('numero_commande').value;
+        if (!numero.startsWith('CMD-')) {
+            numero = 'CMD-' + numero;
+        }
+        document.getElementById('verify-numero').textContent = numero;
         
         const dateInput = document.getElementById('date_evenement').value;
         const date = new Date(dateInput);
@@ -927,6 +1180,11 @@
 
     // Soumission du formulaire
     document.getElementById('checklistForm').addEventListener('submit', function(e) {
+        let numero = document.getElementById('numero_commande').value;
+        if (!numero.startsWith('CMD-')) {
+            document.getElementById('numero_commande').value = 'CMD-' + numero;
+        }
+
         selectedItems.forEach((item, id) => {
             const input = document.createElement('input');
             input.type = 'hidden';

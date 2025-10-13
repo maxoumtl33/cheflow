@@ -1,4 +1,4 @@
-<!-- ==================== ventes/templates/ventes/dashboard.html ==================== -->
+<!-- ==================== ventes/templates/ventes/vendeuse/dashboard.html ==================== -->
 {% extends 'base/base.html' %}
 {% load static %}
 
@@ -49,6 +49,13 @@
         font-weight: 700;
         color: var(--text-dark);
         margin: 0;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
     }
 
     .btn-primary {
@@ -212,6 +219,7 @@
         gap: 0.5rem;
         margin-bottom: 1.5rem;
         border-bottom: 2px solid var(--border-color);
+        overflow-x: auto;
     }
 
     .tab {
@@ -224,6 +232,7 @@
         transition: all 0.3s ease;
         border-bottom: 3px solid transparent;
         margin-bottom: -2px;
+        white-space: nowrap;
     }
 
     .tab.active {
@@ -336,6 +345,21 @@
         color: #991b1b;
     }
 
+    .status-badge.en_attente {
+        background: #fef3c7;
+        color: #78350f;
+    }
+
+    .status-badge.acceptee {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-badge.refusee {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
     .progress-mini {
         width: 80px;
         height: 8px;
@@ -356,18 +380,26 @@
         gap: 0.5rem;
     }
 
-    .btn-sm {
-        padding: 0.5rem 0.75rem;
+    .btn-icon {
+        width: 32px;
+        height: 32px;
         border-radius: 8px;
-        font-size: 0.8rem;
-        font-weight: 600;
         cursor: pointer;
         border: none;
         transition: all 0.3s ease;
         text-decoration: none;
         display: inline-flex;
         align-items: center;
-        gap: 0.35rem;
+        justify-content: center;
+    }
+
+    .btn-icon:hover:not(:disabled) {
+        transform: translateY(-2px);
+    }
+
+    .btn-icon:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
     }
 
     .btn-view {
@@ -377,6 +409,7 @@
 
     .btn-view:hover {
         background: #4f46e5;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
     }
 
     .btn-edit {
@@ -386,6 +419,7 @@
 
     .btn-edit:hover {
         background: #e5e7eb;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     .btn-duplicate {
@@ -395,6 +429,12 @@
 
     .btn-duplicate:hover {
         background: #bfdbfe;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-icon[style*="background: #10b981"]:hover {
+        background: #059669 !important;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
     }
 
     .empty-state {
@@ -408,18 +448,82 @@
         margin-bottom: 1rem;
     }
 
-    .filter-select {
-        padding: 0.5rem 1rem;
+    .view-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--bg-light);
+        padding: 0.25rem;
+        border-radius: 10px;
         border: 1px solid var(--border-color);
-        border-radius: 8px;
-        background: white;
-        cursor: pointer;
-        font-size: 0.9rem;
     }
 
-    .filter-select:focus {
-        outline: none;
+    .view-toggle button {
+        padding: 0.5rem 1rem;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--text-light);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .view-toggle button.active {
+        background: white;
+        color: var(--primary-color);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .view-toggle button:hover:not(.active) {
+        color: var(--text-dark);
+    }
+
+    /* Styles de pagination */
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1.5rem 0;
+    }
+
+    .pagination-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-color);
+        background: white;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        color: var(--text-dark);
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        background: var(--bg-light);
         border-color: var(--primary-color);
+    }
+
+    .pagination-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+        background: var(--bg-light);
+    }
+
+    .pagination-btn.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+        font-weight: 600;
+    }
+
+    .pagination-ellipsis {
+        padding: 0 0.5rem;
+        color: var(--text-light);
     }
 
     @media (max-width: 1200px) {
@@ -442,18 +546,32 @@
             <div class="header-title">
                 <h1>📋 Tableau de bord - Vente <br>Bonjour {{ user.get_full_name|default:user.username }} !</h1>
             </div>
-            <a href="{% url 'ventes:checklist_create' %}" class="btn-primary">
-                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Nouvelle Checklist
-            </a>
-            <a href="{% url 'livraison:liste_livraisons' %}" class="btn-primary">
-                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Livraisons
-            </a>
+            <div class="header-actions">
+                <a href="{% url 'ventes:soumission_create' %}" class="btn-primary">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Soumission
+                </a>
+                <a href="{% url 'ventes:checklist_create' %}" class="btn-primary">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Checklist
+                </a>
+                <a href="{% url 'ventes:contrat_create_step1' %}?new=1" class="btn btn-primary">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Événement MD
+                </a>
+                <a href="{% url 'livraison:liste_livraisons' %}" class="btn-primary">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                    Livraisons
+                </a>
+            </div>
         </div>
     </div>
 
@@ -491,12 +609,13 @@
         <!-- Contenu principal -->
         <div class="content-card">
             <div class="tabs">
-                <button class="tab active" data-tab="date" onclick="switchTab('date')">Checklists par date</button>
+                <button class="tab active" data-tab="date" onclick="switchTab('date')">Par date</button>
                 <button class="tab" data-tab="mine" onclick="switchTab('mine')">Mes checklists</button>
-                <button class="tab" data-tab="contrats" onclick="switchTab('contrats')">📋 Contrats</button>
+                <button class="tab" data-tab="my-contrats" onclick="switchTab('my-contrats')">Mes Événements MD</button>
+                <button class="tab" data-tab="my-soumissions" onclick="switchTab('my-soumissions')">Mes Soumissions</button>
             </div>
 
-            <!-- Section: Checklists par date -->
+            <!-- Section: Par date -->
             <div class="content-section active" id="section-date">
                 <div class="table-header">
                     <h2 id="dateTitle">Sélectionnez une date</h2>
@@ -504,7 +623,7 @@
                 <div id="dateContent">
                     <div class="empty-state">
                         <div class="empty-state-icon">📅</div>
-                        <p>Cliquez sur une date du calendrier pour voir les checklists</p>
+                        <p>Cliquez sur une date du calendrier pour voir les checklists, événements MD ou soumissions</p>
                     </div>
                 </div>
             </div>
@@ -537,52 +656,54 @@
                 </div>
             </div>
 
-            <!-- Section: Contrats -->
-            <div class="content-section" id="section-contrats">
+            <!-- Section: Mes Événements MD -->
+            <div class="content-section" id="section-my-contrats">
                 <div class="table-header">
-                    <h2>📋 Contrats</h2>
-                    <a href="{% url 'ventes:contrat_create_step1' %}" class="btn-primary">
-                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        Nouveau Contrat
-                    </a>
+                    <h2>Mes Événements MD</h2>
                 </div>
-                
-                <!-- Filtres -->
-                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-                    <select id="statusFilter" class="filter-select">
-                        <option value="">Tous les statuts</option>
-                        <option value="planifie">Planifié</option>
-                        <option value="en_cours">En cours</option>
-                        <option value="termine">Terminé</option>
-                        <option value="annule">Annulé</option>
-                    </select>
-                    
-                    <select id="maitreHotelFilter" class="filter-select">
-                        <option value="">Tous les maîtres d'hôtel</option>
-                        {% for mh in maitres_hotel %}
-                        <option value="{{ mh.id }}">{{ mh.get_full_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
                 <div class="table-container">
                     <table>
                         <thead>
                             <tr>
-                                <th>N° Contrat</th>
-                                <th>Événement</th>
-                                <th>Date</th>
-                                <th>Client</th>
-                                <th>Maître d'hôtel</th>
+                                <th>Nom</th>
+                                <th>Numéro</th>
+                                <th>Date événement</th>
                                 <th>Statut</th>
+                                <th>Progression</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="contratsTable">
+                        <tbody id="myContratsTable">
                             <tr>
-                                <td colspan="7" style="text-align: center; padding: 2rem; color: #6b7280;">
+                                <td colspan="6" style="text-align: center; padding: 2rem; color: #6b7280;">
+                                    Chargement...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section: Mes Soumissions -->
+            <div class="content-section" id="section-my-soumissions">
+                <div class="table-header">
+                    <h2>Mes Soumissions</h2>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Compagnie</th>
+                                <th>Numéro</th>
+                                <th>Date événement</th>
+                                <th>Statut</th>
+                                <th>Contact</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mySoumissionsTable">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 2rem; color: #6b7280;">
                                     Chargement...
                                 </td>
                             </tr>
@@ -596,6 +717,7 @@
 
 <script>
     const checklistsData = {{ checklists_data|safe }};
+    
     const allChecklists = [
         {% for checklist in all_checklists %}
         {
@@ -608,7 +730,9 @@
             statusDisplay: "{{ checklist.get_status_display|escapejs }}",
             progression: {{ checklist.progression }},
             isMine: {% if checklist.creee_par.id == request.user.id %}true{% else %}false{% endif %},
-            creePar: "{{ checklist.creee_par.get_full_name|default:checklist.creee_par.username|escapejs }}"
+            creePar: "{{ checklist.creee_par.get_full_name|default:checklist.creee_par.username|escapejs }}",
+            hasContrat: {% if checklist.contrat %}true{% else %}false{% endif %},
+            contratNumero: "{% if checklist.contrat %}{{ checklist.contrat.numero_contrat|escapejs }}{% endif %}"
         },
         {% endfor %}
     ];
@@ -622,18 +746,150 @@
             date: "{{ contrat.date_evenement|date:'Y-m-d' }}",
             dateFormatted: "{{ contrat.date_evenement|date:'d/m/Y' }}",
             client: "{{ contrat.client_nom|escapejs }}",
-            maitreHotel: "{{ contrat.maitre_hotel.get_full_name|default:'Non assigné'|escapejs }}",
-            maitreHotelId: {% if contrat.maitre_hotel %}"{{ contrat.maitre_hotel.id }}"{% else %}null{% endif %},
             status: "{{ contrat.status }}",
-            statusDisplay: "{{ contrat.get_status_display|escapejs }}"
+            statusDisplay: "{{ contrat.get_status_display|escapejs }}",
+            isMine: {% if contrat.cree_par.id == request.user.id %}true{% else %}false{% endif %},
+            creePar: "{{ contrat.cree_par.get_full_name|default:contrat.cree_par.username|escapejs }}"
+        },
+        {% endfor %}
+    ];
+
+    const allSoumissions = [
+        {% for soumission in soumissions %}
+        {
+            id: "{{ soumission.pk }}",
+            numero: "{{ soumission.numero_soumission|escapejs }}",
+            compagnie: "{{ soumission.nom_compagnie|escapejs }}",
+            date: "{{ soumission.date_evenement|date:'Y-m-d' }}",
+            dateFormatted: "{{ soumission.date_evenement|date:'d/m/Y' }}",
+            contact: "{{ soumission.commande_par|escapejs }}",
+            email: "{{ soumission.email|escapejs }}",
+            telephone: "{{ soumission.telephone|escapejs }}",
+            nbPersonnes: {{ soumission.nombre_personnes }},
+            statut: "{{ soumission.statut }}",
+            statutDisplay: "{{ soumission.get_statut_display|escapejs }}",
+            isMine: {% if soumission.cree_par.id == request.user.id %}true{% else %}false{% endif %},
+            creePar: "{{ soumission.cree_par.get_full_name|default:soumission.cree_par.username|escapejs }}"
         },
         {% endfor %}
     ];
 
     const today = "{{ today }}";
     let currentDate = new Date();
-    let selectedDate = null;
+    let selectedDate = today; // Sélectionner aujourd'hui par défaut
     let currentTab = 'date';
+    let currentDateView = 'checklists';
+    
+    // Pagination
+    const ITEMS_PER_PAGE = 10;
+    let currentChecklistPage = 1;
+    let currentContratPage = 1;
+    let currentSoumissionPage = 1;
+
+    function createContratButton(checklist) {
+        if (checklist.hasContrat) {
+            return `
+                <button 
+                    class="btn-icon" 
+                    style="background: #e5e7eb; color: #9ca3af; cursor: not-allowed;" 
+                    title="Contrat CMD-${checklist.contratNumero} déjà créé"
+                    disabled>
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </button>
+            `;
+        } else {
+            return `
+                <a href="/ventes/checklist/${checklist.id}/create-contrat/" 
+                   class="btn-icon" 
+                   style="background: #10b981; color: white;" 
+                   title="Créer un Événement MD depuis cette checklist">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </a>
+            `;
+        }
+    }
+
+    function createPagination(currentPage, totalPages, type) {
+        let html = '<div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem;">';
+        
+        // Bouton Précédent
+        html += `
+            <button 
+                onclick="changePage('${type}', ${currentPage - 1})" 
+                ${currentPage === 1 ? 'disabled' : ''}
+                style="padding: 0.5rem 1rem; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: ${currentPage === 1 ? 'not-allowed' : 'pointer'}; opacity: ${currentPage === 1 ? '0.5' : '1'};">
+                ← Précédent
+            </button>
+        `;
+        
+        // Numéros de page
+        const maxButtons = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+        let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+        
+        if (endPage - startPage < maxButtons - 1) {
+            startPage = Math.max(1, endPage - maxButtons + 1);
+        }
+        
+        if (startPage > 1) {
+            html += `<button onclick="changePage('${type}', 1)" style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer;">1</button>`;
+            if (startPage > 2) {
+                html += '<span style="padding: 0 0.5rem;">...</span>';
+            }
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            html += `
+                <button 
+                    onclick="changePage('${type}', ${i})" 
+                    style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); background: ${i === currentPage ? 'var(--primary-color)' : 'white'}; color: ${i === currentPage ? 'white' : 'black'}; border-radius: 8px; cursor: pointer; font-weight: ${i === currentPage ? '600' : '400'};">
+                    ${i}
+                </button>
+            `;
+        }
+        
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                html += '<span style="padding: 0 0.5rem;">...</span>';
+            }
+            html += `<button onclick="changePage('${type}', ${totalPages})" style="padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: pointer;">${totalPages}</button>`;
+        }
+        
+        // Bouton Suivant
+        html += `
+            <button 
+                onclick="changePage('${type}', ${currentPage + 1})" 
+                ${currentPage === totalPages ? 'disabled' : ''}
+                style="padding: 0.5rem 1rem; border: 1px solid var(--border-color); background: white; border-radius: 8px; cursor: ${currentPage === totalPages ? 'not-allowed' : 'pointer'}; opacity: ${currentPage === totalPages ? '0.5' : '1'};">
+                Suivant →
+            </button>
+        `;
+        
+        html += '</div>';
+        return html;
+    }
+
+    function changePage(type, page) {
+        if (type === 'checklist') {
+            currentChecklistPage = page;
+            loadMyChecklists();
+        } else if (type === 'contrat') {
+            currentContratPage = page;
+            loadMyContrats();
+        } else if (type === 'soumission') {
+            currentSoumissionPage = page;
+            loadMySoumissions();
+        }
+        
+        // Scroll vers le haut de la table
+        document.querySelector('.content-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
     function switchTab(tab) {
         currentTab = tab;
@@ -645,8 +901,18 @@
 
         if (tab === 'mine') {
             loadMyChecklists();
-        } else if (tab === 'contrats') {
-            loadContrats();
+        } else if (tab === 'my-contrats') {
+            loadMyContrats();
+        } else if (tab === 'my-soumissions') {
+            loadMySoumissions();
+        }
+    }
+
+    function switchDateView(view) {
+        currentDateView = view;
+        
+        if (selectedDate) {
+            loadDateData(selectedDate);
         }
     }
 
@@ -666,7 +932,13 @@
             return;
         }
 
-        tbody.innerHTML = myChecklists.map(c => `
+        // Pagination
+        const totalPages = Math.ceil(myChecklists.length / ITEMS_PER_PAGE);
+        const startIndex = (currentChecklistPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        const paginatedChecklists = myChecklists.slice(startIndex, endIndex);
+
+        tbody.innerHTML = paginatedChecklists.map(c => `
             <tr>
                 <td><strong>${c.nom}</strong></td>
                 <td>${c.numero}</td>
@@ -680,99 +952,163 @@
                 </td>
                 <td>
                     <div class="action-buttons">
-                        <a href="/ventes/checklist/${c.id}/" class="btn-sm btn-view">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/ventes/checklist/${c.id}/" class="btn-icon btn-view" title="Voir">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                             </svg>
-                            Voir
                         </a>
-                        <a href="/ventes/checklist/${c.id}/edit/" class="btn-sm btn-edit">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        
+                        ${createContratButton(c)}
+                        
+                        <a href="/ventes/checklist/${c.id}/edit/" class="btn-icon btn-edit" title="Modifier">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
-                            Modifier
                         </a>
-                        <a href="/ventes/checklist/${c.id}/duplicate/" class="btn-sm btn-duplicate">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        
+                        <a href="/ventes/checklist/${c.id}/duplicate/" class="btn-icon btn-duplicate" title="Dupliquer">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                             </svg>
-                            Dupliquer
                         </a>
                     </div>
                 </td>
             </tr>
         `).join('');
+
+        // Ajouter la pagination
+        if (totalPages > 1) {
+            tbody.innerHTML += `
+                <tr>
+                    <td colspan="6" style="padding: 1.5rem;">
+                        ${createPagination(currentChecklistPage, totalPages, 'checklist')}
+                    </td>
+                </tr>
+            `;
+        }
     }
 
-    function loadContrats(statusFilter = '', maitreHotelFilter = '') {
-        let filteredContrats = allContrats;
+    function loadMyContrats() {
+        const myContrats = allContrats.filter(c => c.isMine);
+        const tbody = document.getElementById('myContratsTable');
         
-        if (statusFilter) {
-            filteredContrats = filteredContrats.filter(c => c.status === statusFilter);
-        }
-        
-        if (maitreHotelFilter) {
-            filteredContrats = filteredContrats.filter(c => c.maitreHotelId === maitreHotelFilter);
-        }
-        
-        const tbody = document.getElementById('contratsTable');
-        
-        if (filteredContrats.length === 0) {
+        if (myContrats.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 3rem;">
+                    <td colspan="6" style="text-align: center; padding: 3rem;">
                         <div class="empty-state-icon">📭</div>
-                        <p>Aucun contrat trouvé</p>
+                        <p>Vous n'avez pas encore créé d'Événement MD</p>
                     </td>
                 </tr>
             `;
             return;
         }
-        
-        tbody.innerHTML = filteredContrats.map(c => `
+
+        // Pagination
+        const totalPages = Math.ceil(myContrats.length / ITEMS_PER_PAGE);
+        const startIndex = (currentContratPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        const paginatedContrats = myContrats.slice(startIndex, endIndex);
+
+        tbody.innerHTML = paginatedContrats.map(c => `
             <tr>
-                <td><strong>${c.numero}</strong></td>
-                <td>${c.evenement}</td>
+                <td><strong>${c.evenement}</strong></td>
+                <td>${c.numero}</td>
                 <td>${c.dateFormatted}</td>
-                <td>${c.client}</td>
-                <td>${c.maitreHotel}</td>
                 <td><span class="status-badge ${c.status}">${c.statusDisplay}</span></td>
+                <td>-</td>
                 <td>
                     <div class="action-buttons">
-                        <a href="/ventes/contrat/${c.id}/" class="btn-sm btn-view">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/ventes/contrat/${c.id}/" class="btn-icon btn-view" title="Voir">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                             </svg>
-                            Voir
                         </a>
-                        <a href="/ventes/contrat/${c.id}/edit/" class="btn-sm btn-edit">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="/ventes/contrat/${c.id}/edit/" class="btn-icon btn-edit" title="Modifier">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
-                            Modifier
                         </a>
                     </div>
                 </td>
             </tr>
         `).join('');
+
+        // Ajouter la pagination
+        if (totalPages > 1) {
+            tbody.innerHTML += `
+                <tr>
+                    <td colspan="6" style="padding: 1.5rem;">
+                        ${createPagination(currentContratPage, totalPages, 'contrat')}
+                    </td>
+                </tr>
+            `;
+        }
     }
 
-    // Événements pour les filtres
-    document.getElementById('statusFilter')?.addEventListener('change', (e) => {
-        const maitreHotelFilter = document.getElementById('maitreHotelFilter').value;
-        loadContrats(e.target.value, maitreHotelFilter);
-    });
+    function loadMySoumissions() {
+        const mySoumissions = allSoumissions.filter(s => s.isMine);
+        const tbody = document.getElementById('mySoumissionsTable');
+        
+        if (mySoumissions.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 3rem;">
+                        <div class="empty-state-icon">📭</div>
+                        <p>Vous n'avez pas encore créé de soumission</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
 
-    document.getElementById('maitreHotelFilter')?.addEventListener('change', (e) => {
-        const statusFilter = document.getElementById('statusFilter').value;
-        loadContrats(statusFilter, e.target.value);
-    });
+        // Pagination
+        const totalPages = Math.ceil(mySoumissions.length / ITEMS_PER_PAGE);
+        const startIndex = (currentSoumissionPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        const paginatedSoumissions = mySoumissions.slice(startIndex, endIndex);
 
-    function loadDateChecklists(dateStr) {
+        tbody.innerHTML = paginatedSoumissions.map(s => `
+            <tr>
+                <td><strong>${s.compagnie}</strong></td>
+                <td>${s.numero}</td>
+                <td>${s.dateFormatted}</td>
+                <td><span class="status-badge ${s.statut}">${s.statutDisplay}</span></td>
+                <td>${s.contact}</td>
+                <td>
+                    <div class="action-buttons">
+                        <a href="/ventes/soumission/${s.id}/" class="btn-icon btn-view" title="Voir">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </a>
+                        <a href="/ventes/soumission/${s.id}/edit/" class="btn-icon btn-edit" title="Modifier">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        // Ajouter la pagination
+        if (totalPages > 1) {
+            tbody.innerHTML += `
+                <tr>
+                    <td colspan="6" style="padding: 1.5rem;">
+                        ${createPagination(currentSoumissionPage, totalPages, 'soumission')}
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    function loadDateData(dateStr) {
         selectedDate = dateStr;
-        const checklists = allChecklists.filter(c => c.date === dateStr);
         
         const [year, month, day] = dateStr.split('-').map(Number);
         const date = new Date(year, month - 1, day);
@@ -784,7 +1120,46 @@
             day: 'numeric' 
         });
         
-        document.getElementById('dateTitle').textContent = `Checklists du ${formatted}`;
+        if (currentDateView === 'checklists') {
+            loadDateChecklists(dateStr, formatted);
+        } else if (currentDateView === 'contrats') {
+            loadDateContrats(dateStr, formatted);
+        } else {
+            loadDateSoumissions(dateStr, formatted);
+        }
+    }
+
+    function loadDateChecklists(dateStr, formatted) {
+        const checklists = allChecklists.filter(c => c.date === dateStr);
+        
+        const titleHtml = `
+            <div style="justify-content: space-between; align-items: center; width: 100%;">
+                
+                <div class="view-toggle" style="margin: 0;">
+                    <button class="active" data-view="checklists" onclick="switchDateView('checklists')">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                        Checklists
+                    </button>
+                    <button data-view="contrats" onclick="switchDateView('contrats')">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        Événements MD
+                    </button>
+                    <button data-view="soumissions" onclick="switchDateView('soumissions')">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Soumissions
+                    </button>
+                </div>
+                <h2 style="margin: 0;">Checklists du ${formatted}</h2>
+            </div>
+        `;
+        
+        document.querySelector('#section-date .table-header').innerHTML = titleHtml;
         const content = document.getElementById('dateContent');
         
         if (checklists.length === 0) {
@@ -828,24 +1203,214 @@
                                 </td>
                                 <td>
                                     <div class="action-buttons">
-                                        <a href="/ventes/checklist/${c.id}/" class="btn-sm btn-view">
-                                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <a href="/ventes/checklist/${c.id}/" class="btn-icon btn-view" title="Voir">
+                                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                             </svg>
-                                            Voir
                                         </a>
+                                        
                                         ${c.isMine ? `
-                                            <a href="/ventes/checklist/${c.id}/edit/" class="btn-sm btn-edit">
-                                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            ${createContratButton(c)}
+                                            
+                                            <a href="/ventes/checklist/${c.id}/edit/" class="btn-icon btn-edit" title="Modifier">
+                                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                                 </svg>
-                                                Modifier
+                                            </a>
+                                            <a href="/ventes/checklist/${c.id}/duplicate/" class="btn-icon btn-duplicate" title="Dupliquer">
+                                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                                </svg>
                                             </a>
                                         ` : ''}
                                     </div>
                                 </td>
                             </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function loadDateContrats(dateStr, formatted) {
+        const contrats = allContrats.filter(c => c.date === dateStr);
+        
+        const titleHtml = `
+            <div style="justify-content: space-between; align-items: center; width: 100%;">
+                <div class="view-toggle" style="margin: 0;">
+                    <button data-view="checklists" onclick="switchDateView('checklists')">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                        Checklists
+                    </button>
+                    <button class="active" data-view="contrats" onclick="switchDateView('contrats')">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        Événements MD
+                    </button>
+                    <button data-view="soumissions" onclick="switchDateView('soumissions')">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Soumissions
+                    </button>
+                </div>
+                                <h2 style="margin: 0;">Événements MD du ${formatted}</h2>
+
+            </div>
+        `;
+        
+        document.querySelector('#section-date .table-header').innerHTML = titleHtml;
+        const content = document.getElementById('dateContent');
+        
+        if (contrats.length === 0) {
+            content.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <p>Aucun événement MD pour cette date</p>
+                </div>
+            `;
+            return;
+        }
+
+        content.innerHTML = `
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nom</th>
+                            <th>Numéro</th>
+                            <th>Créé par</th>
+                            <th>Statut</th>
+                            <th>Progression</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${contrats.map(c => `
+                            <tr>
+                                <td><strong>${c.evenement}</strong></td>
+                                <td>${c.numero}</td>
+                                <td>
+                                    ${c.creePar}
+                                    ${c.isMine ? '<span class="status-badge validee" style="margin-left: 0.5rem; font-size: 0.7rem;">Moi</span>' : ''}
+                                </td>
+                                <td><span class="status-badge ${c.status}">${c.statusDisplay}</span></td>
+                                <td>-</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="/ventes/contrat/${c.id}/" class="btn-icon btn-view" title="Voir">
+                                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                            </svg>
+                                        </a>
+                                        ${c.isMine ? `
+                                            <a href="/ventes/contrat/${c.id}/edit/" class="btn-icon btn-edit" title="Modifier">
+                                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                </svg>
+                                            </a>
+                                        ` : ''}
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function loadDateSoumissions(dateStr, formatted) {
+        const soumissions = allSoumissions.filter(s => s.date === dateStr);
+        
+        const titleHtml = `
+            <div style="justify-content: space-between; align-items: center; width: 100%;">
+                <div class="view-toggle" style="margin: 0;">
+                    <button data-view="checklists" onclick="switchDateView('checklists')">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                        Checklists
+                    </button>
+                    <button data-view="contrats" onclick="switchDateView('contrats')">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        Événements MD
+                    </button>
+                    <button class="active" data-view="soumissions" onclick="switchDateView('soumissions')">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Soumissions
+                    </button>
+                </div>
+                                <h2 style="margin: 0;">Soumissions du ${formatted}</h2>
+
+            </div>
+        `;
+        
+        document.querySelector('#section-date .table-header').innerHTML = titleHtml;
+        const content = document.getElementById('dateContent');
+        
+        if (soumissions.length === 0) {
+            content.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <p>Aucune soumission pour cette date</p>
+                </div>
+            `;
+            return;
+        }
+
+        content.innerHTML = `
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Compagnie</th>
+                            <th>Numéro</th>
+                            <th>Créée par</th>
+                            <th>Statut</th>
+                            <th>Contact</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${soumissions.map(s => `
+                            <tr>
+                                <td><strong>${s.compagnie}</strong></td>
+                                <td>${s.numero}</td>
+                                <td>
+                                    ${s.creePar}
+                                    ${s.isMine ? '<span class="status-badge validee" style="margin-left: 0.5rem; font-size: 0.7rem;">Moi</span>' : ''}
+                                </td>
+                                <td><span class="status-badge ${s.statut}">${s.statutDisplay}</span></td>
+                                <td>${s.contact}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="/ventes/soumission/${s.id}/" class="btn-icon btn-view" title="Voir">
+                                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                            </svg>
+                        </a>
+                        ${s.isMine ? `
+                            <a href="/ventes/soumission/${s.id}/edit/" class="btn-icon btn-edit" title="Modifier">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </a>
+                        ` : ''}
+                    </div>
+                </td>
+            </tr>
                         `).join('')}
                     </tbody>
                 </table>
@@ -866,6 +1431,10 @@
     document.getElementById('todayBtn').addEventListener('click', () => {
         currentDate = new Date();
         renderCalendar();
+        // Charger les données d'aujourd'hui
+        if (today) {
+            loadDateData(today);
+        }
     });
 
     function renderCalendar() {
@@ -915,7 +1484,11 @@
         if (dateStr === selectedDate) dayDiv.classList.add('selected');
 
         const hasChecklists = allChecklists.some(c => c.date === dateStr);
-        if (hasChecklists) {
+        const hasContrats = allContrats.some(c => c.date === dateStr);
+        const hasSoumissions = allSoumissions.some(s => s.date === dateStr);
+        const hasEvents = hasChecklists || hasContrats || hasSoumissions;
+        
+        if (hasEvents) {
             dayDiv.classList.add('has-checklists');
             dayDiv.innerHTML = `${day}<div class="checklist-indicator"></div>`;
         } else {
@@ -928,12 +1501,23 @@
             }
             document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('selected'));
             dayDiv.classList.add('selected');
-            loadDateChecklists(dateStr);
+            loadDateData(dateStr);
         });
 
         return dayDiv;
     }
 
+    // Initialisation
     renderCalendar();
+    
+    // Charger automatiquement les données pour aujourd'hui
+    if (today) {
+        loadDateData(today);
+    }
+    // ✅ RECHARGEMENT AUTOMATIQUE TOUTES LES 10 MINUTES
+    setInterval(function() {
+        console.log('Rechargement automatique de la page...');
+        window.location.reload();
+    }, 10 * 60 * 1000); // 10 minutes * 60 secondes * 1000 millisecondes
 </script>
 {% endblock %}

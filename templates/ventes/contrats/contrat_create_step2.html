@@ -3,7 +3,6 @@
 
 {% block extra_css %}
 <style>
-    /* Réutiliser les styles de step1 */
     .wizard-container { max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; }
     .wizard-header { background: white; border-radius: 20px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
     .wizard-steps { display: flex; justify-content: space-between; margin-bottom: 2rem; position: relative; }
@@ -31,13 +30,49 @@
     .form-section { margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 2px solid #e5e7eb; }
     .form-section:last-child { border-bottom: none; }
     .section-title { font-size: 1.1rem; font-weight: 700; color: #1f2937; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    
+    /* ✅ Style amélioré pour l'autocomplétion Google */
+    .pac-container {
+        z-index: 10000 !important;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        border: none;
+        margin-top: 5px;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    .pac-item {
+        padding: 10px 15px;
+        border: none;
+        cursor: pointer;
+        font-size: 0.95rem;
+    }
+    
+    .pac-item:hover {
+        background: #f3f4f6;
+    }
+    
+    .pac-icon {
+        display: none;
+    }
+    
+    .pac-item-query {
+        font-weight: 600;
+        color: #1f2937;
+    }
+    
+    /* Assurer que le champ d'adresse ne soit pas bloqué */
+    #adresse_complete {
+        position: relative;
+        z-index: 1;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="wizard-container">
     <div class="wizard-header">
-        <h1 style="margin: 0 0 2rem 0;">🎉 Nouveau Contrat</h1>
+        <h1 style="margin: 0 0 2rem 0;">🎉 Nouvel Événement MD</h1>
         
         <div class="wizard-steps">
             <div class="wizard-step completed">
@@ -55,10 +90,35 @@
         </div>
     </div>
 
-    <form method="post" class="form-card">
+    <form method="post" class="form-card" id="step2Form">
         {% csrf_token %}
         
         <h2 style="margin-bottom: 1.5rem;">📋 Étape 2 : Informations détaillées</h2>
+
+        {% if request.session.contrat_step1.checklist_id %}
+        <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); 
+                    border-left: 4px solid #10b981; 
+                    padding: 1rem 1.5rem; 
+                    border-radius: 10px; 
+                    margin-bottom: 2rem;
+                    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <svg width="24" height="24" fill="none" stroke="#059669" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div>
+                    <p style="margin: 0; font-weight: 700; color: #065f46; font-size: 1rem;">
+                        ✨ Création depuis une checklist
+                    </p>
+                    <p style="margin: 0.25rem 0 0 0; color: #047857; font-size: 0.9rem;">
+                        Les informations de la checklist <strong>{{ request.session.contrat_step1.numero_contrat }}</strong> 
+                        ont été automatiquement pré-remplies. Vous pouvez les modifier si nécessaire.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Section Client -->
         <div class="form-section">
@@ -71,24 +131,24 @@
             
             <div class="form-group">
                 <label class="form-label required">Nom du client</label>
-                <input type="text" name="client_nom" class="form-input" placeholder="ex: Jean Dupont" required value="{{ form_data.client_nom }}">
+                <input type="text" name="client_nom" class="form-input" placeholder="ex: Jean Dupont" required value="{{ form_data.client_nom|default:'' }}">
             </div>
 
             <div class="form-grid">
                 <div class="form-group">
                     <label class="form-label required">Téléphone</label>
-                    <input type="tel" name="client_telephone" class="form-input" placeholder="ex: 514-123-4567" required value="{{ form_data.client_telephone }}">
+                    <input type="tel" name="client_telephone" class="form-input" placeholder="ex: 514-123-4567" required value="{{ form_data.client_telephone|default:'' }}">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Email</label>
-                    <input type="email" name="client_email" class="form-input" placeholder="ex: client@email.com" value="{{ form_data.client_email }}">
+                    <input type="email" name="client_email" class="form-input" placeholder="ex: client@email.com" value="{{ form_data.client_email|default:'' }}">
                 </div>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Contact sur site (si différent)</label>
-                <input type="text" name="contact_sur_site" class="form-input" placeholder="ex: Marie Martin" value="{{ form_data.contact_sur_site }}">
+                <input type="text" name="contact_sur_site" class="form-input" placeholder="ex: Marie Martin" value="{{ form_data.contact_sur_site|default:'' }}">
             </div>
         </div>
 
@@ -104,18 +164,30 @@
             
             <div class="form-group">
                 <label class="form-label required">Adresse complète</label>
-                <textarea name="adresse_complete" class="form-input" rows="2" placeholder="ex: 123 Rue Saint-Laurent" required>{{ form_data.adresse_complete }}</textarea>
+                <input 
+                    type="text" 
+                    id="adresse_complete" 
+                    name="adresse_complete" 
+                    class="form-input" 
+                    placeholder="ex: 123 Rue Saint-Laurent, Montréal" 
+                    required 
+                    value="{{ form_data.adresse_complete|default:'' }}"
+                    autocomplete="off"
+                >
+                <div style="font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem;">
+                    💡 Commencez à taper et sélectionnez une adresse dans la liste
+                </div>
             </div>
 
             <div class="form-grid">
                 <div class="form-group">
                     <label class="form-label">Ville</label>
-                    <input type="text" name="ville" class="form-input" value="{{ form_data.ville|default:'Montréal' }}">
+                    <input type="text" id="ville" name="ville" class="form-input" value="{{ form_data.ville|default:'Montréal' }}">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Code postal</label>
-                    <input type="text" name="code_postal" class="form-input" placeholder="ex: H2X 1Y5" value="{{ form_data.code_postal }}">
+                    <input type="text" id="code_postal" name="code_postal" class="form-input" placeholder="ex: H2X 1Y5" value="{{ form_data.code_postal|default:'' }}">
                 </div>
             </div>
         </div>
@@ -131,18 +203,18 @@
             
             <div class="form-group">
                 <label class="form-label required">Date de l'événement</label>
-                <input type="date" name="date_evenement" class="form-input" required value="{{ form_data.date_evenement }}">
+                <input type="date" name="date_evenement" class="form-input" required value="{{ form_data.date_evenement|default:'' }}">
             </div>
 
             <div class="form-grid">
                 <div class="form-group">
                     <label class="form-label required">Heure de début prévue</label>
-                    <input type="time" name="heure_debut_prevue" class="form-input" required value="{{ form_data.heure_debut_prevue }}">
+                    <input type="time" name="heure_debut_prevue" class="form-input" required value="{{ form_data.heure_debut_prevue|default:'' }}">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label required">Heure de fin prévue</label>
-                    <input type="time" name="heure_fin_prevue" class="form-input" required value="{{ form_data.heure_fin_prevue }}">
+                    <input type="time" name="heure_fin_prevue" class="form-input" required value="{{ form_data.heure_fin_prevue|default:'' }}">
                 </div>
             </div>
         </div>
@@ -163,12 +235,12 @@
 
             <div class="form-group">
                 <label class="form-label">Informations supplémentaires</label>
-                <textarea name="informations_supplementaires" class="form-input" rows="3" placeholder="ex: Thème de la soirée, particularités...">{{ form_data.informations_supplementaires }}</textarea>
+                <textarea name="informations_supplementaires" class="form-input" rows="3" placeholder="ex: Thème de la soirée, particularités...">{{ form_data.informations_supplementaires|default:'' }}</textarea>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Instructions spéciales</label>
-                <textarea name="instructions_speciales" class="form-input" rows="3" placeholder="ex: Allergies alimentaires, restrictions d'accès...">{{ form_data.instructions_speciales }}</textarea>
+                <textarea name="instructions_speciales" class="form-input" rows="3" placeholder="ex: Allergies alimentaires, restrictions d'accès...">{{ form_data.instructions_speciales|default:'' }}</textarea>
             </div>
         </div>
 
@@ -188,4 +260,118 @@
         </div>
     </form>
 </div>
+
+<!-- ✅ Google Places API - Assurez-vous de remplacer {google_api_key} par votre clé -->
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places&language=fr"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const adresseInput = document.getElementById('adresse_complete');
+    const villeInput = document.getElementById('ville');
+    const codePostalInput = document.getElementById('code_postal');
+    const form = document.getElementById('step2Form');
+    
+    // ✅ Variable pour suivre si une adresse est en cours de sélection
+    let isSelectingAddress = false;
+    
+    // ✅ Vérifier que Google Maps est chargé
+    if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+        console.error('❌ Google Maps API non chargée - Vérifiez votre clé API');
+        return;
+    }
+    
+    console.log('✅ Google Maps API chargée avec succès');
+    
+    // ✅ Initialiser l'autocomplétion Google Places
+    const autocomplete = new google.maps.places.Autocomplete(adresseInput, {
+        componentRestrictions: { country: 'ca' },
+        fields: ['address_components', 'formatted_address', 'geometry'],
+        types: ['address']
+    });
+    
+    // ✅ Désactiver la soumission automatique du formulaire sur Enter
+    adresseInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Si un élément de la liste est sélectionné, ne rien faire
+            // Google Places gère automatiquement la sélection
+            isSelectingAddress = true;
+            
+            return false;
+        }
+    });
+    
+    // ✅ Écouter la sélection d'une adresse
+    autocomplete.addListener('place_changed', function() {
+        isSelectingAddress = false;
+        const place = autocomplete.getPlace();
+        
+        if (!place.address_components) {
+            console.log('⚠️ Aucune adresse sélectionnée');
+            return;
+        }
+        
+        console.log('📍 Place sélectionné:', place);
+        
+        // Remplir l'adresse complète
+        adresseInput.value = place.formatted_address;
+        
+        // Extraire et remplir ville et code postal
+        let ville = '';
+        let codePostal = '';
+        
+        place.address_components.forEach(component => {
+            const types = component.types;
+            
+            // Ville
+            if (types.includes('locality')) {
+                ville = component.long_name;
+            }
+            
+            // Code postal
+            if (types.includes('postal_code')) {
+                codePostal = component.short_name;
+            }
+        });
+        
+        // Remplir les champs
+        if (ville) villeInput.value = ville;
+        if (codePostal) codePostalInput.value = codePostal;
+        
+        console.log('✅ Adresse remplie:', {
+            adresse: place.formatted_address,
+            ville: ville,
+            codePostal: codePostal
+        });
+    });
+    
+    // ✅ Logger les inputs pour le debug
+    adresseInput.addEventListener('input', function(e) {
+        console.log('📝 Input détecté:', e.target.value);
+    });
+    
+    // ✅ Empêcher la soumission du form si on est en train de sélectionner
+    form.addEventListener('submit', function(e) {
+        if (isSelectingAddress) {
+            console.log('⏸️ Soumission bloquée - Sélection en cours');
+            e.preventDefault();
+            return false;
+        }
+    });
+    
+    // ✅ Gérer le focus
+    adresseInput.addEventListener('focus', function() {
+        console.log('🎯 Focus sur le champ adresse');
+    });
+    
+    // ✅ Réinitialiser le flag après un délai
+    adresseInput.addEventListener('blur', function() {
+        setTimeout(() => {
+            isSelectingAddress = false;
+        }, 200);
+    });
+});
+</script>
 {% endblock %}

@@ -30,13 +30,13 @@ def dashboard_verificateur(request):
         Prefetch('items', queryset=ItemChecklist.objects.select_related('objet'))
     ).annotate(
         total_items=Count('items'),
-        items_verifies=Count('items', filter=Q(items__verifie=True))
+        items_verifies=Count('items', filter=Q(items__statut_verification='valide'))  # ✅ CHANGEMENT ICI
     )
     
     # Stats globales
     stats = {
         'total_checklists': all_checklists.count(),
-        'en_attente': all_checklists.filter(status='en_attente').count(),
+        'en_attente': all_checklists.filter(Q(status='en_attente') | Q(status='en_cours')).count(),
         'en_cours': all_checklists.filter(status='en_cours').count(),
         'validees': all_checklists.filter(status='validee').count(),
     }
@@ -48,7 +48,7 @@ def dashboard_verificateur(request):
     
     context = {
         'selected_date': selected_date,
-        'checklists': all_checklists,  # Toutes les checklists pour le JS
+        'checklists': all_checklists,
         'stats': stats,
         'livraisons': livraisons_jour,
         'objets': objets,
@@ -56,7 +56,6 @@ def dashboard_verificateur(request):
     }
     
     return render(request, 'checklist/dashboard_verificateur.html', context)
-
 
 
 

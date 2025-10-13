@@ -620,7 +620,7 @@
                             <td>{{ item.objet.nom }}</td>
                             <td>{{ item.quantite }} {{ item.objet.unite }}</td>
                             <td>
-                                {% if item.verifie %}
+                                {% if item.statut_verification == 'valide' %}
                                     <span class="item-status verifie">✓ Vérifié</span>
                                 {% else %}
                                     <span class="item-status en-attente">⏳ En attente</span>

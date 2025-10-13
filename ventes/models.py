@@ -116,6 +116,29 @@ class Checklist(models.Model):
         valides = self.items.filter(statut_verification='valide').count()
         return round((valides / total) * 100)
     
+    def recalculer_statut(self):
+        """Recalcule automatiquement le statut selon les items"""
+        items = self.items.all()
+        
+        if not items.exists():
+            self.status = 'en_cours'
+            return
+        
+        # Compter les items par statut
+        total = items.count()
+        valides = items.filter(statut_verification='valide').count()
+        refuses = items.filter(statut_verification='refuse').count()
+        
+        # Logique de statut
+        if refuses > 0:
+            # Dès qu'un item est refusé -> checklist incomplète
+            self.status = 'incomplete'
+        elif valides == total:
+            # Tous validés -> checklist validée
+            self.status = 'validee'
+        else:
+            # Sinon -> en cours
+            self.status = 'en_cours'
     def lier_livraison_automatiquement(self):
         """Lie automatiquement une livraison si le numéro de commande correspond"""
         from livraison.models import Livraison
@@ -307,3 +330,112 @@ class ItemChecklistHistorique(models.Model):
         if self.quantite_avant and self.quantite_apres:
             return float(self.quantite_apres - self.quantite_avant)
         return None
+    
+
+# ventes/models.py (ou dans l'app appropriée)
+
+from django.db import models
+from django.conf import settings
+from django.utils import timezone
+import uuid
+
+
+class Soumission(models.Model):
+    """Soumission créée par une vendeuse pour un événement"""
+    
+    STATUT_CHOICES = [
+        ('en_cours', 'En cours'),
+        ('envoye', 'Envoyé'),
+        ('accepte', 'Accepté'),
+        ('refuse', 'Refusé'),
+    ]
+    
+    # Identification
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    numero_soumission = models.CharField(max_length=20, unique=True, help_text="Numéro unique de soumission")
+    
+    # Détails de l'Événement
+    date_evenement = models.DateField(verbose_name="Date de l'événement")
+    nom_compagnie = models.CharField(max_length=200, verbose_name="Nom de la compagnie")
+    nombre_personnes = models.PositiveIntegerField(verbose_name="Nombre de personnes")
+    adresse = models.TextField(verbose_name="Adresse de l'événement")
+    
+    # Options
+    avec_service = models.BooleanField(default=False, verbose_name="Avec service")
+    location_materiel = models.BooleanField(default=False, verbose_name="Location matériel")
+    avec_alcool = models.BooleanField(default=False, verbose_name="Avec alcool")
+    
+    # Coordonnées de Contact
+    commande_par = models.CharField(max_length=200, verbose_name="Commandé par")
+    email = models.EmailField(verbose_name="Email")
+    telephone = models.CharField(max_length=20, verbose_name="Téléphone")
+    
+    # Statut et suivi
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='en_cours')
+    
+    # Détails de Création
+    cree_a = models.DateTimeField(default=timezone.now, verbose_name="Créé à")
+    cree_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True,
+        related_name='soumissions_creees',
+        verbose_name="Créé par"
+    )
+    
+    # Dates de suivi
+    date_modification = models.DateTimeField(auto_now=True)
+    date_soumission = models.DateTimeField(null=True, blank=True, verbose_name="Date d'envoi")
+    date_reponse = models.DateTimeField(null=True, blank=True, verbose_name="Date de réponse")
+    
+    # Notes optionnelles
+    notes = models.TextField(blank=True, verbose_name="Notes internes")
+
+    def save(self, *args, **kwargs):
+        """Génération automatique du numéro de soumission"""
+        if not self.numero_soumission:
+            # Trouver le dernier numéro
+            last_soumission = Soumission.objects.filter(
+                numero_soumission__startswith='SOU-'
+            ).order_by('-numero_soumission').first()
+            
+            if last_soumission and last_soumission.numero_soumission:
+                # Extraire le numéro et incrémenter
+                try:
+                    last_number = int(last_soumission.numero_soumission.split('-')[1])
+                    new_number = last_number + 1
+                except (IndexError, ValueError):
+                    new_number = 1
+            else:
+                new_number = 1
+            
+            # Générer le nouveau numéro avec padding (ex: SOU-00001)
+            self.numero_soumission = f"SOU-{new_number:05d}"
+        
+        super().save(*args, **kwargs)
+    
+    class Meta:
+        ordering = ['-date_evenement', '-cree_a']
+        verbose_name = 'Soumission'
+        verbose_name_plural = 'Soumissions'
+    
+    def __str__(self):
+        return f"{self.numero_soumission} - {self.nom_compagnie} ({self.date_evenement})"
+    
+    def envoyer(self):
+        """Marquer la soumission comme envoyée"""
+        self.statut = 'envoye'
+        self.date_soumission = timezone.now()
+        self.save()
+    
+    def accepter(self):
+        """Accepter la soumission"""
+        self.statut = 'accepte'
+        self.date_reponse = timezone.now()
+        self.save()
+    
+    def refuser(self):
+        """Refuser la soumission"""
+        self.statut = 'refuse'
+        self.date_reponse = timezone.now()
+        self.save()

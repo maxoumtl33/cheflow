@@ -177,13 +177,23 @@
         color: #6b7280;
         margin-top: 0.25rem;
     }
+
+    /* ✅ Alerte pour création depuis checklist */
+    .checklist-alert {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border-left: 4px solid #10b981;
+        padding: 1rem 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="wizard-container">
     <div class="wizard-header">
-        <h1 style="margin: 0 0 2rem 0;">🎉 Nouveau Contrat</h1>
+        <h1 style="margin: 0 0 2rem 0;">🎉 Nouvel Événement MD</h1>
         
         <div class="wizard-steps">
             <div class="wizard-step active">
@@ -204,10 +214,31 @@
     <form method="post" class="form-card">
         {% csrf_token %}
         
+        <!-- ✅ Alerte si création depuis checklist -->
+        {% if request.session.contrat_step1.checklist_id %}
+        <div class="checklist-alert">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <svg width="24" height="24" fill="none" stroke="#059669" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div>
+                    <p style="margin: 0; font-weight: 700; color: #065f46; font-size: 1rem;">
+                        ✨ Création depuis une checklist
+                    </p>
+                    <p style="margin: 0.25rem 0 0 0; color: #047857; font-size: 0.9rem;">
+                        Certaines informations ont été pré-remplies depuis la checklist. 
+                        Vous pouvez les modifier si nécessaire.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
         <h2 style="margin-bottom: 1.5rem;">📝 Étape 1 : Identifiants & Associations</h2>
 
         <div class="form-group">
-            <label class="form-label required">Numéro de contrat</label>
+            <label class="form-label required">Numéro de l'Événement MD</label>
             <div class="input-group">
                 <span class="input-prefix">CMD-</span>
                 <input 
@@ -215,12 +246,13 @@
                     name="numero_contrat" 
                     class="form-input" 
                     placeholder="ex: 2025-001"
+                    value="{{ request.session.contrat_step1.numero_contrat|default:'' }}"
                     required
                     pattern="[0-9\-]+"
                     title="Seuls les chiffres et tirets sont autorisés"
                 >
             </div>
-            <div class="help-text">Entrez uniquement les chiffres (ex: 2025-001)</div>
+            <div class="help-text">Entrez uniquement les chiffres (ex: 2025-001). Le préfixe CMD- sera ajouté automatiquement.</div>
         </div>
 
         <div class="form-group">
@@ -230,6 +262,7 @@
                 name="nom_evenement" 
                 class="form-input" 
                 placeholder="ex: Mariage Dupont"
+                value="{{ request.session.contrat_step1.nom_evenement|default:'' }}"
                 required
             >
         </div>
@@ -239,12 +272,13 @@
             <select name="maitre_hotel" class="form-input">
                 <option value="">-- Aucun pour le moment --</option>
                 {% for mh in maitres_hotel %}
-                <option value="{{ mh.id }}">{{ mh.get_full_name }} ({{ mh.email }})</option>
+                <option value="{{ mh.id }}" 
+                        {% if request.session.contrat_step1.maitre_hotel_id == mh.id|stringformat:"s" %}selected{% endif %}>
+                    {{ mh.get_full_name }} ({{ mh.email }})
+                </option>
                 {% endfor %}
             </select>
         </div>
-
-        
 
         {% if livraisons %}
         <div class="form-group">
@@ -252,7 +286,8 @@
             <select name="livraison" class="form-input">
                 <option value="">-- Aucune --</option>
                 {% for livraison in livraisons %}
-                <option value="{{ livraison.id }}">
+                <option value="{{ livraison.id }}"
+                        {% if request.session.contrat_step1.livraison_id == livraison.id|stringformat:"s" %}selected{% endif %}>
                     {{ livraison.numero_livraison }} - {{ livraison.date_livraison|date:"d/m/Y" }}
                 </option>
                 {% endfor %}
@@ -261,7 +296,7 @@
         {% endif %}
 
         <div class="form-actions">
-            <a href="{% url 'ventes:dashboard_responsable' %}" class="btn btn-secondary">
+            <a href="{% url 'ventes:dashboard_vendeuse' %}" class="btn btn-secondary">
                 Annuler
             </a>
             <button type="submit" class="btn btn-primary">
