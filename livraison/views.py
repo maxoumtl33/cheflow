@@ -258,7 +258,7 @@ def creer_route(request):
             nom=data['nom'],
             date=data['date'],
             periode=data['periode'],
-            heure_depart=data['heure_depart'],  # Le save() va auto-parser
+            heure_depart=data['heure_depart'],
             commentaire=data.get('commentaire', ''),
             cree_par=request.user
         )
@@ -266,7 +266,7 @@ def creer_route(request):
         if data.get('livreurs'):
             livreurs = CustomUser.objects.filter(
                 id__in=data['livreurs'],
-                role='livreur'
+                role__in=['livreur', 'resp_livraison']  # ← CORRECTION ICI
             )
             route.livreurs.set(livreurs)
         
@@ -286,6 +286,7 @@ def creer_route(request):
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    
 
 @login_required
 @require_http_methods(["POST"])
@@ -427,7 +428,10 @@ def routes_json(request):
 def livreurs_json(request):
     """Liste des livreurs disponibles"""
     
-    livreurs = CustomUser.objects.filter(role='livreur', is_active=True)
+    livreurs = CustomUser.objects.filter(
+        role__in=['livreur', 'resp_livraison'],  # ← CORRECTION ICI
+        is_active=True
+    )
     
     data = [{
         'id': l.id,
@@ -436,7 +440,6 @@ def livreurs_json(request):
     } for l in livreurs]
     
     return JsonResponse({'livreurs': data})
-
 
 import re
 from django.db import transaction
@@ -850,7 +853,7 @@ def modifier_route(request, route_id):
         if data.get('livreurs'):
             livreurs = CustomUser.objects.filter(
                 id__in=data['livreurs'],
-                role='livreur'
+                role__in=['livreur', 'resp_livraison']  # ← CORRECTION ICI
             )
             route.livreurs.set(livreurs)
         
@@ -947,10 +950,69 @@ def creer_livreur(request):
 
 
 @login_required
+@require_http_methods(["POST"])
+def creer_livreur(request):
+    """Créer un nouveau livreur"""
+    try:
+        data = json.loads(request.body)
+        
+        # Validation
+        if CustomUser.objects.filter(username=data['username']).exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'Ce nom d\'utilisateur existe déjà'
+            }, status=400)
+        
+        if len(data['password']) < 8:
+            return JsonResponse({
+                'success': False,
+                'error': 'Le mot de passe doit contenir au moins 8 caractères'
+            }, status=400)
+        
+        # Déterminer le rôle (par défaut 'livreur')
+        role = data.get('role', 'livreur')
+        if role not in ['livreur', 'resp_livraison']:
+            role = 'livreur'
+        
+        # Créer l'utilisateur
+        livreur = CustomUser.objects.create_user(
+            username=data['username'],
+            password=data['password'],
+            first_name=data['first_name'],
+            last_name=data['last_name'],
+            email=data.get('email', ''),
+            role=role,  # ← CORRECTION ICI
+            is_active=True
+        )
+        
+        # Créer le profil livreur si vous avez un modèle Livreur séparé
+        from .models import Livreur
+        Livreur.objects.create(
+            user=livreur,
+            telephone=data.get('telephone', '')
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Livreur créé avec succès',
+            'livreur_id': livreur.id
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@login_required
 def get_livreur_details(request, livreur_id):
     """Récupérer les détails d'un livreur"""
     try:
-        livreur = CustomUser.objects.get(id=livreur_id, role='livreur')
+        livreur = CustomUser.objects.get(
+            id=livreur_id, 
+            role__in=['livreur', 'resp_livraison']  # ← CORRECTION ICI
+        )
         
         # Récupérer le profil livreur
         try:
@@ -967,7 +1029,9 @@ def get_livreur_details(request, livreur_id):
             'last_name': livreur.last_name,
             'email': livreur.email,
             'telephone': telephone,
-            'is_active': livreur.is_active
+            'is_active': livreur.is_active,
+            'role': livreur.role,
+            'role_display': livreur.get_role_display()
         })
         
     except CustomUser.DoesNotExist:
@@ -976,14 +1040,16 @@ def get_livreur_details(request, livreur_id):
             'error': 'Livreur introuvable'
         }, status=404)
 
-
 @login_required
 @require_http_methods(["PUT"])
 def modifier_livreur(request, livreur_id):
     """Modifier un livreur existant"""
     try:
         data = json.loads(request.body)
-        livreur = CustomUser.objects.get(id=livreur_id, role='livreur')
+        livreur = CustomUser.objects.get(
+            id=livreur_id, 
+            role__in=['livreur', 'resp_livraison']  # ← CORRECTION ICI
+        )
         
         # Vérifier si le username est déjà utilisé par un autre utilisateur
         if data['username'] != livreur.username:
@@ -1042,7 +1108,10 @@ def modifier_livreur(request, livreur_id):
 def supprimer_livreur(request, livreur_id):
     """Supprimer un livreur"""
     try:
-        livreur = CustomUser.objects.get(id=livreur_id, role='livreur')
+        livreur = CustomUser.objects.get(
+            id=livreur_id, 
+            role__in=['livreur', 'resp_livraison']  # ← CORRECTION ICI
+        )
         
         # Vérifier qu'il n'a pas de routes actives
         routes_actives = Route.objects.filter(
@@ -1086,7 +1155,7 @@ def gestion_livreurs(request):
     
     # Récupérer tous les livreurs
     livreurs = CustomUser.objects.filter(
-        role='livreur'
+        role__in=['livreur', 'resp_livraison']  # ← CORRECTION ICI
     ).prefetch_related(
         Prefetch(
             'disponibilites',
@@ -1126,7 +1195,10 @@ def ajouter_disponibilite(request):
     """Ajouter une disponibilité pour un livreur avec heure de shift optionnelle"""
     try:
         data = json.loads(request.body)
-        livreur = CustomUser.objects.get(id=data['livreur_id'], role='livreur')
+        livreur = CustomUser.objects.get(
+            id=data['livreur_id'], 
+            role__in=['livreur', 'resp_livraison']  # ← CORRECTION ICI
+        )
         
         # ✨ Gérer l'heure de début de shift
         heure_debut_shift = None
@@ -1232,7 +1304,7 @@ def resume_journalier(request):
         'mode_envoi'
     ).prefetch_related(
         'livraisonroute_set__route__livreurs'
-    ).order_by('periode', 'heure_souhaitee')
+    ).order_by('heure_souhaitee')
     
     # Stats globales
     stats = {
@@ -2645,6 +2717,8 @@ def routes_par_date(request):
     routes = Route.objects.filter(
         date=date_obj,
         livreurs=request.user
+    ).select_related('vehicule').prefetch_related(
+        'livraisonroute_set__livraison__checklist'  # 🔥 AJOUT du prefetch pour checklist
     ).order_by('heure_depart')
     
     routes_data = []
@@ -2654,30 +2728,29 @@ def routes_par_date(request):
         
         for lr in livraisons_route:
             livraison = lr.livraison
+            
+            # 🔥 Construire la liste des besoins POUR CETTE LIVRAISON
+            besoins_specifiques = []
+            if livraison.besoin_cafe:
+                besoins_specifiques.append('Café')
+            if livraison.besoin_the:
+                besoins_specifiques.append('Thé')
+            if livraison.besoin_sac_glace:
+                besoins_specifiques.append('Sac glace')
+            if livraison.besoin_part_chaud:
+                besoins_specifiques.append('Part chaud')
+            if livraison.checklist:  # 🔥 AJOUT checklist
+                besoins_specifiques.append('Checklist')
+            
             livraisons_data.append({
                 'id': str(livraison.id),
                 'nom': livraison.nom_evenement or livraison.numero_livraison,
                 'adresse': livraison.adresse_complete,
                 'heure': livraison.heure_souhaitee.strftime('%H:%M') if livraison.heure_souhaitee else '',
                 'status': livraison.status,
-                'informations_supplementaires': livraison.informations_supplementaires or '',  # 🔥 AJOUT
-                'besoins': []  # Gardé pour compatibilité, mais non utilisé dans l'affichage individuel
+                'informations_supplementaires': livraison.informations_supplementaires or '',
+                'besoins_specifiques': besoins_specifiques
             })
-            
-            # Construire la liste des besoins (pour l'agrégation au niveau route)
-            besoins = []
-            if livraison.besoin_cafe:
-                besoins.append('Café')
-            if livraison.besoin_the:
-                besoins.append('Thé')
-            if livraison.besoin_sac_glace:
-                besoins.append('Sac glace')
-            if livraison.besoin_part_chaud:
-                besoins.append('Part chaud')
-            if livraison.autres_besoins:
-                besoins.append(livraison.autres_besoins)
-            
-            livraisons_data[-1]['besoins'] = besoins
         
         # Récupérer le premier livreur
         livreur_principal = route.livreurs.first()
@@ -2695,6 +2768,8 @@ def routes_par_date(request):
                 besoins_route.add('Sac glace')
             if livraison.besoin_part_chaud:
                 besoins_route.add('Part chaud')
+            if livraison.checklist:  # 🔥 AJOUT checklist au niveau route
+                besoins_route.add('Checklist')
         
         # Compter les livraisons par statut
         total_livraisons = livraisons_route.count()
@@ -2723,6 +2798,7 @@ def routes_par_date(request):
         'success': True,
         'routes': routes_data
     })
+
 @login_required
 def routes_du_mois(request):
     """API pour récupérer les dates qui ont des routes pour le livreur connecté"""

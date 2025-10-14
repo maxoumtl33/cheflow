@@ -296,9 +296,15 @@
         {% endif %}
 
         <div class="form-actions">
+            {% if request.user.role == 'resp_ventes' %}
+            <a href="{% url 'ventes:dashboard_responsable' %}" class="btn btn-secondary">
+                Annuler
+            </a>
+            {% else %}
             <a href="{% url 'ventes:dashboard_vendeuse' %}" class="btn btn-secondary">
                 Annuler
             </a>
+            {% endif %}
             <button type="submit" class="btn btn-primary">
                 Suivant
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">

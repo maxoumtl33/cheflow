@@ -287,13 +287,21 @@
 {% block content %}
 <div class="detail-container">
     <!-- Bouton retour -->
+     {% if request.user.role == 'resp_ventes' %}
+    <a href="{% url 'ventes:dashboard_responsable' %}" class="back-button">
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Retour au tableau de bord
+    </a>
+    {% else %}
     <a href="{% url 'ventes:dashboard_vendeuse' %}" class="back-button">
         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
         </svg>
         Retour au tableau de bord
     </a>
-
+    {% endif %}
     <!-- En-tête -->
     <div class="header-card">
         <div class="header-content">

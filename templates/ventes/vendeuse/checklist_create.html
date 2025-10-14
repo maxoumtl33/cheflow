@@ -337,9 +337,6 @@
         border-radius: 12px;
         padding: 1rem;
         margin-bottom: 0.75rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
         transition: all 0.3s ease;
     }
 
@@ -355,6 +352,13 @@
     .object-item.selected {
         background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
         border-color: #10b981;
+    }
+
+    .object-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
     }
 
     .object-name {
@@ -427,6 +431,58 @@
         transform: scale(1.05);
     }
 
+    /* Styles pour le bouton commentaire */
+    .btn-comment {
+        background: #f3f4f6;
+        color: #6b7280;
+        border: none;
+        padding: 0.4rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-weight: 600;
+    }
+
+    .btn-comment:hover {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    .btn-comment.has-comment {
+        background: #dbeafe;
+        color: #1e40af;
+        border: 1px solid #93c5fd;
+    }
+
+    .btn-comment svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    /* Zone de commentaire sous l'objet */
+    .comment-preview {
+        margin-top: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: #fef3c7;
+        border-left: 3px solid #f59e0b;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        color: #92400e;
+        display: none;
+    }
+
+    .comment-preview.show {
+        display: block;
+    }
+
+    .comment-preview-text {
+        margin: 0;
+    }
+
     .selected-items {
         background: #f9fafb;
         border-radius: 12px;
@@ -455,11 +511,15 @@
         padding: 1rem;
         border-radius: 8px;
         margin-bottom: 0.75rem;
+        border-left: 4px solid #10b981;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .item-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-left: 4px solid #10b981;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 0.5rem;
     }
 
     .item-info {
@@ -484,6 +544,16 @@
         border-radius: 8px;
         font-weight: 700;
         margin-right: 1rem;
+    }
+
+    .item-comment {
+        margin-top: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: #fef3c7;
+        border-left: 3px solid #f59e0b;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        color: #92400e;
     }
 
     .btn-remove {
@@ -532,6 +602,7 @@
 
     .info-value {
         color: #0e7490;
+        flex: 1;
     }
 
     .alert-info {
@@ -619,13 +690,138 @@
         padding: 2rem;
         color: #6b7280;
     }
+
+    /* Styles du modal commentaire */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+
+    .modal-overlay.show {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        width: 100%;
+        max-width: 500px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+        from { transform: translateY(50px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    .btn-close-modal {
+        background: #f3f4f6;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .btn-close-modal:hover {
+        background: #e5e7eb;
+    }
+
+    .modal-object-info {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+
+    .comment-textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 0.875rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 1rem;
+        resize: vertical;
+        font-family: inherit;
+        transition: all 0.3s ease;
+    }
+
+    .comment-textarea:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .modal-actions button {
+        flex: 1;
+        padding: 0.875rem;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-modal-cancel {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .btn-modal-cancel:hover {
+        background: #e5e7eb;
+    }
+
+    .btn-modal-save {
+        background: #6366f1;
+        color: white;
+    }
+
+    .btn-modal-save:hover {
+        background: #4f46e5;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="card">
-        <a href="{% url 'ventes:dashboard_vendeuse' %}" class="back-btn">
+        {% if request.user.role == 'resp_ventes' %}
+            <a href="{% url 'ventes:dashboard_responsable' %}" class="back-btn">
+        {% else %}
+            <a href="{% url 'ventes:dashboard_vendeuse' %}" class="back-btn">
+        {% endif %}
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
@@ -737,19 +933,38 @@
                         <div class="objects-container">
                             {% for objet in categorie.objets.all %}
                             <div class="object-item" data-object-id="{{ objet.id }}" data-object-name="{{ objet.nom }}" data-category-name="{{ categorie.nom }}">
-                                <div class="object-name">{{ objet.nom }}</div>
-                                <div class="quantity-controls">
-                                    <button type="button" class="qty-btn" onclick="decreaseQty(this)">−</button>
-                                    <input 
-                                        type="number" 
-                                        class="qty-input" 
-                                        value="1" 
-                                        min="1" 
-                                        max="999"
-                                        onchange="validateQty(this)"
-                                    >
-                                    <button type="button" class="qty-btn" onclick="increaseQty(this)">+</button>
-                                    <button type="button" class="btn-add" onclick="addItem(this)">Ajouter</button>
+                                <div class="object-item-header">
+                                    <div class="object-name">{{ objet.nom }}</div>
+                                    <div class="quantity-controls">
+                                        <button type="button" class="qty-btn" onclick="decreaseQty(this)">−</button>
+                                        <input 
+                                            type="number" 
+                                            class="qty-input" 
+                                            value="1" 
+                                            min="1" 
+                                            max="9999"
+                                            onchange="validateQty(this)"
+                                        >
+                                        <button type="button" class="qty-btn" onclick="increaseQty(this)">+</button>
+                                        <button type="button" class="btn-add" onclick="addItem(this)">Ajouter</button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Bouton pour ajouter un commentaire -->
+                                <div style="margin-top: 0.5rem;">
+                                    <button type="button" 
+                                            class="btn-comment" 
+                                            onclick="openCommentModal('{{ objet.id }}', '{{ objet.nom|escapejs }}', event)">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                                        </svg>
+                                        <span class="comment-btn-text">Ajouter un commentaire</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- Prévisualisation du commentaire -->
+                                <div class="comment-preview" data-object-id="{{ objet.id }}">
+                                    <p class="comment-preview-text"></p>
                                 </div>
                             </div>
                             {% endfor %}
@@ -840,9 +1055,40 @@
     </div>
 </div>
 
+<!-- Modal Commentaire -->
+<div id="commentModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>💬 Ajouter un commentaire</h3>
+            <button type="button" class="btn-close-modal" onclick="closeCommentModal()">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="modal-object-info" id="commentObjectName"></div>
+        
+        <textarea id="commentTextarea" 
+                  class="comment-textarea" 
+                  placeholder="Ajoutez un commentaire pour cet objet (ex: dimensions, couleur, quantité spéciale...)"></textarea>
+        
+        <div class="modal-actions">
+            <button type="button" class="btn-modal-cancel" onclick="closeCommentModal()">
+                Annuler
+            </button>
+            <button type="button" class="btn-modal-save" onclick="saveComment()">
+                Enregistrer
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
     let currentStep = 1;
     const selectedItems = new Map();
+    const itemComments = new Map(); // Stocker les commentaires des objets
+    let currentCommentObjectId = null;
 
     // Gestion du champ numéro de commande - accepter uniquement les chiffres
     document.getElementById('numero_commande').addEventListener('input', function(e) {
@@ -885,7 +1131,94 @@
         }
     }
 
-    // Gestion des étapes
+    // ========== GESTION DES COMMENTAIRES ==========
+    
+    function openCommentModal(objectId, objectName, event) {
+        event.stopPropagation();
+        event.preventDefault();
+        
+        currentCommentObjectId = objectId;
+        document.getElementById('commentObjectName').textContent = `Pour: ${objectName}`;
+        
+        // Charger le commentaire existant s'il y en a un
+        const existingComment = itemComments.get(objectId) || '';
+        document.getElementById('commentTextarea').value = existingComment;
+        
+        document.getElementById('commentModal').classList.add('show');
+        document.body.style.overflow = 'hidden';
+        
+        // Focus sur le textarea
+        setTimeout(() => {
+            document.getElementById('commentTextarea').focus();
+        }, 100);
+    }
+
+    function closeCommentModal() {
+        document.getElementById('commentModal').classList.remove('show');
+        document.body.style.overflow = 'auto';
+        currentCommentObjectId = null;
+    }
+
+    function saveComment() {
+        if (!currentCommentObjectId) return;
+        
+        const comment = document.getElementById('commentTextarea').value.trim();
+        const objectItem = document.querySelector(`.object-item[data-object-id="${currentCommentObjectId}"]`);
+        
+        if (comment) {
+            // Sauvegarder le commentaire
+            itemComments.set(currentCommentObjectId, comment);
+            
+            // Mettre à jour le bouton
+            const btn = objectItem.querySelector('.btn-comment');
+            btn.classList.add('has-comment');
+            btn.querySelector('.comment-btn-text').textContent = 'Modifier le commentaire';
+            
+            // Afficher la prévisualisation
+            const preview = objectItem.querySelector('.comment-preview');
+            preview.querySelector('.comment-preview-text').textContent = comment;
+            preview.classList.add('show');
+        } else {
+            // Supprimer le commentaire
+            itemComments.delete(currentCommentObjectId);
+            
+            // Réinitialiser le bouton
+            const btn = objectItem.querySelector('.btn-comment');
+            btn.classList.remove('has-comment');
+            btn.querySelector('.comment-btn-text').textContent = 'Ajouter un commentaire';
+            
+            // Cacher la prévisualisation
+            const preview = objectItem.querySelector('.comment-preview');
+            preview.classList.remove('show');
+        }
+        
+        // Mettre à jour la liste des items sélectionnés si cet objet est déjà ajouté
+        if (selectedItems.has(currentCommentObjectId)) {
+            const item = selectedItems.get(currentCommentObjectId);
+            item.comment = comment;
+            selectedItems.set(currentCommentObjectId, item);
+            updateSelectedItemsList();
+        }
+        
+        closeCommentModal();
+    }
+
+    // Fermer le modal avec Échap
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.getElementById('commentModal').classList.contains('show')) {
+            closeCommentModal();
+        }
+    });
+
+    // Fermer le modal en cliquant à l'extérieur
+    document.getElementById('commentModal').addEventListener('click', (e) => {
+        if (e.target.id === 'commentModal') {
+            closeCommentModal();
+        }
+    });
+
+    // ========== GESTION DES ÉTAPES ==========
+    
     function updateStepper() {
         document.querySelectorAll('.step').forEach((step, index) => {
             const stepNum = index + 1;
@@ -905,6 +1238,11 @@
 
         const progress = ((currentStep - 1) / 2) * 100;
         document.getElementById('stepperProgress').style.width = progress + '%';
+        // ✅ Faire défiler en haut de page avec animation douce
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
     }
 
     function nextStep() {
@@ -1005,10 +1343,14 @@
             return;
         }
 
+        // Récupérer le commentaire s'il existe
+        const comment = itemComments.get(objectId) || '';
+
         selectedItems.set(objectId, {
             name: objectName,
             quantity: qty,
-            category: categoryName
+            category: categoryName,
+            comment: comment
         });
 
         objectItem.classList.add('selected');
@@ -1048,13 +1390,24 @@
         selectedItems.forEach((item, id) => {
             const div = document.createElement('div');
             div.className = 'selected-item';
+            
+            let commentHTML = '';
+            if (item.comment) {
+                commentHTML = `<div class="item-comment">
+                    <strong>💬 Commentaire :</strong> ${item.comment}
+                </div>`;
+            }
+            
             div.innerHTML = `
-                <div class="item-info">
-                    <div class="item-name">${item.name}</div>
-                    <div class="item-category">${item.category}</div>
+                <div class="item-header">
+                    <div class="item-info">
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-category">${item.category}</div>
+                    </div>
+                    <span class="item-qty">Qté: ${item.quantity}</span>
+                    <button type="button" class="btn-remove" onclick="removeItem('${id}')">Retirer</button>
                 </div>
-                <span class="item-qty">Qté: ${item.quantity}</span>
-                <button type="button" class="btn-remove" onclick="removeItem('${id}')">Retirer</button>
+                ${commentHTML}
             `;
             list.appendChild(div);
         });
@@ -1170,9 +1523,15 @@
         selectedItems.forEach((item, id) => {
             const div = document.createElement('div');
             div.className = 'info-row';
+            
+            let commentText = '';
+            if (item.comment) {
+                commentText = `<br><small style="color: #92400e; font-style: italic;">💬 ${item.comment}</small>`;
+            }
+            
             div.innerHTML = `
                 <span class="info-label">${item.name}</span>
-                <span class="info-value">Quantité: ${item.quantity} (${item.category})</span>
+                <span class="info-value">Quantité: ${item.quantity} (${item.category})${commentText}</span>
             `;
             verifyList.appendChild(div);
         });
@@ -1186,11 +1545,21 @@
         }
 
         selectedItems.forEach((item, id) => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'items[]';
-            input.value = `${id}:${item.quantity}`;
-            this.appendChild(input);
+            // Ajouter l'item avec quantité
+            const inputItem = document.createElement('input');
+            inputItem.type = 'hidden';
+            inputItem.name = 'items[]';
+            inputItem.value = `${id}:${item.quantity}`;
+            this.appendChild(inputItem);
+            
+            // Ajouter le commentaire si présent
+            if (item.comment) {
+                const inputComment = document.createElement('input');
+                inputComment.type = 'hidden';
+                inputComment.name = `comment_${id}`;
+                inputComment.value = item.comment;
+                this.appendChild(inputComment);
+            }
         });
     });
 

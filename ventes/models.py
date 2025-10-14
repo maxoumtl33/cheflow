@@ -175,6 +175,7 @@ class ItemChecklist(models.Model):
     checklist = models.ForeignKey(Checklist, on_delete=models.CASCADE, related_name='items')
     objet = models.ForeignKey(ObjetChecklist, on_delete=models.PROTECT)
     quantite = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    quantite = models.DecimalField(max_digits=10, decimal_places=2, default=1)
     ordre = models.IntegerField(default=0)
     
     # Statut de vérification

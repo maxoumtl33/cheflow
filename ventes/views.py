@@ -1,16 +1,37 @@
 # ==================== ventes/views.py ====================
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.db.models import Q, Count, Prefetch
 from django.utils import timezone
-from datetime import datetime, timedelta
-from .models import Checklist, ItemChecklist, CategorieObjet, ObjetChecklist
+from datetime import datetime, timedelta, date
+from .models import Checklist, ItemChecklist, CategorieObjet, ObjetChecklist, Soumission
 from django.contrib import messages
 import json
-from hotel.models import Contrat
+from hotel.models import Contrat, PhotoContrat, HistoriqueContrat
 from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.conf import settings
+from collections import defaultdict
+
+User = get_user_model()
+
+# ============ FONCTION HELPER POUR REDIRECTIONS ============
+def get_user_dashboard_redirect(user):
+    """Retourne l'objet redirect approprié selon le rôle de l'utilisateur"""
+    print(f"🔍 DEBUG get_user_dashboard_redirect - Role: {user.role}, Username: {user.username}")
+    
+    if user.role == 'resp_ventes':
+        print("✅ Redirection vers dashboard_responsable")
+        return redirect('ventes:dashboard_responsable')
+    elif user.role == 'vendeur':
+        print("✅ Redirection vers dashboard_vendeuse")
+        return redirect('ventes:dashboard_vendeuse')
+    else:
+        # Pour les autres rôles, utiliser la méthode du modèle
+        dashboard_url = user.get_dashboard_url()
+        print(f"✅ Redirection vers {dashboard_url}")
+        return redirect(dashboard_url)
 
 @login_required
 def dashboard_vendeuse(request):
@@ -46,12 +67,6 @@ def dashboard_vendeuse(request):
             'progression': checklist.progression()
         })
     
-    # ============ CONTRATS ============
-    from hotel.models import Contrat
-    from django.contrib.auth import get_user_model
-    
-    User = get_user_model()
-    
     # Récupérer tous les contrats
     contrats = Contrat.objects.select_related(
         'maitre_hotel', 'cree_par'
@@ -60,14 +75,10 @@ def dashboard_vendeuse(request):
     # Liste des maîtres d'hôtel pour les filtres
     maitres_hotel = User.objects.filter(role='maitre_hotel', is_active=True)
     
-    # ============ SOUMISSIONS ============
-    from ventes.models import Soumission
-    
     # Récupérer toutes les soumissions
     soumissions = Soumission.objects.select_related(
         'cree_par'
     ).order_by('-date_evenement')
-    # =====================================
     
     context = {
         'checklists_data': json.dumps(checklists_par_date),
@@ -79,6 +90,7 @@ def dashboard_vendeuse(request):
     }
     
     return render(request, 'ventes/vendeuse/dashboard.html', context)
+
 @login_required
 def checklists_by_date(request, date):
     """Liste des checklists pour une date donnée"""
@@ -91,7 +103,6 @@ def checklists_by_date(request, date):
     # Filtrer selon l'onglet (all ou mine)
     view_type = request.GET.get('view', 'all')
     
-    # CORRECTION: Utiliser date_evenement
     checklists = Checklist.objects.filter(date_evenement=date_obj)
     
     if view_type == 'mine':
@@ -106,8 +117,6 @@ def checklists_by_date(request, date):
     }
     
     return render(request, 'ventes/vendeuse/checklists_date.html', context)
-
-
 
 @login_required
 def checklist_detail(request, pk):
@@ -132,7 +141,7 @@ def checklist_detail(request, pk):
     
     # Calculer les statistiques
     total_items = items.count()
-    verified_items = items.filter(statut_verification = 'valide').count()
+    verified_items = items.filter(statut_verification='valide').count()
     pending_items = total_items - verified_items
     
     # Vérifier les permissions
@@ -152,14 +161,6 @@ def checklist_detail(request, pk):
     
     return render(request, 'ventes/vendeuse/checklist_detail.html', context)
 
-
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.db.models import Prefetch
-from .models import Checklist, ItemChecklist, CategorieObjet, ObjetChecklist
-
-
 @login_required
 def checklist_create(request):
     """Créer une nouvelle checklist"""
@@ -174,20 +175,12 @@ def checklist_create(request):
         notes = request.POST.get('notes', '')
         items_data = request.POST.getlist('items[]')
         
-        # ✅ FORMATER LE NUMÉRO DE COMMANDE
-        # Si l'utilisateur entre "49589", on transforme en "CMD-49589"
+        # Formater le numéro de commande
         if numero_commande_brut:
-            # Enlever le préfixe CMD- s'il existe déjà (au cas où)
             numero_sans_prefix = numero_commande_brut.replace('CMD-', '').strip()
-            # Ajouter le préfixe CMD-
             numero_commande = f"CMD-{numero_sans_prefix}"
         else:
             numero_commande = ''
-        
-        # Debug
-        print(f"DEBUG - numero_commande_brut: {numero_commande_brut}")
-        print(f"DEBUG - numero_commande formaté: {numero_commande}")
-        print(f"nom: {nom}, date: {date_evenement}")
         
         # Vérifier que les champs obligatoires sont présents
         if not nom or not numero_commande or not date_evenement:
@@ -221,21 +214,27 @@ def checklist_create(request):
             # Créer la checklist
             checklist = Checklist.objects.create(
                 nom=nom,
-                numero_commande=numero_commande,  # ✅ Avec le préfixe CMD-
+                numero_commande=numero_commande,
                 creee_par=request.user,
                 date_evenement=date_evenement,
                 notes=notes,
                 status='brouillon'
             )
             
-            # Ajouter les items
+            # Ajouter les items avec leurs commentaires
             for item_str in items_data:
                 try:
                     objet_id, quantite = item_str.split(':')
+                    
+                    # Récupérer le commentaire pour cet objet (s'il existe)
+                    comment_key = f'comment_{objet_id}'
+                    comment = request.POST.get(comment_key, '')
+                    
                     ItemChecklist.objects.create(
                         checklist=checklist,
                         objet_id=int(objet_id),
-                        quantite=float(quantite)
+                        quantite=float(quantite),
+                        notes=comment  # Sauvegarder le commentaire
                     )
                 except (ValueError, IndexError) as e:
                     print(f"Erreur parsing item {item_str}: {e}")
@@ -255,8 +254,6 @@ def checklist_create(request):
     }
     
     return render(request, 'ventes/vendeuse/checklist_create.html', context)
-
-
 @login_required
 def checklist_edit(request, pk):
     """Modifier une checklist"""
@@ -281,16 +278,12 @@ def checklist_edit(request, pk):
         notes = request.POST.get('notes', '')
         items_data = request.POST.getlist('items[]')
         
-        # ✅ FORMATER LE NUMÉRO DE COMMANDE
+        # Formater le numéro de commande
         if numero_commande_brut:
             numero_sans_prefix = numero_commande_brut.replace('CMD-', '').strip()
             numero_commande = f"CMD-{numero_sans_prefix}"
         else:
             numero_commande = ''
-        
-        # Debug
-        print(f"POST data: nom={nom}, numero={numero_commande}, date={date_evenement}")
-        print(f"Items: {items_data}")
         
         # Vérifier les champs obligatoires
         if not nom or not numero_commande or not date_evenement:
@@ -315,7 +308,7 @@ def checklist_edit(request, pk):
         try:
             # Mettre à jour les informations de base de la checklist
             checklist.nom = nom
-            checklist.numero_commande = numero_commande  # ✅ Avec le préfixe CMD-
+            checklist.numero_commande = numero_commande
             checklist.date_evenement = date_evenement
             checklist.notes = notes
             checklist.save()
@@ -376,7 +369,6 @@ def checklist_edit(request, pk):
     
     return render(request, 'ventes/vendeuse/checklist_edit.html', context)
 
-
 @login_required
 def checklist_delete(request, pk):
     """Supprimer une checklist"""
@@ -392,7 +384,7 @@ def checklist_delete(request, pk):
         numero_commande = checklist.numero_commande
         checklist.delete()
         messages.success(request, f"Checklist {numero_commande} supprimée avec succès!")
-        return redirect('ventes:dashboard_responsable')
+        return get_user_dashboard_redirect(request.user)
     
     return render(request, 'ventes/vendeuse/checklist_confirm_delete.html', {'checklist': checklist})
 
@@ -436,18 +428,17 @@ def checklist_duplicate(request, pk):
         messages.error(request, f"Erreur lors de la duplication: {str(e)}")
         return redirect('ventes:checklist_detail', pk=pk)
 
-
 @login_required
 def toggle_item_validation(request, pk):
     """Toggle validation d'un item (AJAX)"""
     if request.method == 'POST':
         item = get_object_or_404(ItemChecklist, pk=pk)
         
-        # Toggle la validation - UTILISER LE BON CHAMP
-        item.verifie = not item.verifie  # Au lieu de 'valide'
+        # Toggle la validation
+        item.verifie = not item.verifie
         if item.verifie:
-            item.date_verification = timezone.now()  # Au lieu de 'date_validation'
-            item.verifie_par = request.user  # Au lieu de 'valideur'
+            item.date_verification = timezone.now()
+            item.verifie_par = request.user
         else:
             item.date_verification = None
             item.verifie_par = None
@@ -463,13 +454,13 @@ def toggle_item_validation(request, pk):
             checklist.verificateur = request.user
             checklist.date_verification = timezone.now()
         else:
-            checklist.status = 'en_cours'  # ou 'brouillon'
+            checklist.status = 'en_cours'
         checklist.save()
         
         return JsonResponse({
             'success': True,
             'verifie': item.verifie,
-            'progression': checklist.progression(),  # Méthode de votre modèle
+            'progression': checklist.progression(),
             'status': checklist.status
         })
     
@@ -505,26 +496,6 @@ def update_item_quantity(request, pk):
     
     return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=400)
 
-
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import get_user_model
-from django.shortcuts import render
-from django.db.models import Count
-from .models import Checklist, ObjetChecklist, CategorieObjet
-
-User = get_user_model()
-
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import get_user_model
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.db.models import Count
-from collections import defaultdict
-from datetime import date
-from .models import Checklist, ObjetChecklist, CategorieObjet
-
-User = get_user_model()
-
 @login_required
 def dashboard_responsable(request):
     """Dashboard pour les responsables ventes"""
@@ -532,7 +503,7 @@ def dashboard_responsable(request):
     # Vérifier que l'utilisateur est responsable ventes
     if request.user.role != 'resp_ventes':
         messages.error(request, "Accès réservé aux responsables ventes")
-        return redirect('ventes:dashboard_vendeuse')
+        return get_user_dashboard_redirect(request.user)
     
     # Récupérer toutes les checklists
     checklists = Checklist.objects.select_related(
@@ -611,18 +582,6 @@ def dashboard_responsable(request):
     
     return render(request, 'ventes/responsable/dashboard_responsable.html', context)
 
-
-# views.py
-
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from .models import ObjetChecklist, CategorieObjet
-
-User = get_user_model()
-
 # ============ CRUD OBJETS ============
 
 @login_required
@@ -630,7 +589,7 @@ def objet_create(request):
     """Créer un nouvel objet"""
     if request.user.role != 'resp_ventes':
         messages.error(request, "Accès réservé aux responsables ventes")
-        return redirect('ventes:dashboard_vendeuse')
+        return get_user_dashboard_redirect(request.user)
     
     categories = CategorieObjet.objects.filter(actif=True).order_by('ordre', 'nom')
     
@@ -665,13 +624,12 @@ def objet_create(request):
     
     return render(request, 'ventes/responsable/objet_form.html', {'categories': categories})
 
-
 @login_required
 def objet_edit(request, pk):
     """Modifier un objet"""
     if request.user.role != 'resp_ventes':
         messages.error(request, "Accès réservé aux responsables ventes")
-        return redirect('ventes:dashboard_vendeuse')
+        return get_user_dashboard_redirect(request.user)
     
     objet = get_object_or_404(ObjetChecklist, pk=pk)
     categories = CategorieObjet.objects.filter(actif=True).order_by('ordre', 'nom')
@@ -721,13 +679,12 @@ def objet_edit(request, pk):
         'form': form_data
     })
 
-
 @login_required
 def objet_delete(request, pk):
     """Supprimer un objet"""
     if request.user.role != 'resp_ventes':
         messages.error(request, "Accès réservé aux responsables ventes")
-        return redirect('ventes:dashboard_vendeuse')
+        return get_user_dashboard_redirect(request.user)
     
     objet = get_object_or_404(ObjetChecklist, pk=pk)
     
@@ -739,7 +696,6 @@ def objet_delete(request, pk):
     
     return render(request, 'ventes/responsable/objet_confirm_delete.html', {'objet': objet})
 
-
 # ============ CRUD CATÉGORIES ============
 
 @login_required
@@ -747,7 +703,7 @@ def categorie_create(request):
     """Créer une nouvelle catégorie"""
     if request.user.role != 'resp_ventes':
         messages.error(request, "Accès réservé aux responsables ventes")
-        return redirect('ventes:dashboard_vendeuse')
+        return get_user_dashboard_redirect(request.user)
     
     colors = [
         ('slate', 'Ardoise'), ('red', 'Rouge'), ('orange', 'Orange'),
@@ -787,13 +743,12 @@ def categorie_create(request):
     
     return render(request, 'ventes/responsable/categorie_form.html', {'colors': colors})
 
-
 @login_required
 def categorie_edit(request, pk):
     """Modifier une catégorie"""
     if request.user.role != 'resp_ventes':
         messages.error(request, "Accès réservé aux responsables ventes")
-        return redirect('ventes:dashboard_vendeuse')
+        return get_user_dashboard_redirect(request.user)
     
     categorie = get_object_or_404(CategorieObjet, pk=pk)
     colors = [
@@ -847,13 +802,12 @@ def categorie_edit(request, pk):
         'form': form_data
     })
 
-
 @login_required
 def categorie_delete(request, pk):
     """Supprimer une catégorie"""
     if request.user.role != 'resp_ventes':
         messages.error(request, "Accès réservé aux responsables ventes")
-        return redirect('ventes:dashboard_vendeuse')
+        return get_user_dashboard_redirect(request.user)
     
     categorie = get_object_or_404(CategorieObjet, pk=pk)
     
@@ -869,7 +823,6 @@ def categorie_delete(request, pk):
     
     return render(request, 'ventes/responsable/categorie_confirm_delete.html', {'categorie': categorie})
 
-
 # ============ CRUD VENDEUSES ============
 
 @login_required
@@ -877,7 +830,7 @@ def vendeuse_create(request):
     """Créer une nouvelle vendeuse"""
     if request.user.role != 'resp_ventes':
         messages.error(request, "Accès réservé aux responsables ventes")
-        return redirect('ventes:dashboard_vendeuse')
+        return get_user_dashboard_redirect(request.user)
     
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -920,8 +873,6 @@ def vendeuse_create(request):
                 role='vendeur'
             )
             
-            
-            
             messages.success(request, f"Vendeuse '{user.get_full_name()}' créée avec succès!")
             return redirect('ventes:dashboard_responsable')
         except Exception as e:
@@ -929,15 +880,14 @@ def vendeuse_create(request):
     
     return render(request, 'ventes/responsable/vendeuse_form.html', {})
 
-
 @login_required
 def vendeuse_edit(request, pk):
     """Modifier une vendeuse"""
     if request.user.role != 'resp_ventes':
         messages.error(request, "Accès réservé aux responsables ventes")
-        return redirect('ventes:dashboard_vendeuse')
+        return get_user_dashboard_redirect(request.user)
     
-    vendeuse = get_object_or_404(User, pk=pk, groups__name='Vendeuse')
+    vendeuse = get_object_or_404(User, pk=pk, role='vendeur')
     
     if request.method == 'POST':
         first_name = request.POST.get('first_name')
@@ -955,7 +905,7 @@ def vendeuse_edit(request, pk):
         # Vérifier si l'email existe déjà (sauf pour cet utilisateur)
         if User.objects.filter(email=email).exclude(pk=pk).exists():
             messages.error(request, "Cet email est déjà utilisé")
-            return render(request, 'ventes/vendeuse_form.html', {
+            return render(request, 'ventes/responsable/vendeuse_form.html', {
                 'vendeuse': vendeuse,
                 'form': request.POST
             })
@@ -985,24 +935,16 @@ def vendeuse_edit(request, pk):
         'form': form_data
     })
 
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import Http404
-from users.models import CustomUser
-
 @login_required
 def vendeuse_delete(request, pk):
     """Suppression d'une vendeuse"""
     
-    # Vérifier que l'utilisateur a les droits (responsable uniquement)
     if request.user.role != 'resp_ventes':
         messages.error(request, "Vous n'avez pas les permissions nécessaires.")
-        return redirect('ventes:dashboard_vendeuse')
+        return get_user_dashboard_redirect(request.user)
     
     try:
-        # Récupérer l'utilisateur vendeuse
+        from users.models import CustomUser
         vendeuse = get_object_or_404(CustomUser, pk=pk, role='vendeur')
         
         if request.method == 'POST':
@@ -1011,10 +953,7 @@ def vendeuse_delete(request, pk):
             messages.success(request, f"La vendeuse {vendeuse_nom} a été supprimée avec succès.")
             return redirect('ventes:dashboard_responsable')
         
-        # Si GET, afficher une page de confirmation
-        context = {
-            'vendeuse': vendeuse,
-        }
+        context = {'vendeuse': vendeuse}
         return render(request, 'ventes/responsable/vendeuse_confirm_delete.html', context)
         
     except Http404:
@@ -1023,8 +962,6 @@ def vendeuse_delete(request, pk):
     except Exception as e:
         messages.error(request, f"Erreur lors de la suppression : {str(e)}")
         return redirect('ventes:dashboard_responsable')
-
-# ventes/views.py
 
 @login_required
 def supprimer_item_checklist(request, item_id):
@@ -1037,7 +974,7 @@ def supprimer_item_checklist(request, item_id):
     objet_nom = item.objet.nom
     statut = item.statut_verification
     
-    # ✅ Si l'item a été vérifié (validé ou refusé), demander confirmation
+    # Si l'item a été vérifié (validé ou refusé), demander confirmation
     if item.date_verification and not request.POST.get('force_delete'):
         return JsonResponse({
             'success': False,
@@ -1048,19 +985,14 @@ def supprimer_item_checklist(request, item_id):
         })
     
     # Suppression confirmée ou item jamais vérifié
-    item.delete()  # Le signal post_delete gère l'historique automatiquement
+    item.delete()
     
     return JsonResponse({
         'success': True,
         'message': f"Item '{objet_nom}' supprimé avec succès"
     })
 
-# ============ CRUD CONTRATS - Ajout à ventes/views.py ============
-
-from hotel.models import Contrat, PhotoContrat, HistoriqueContrat
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
+# ============ CRUD CONTRATS ============
 
 @login_required
 def contrat_list(request):
@@ -1090,14 +1022,17 @@ def contrat_list(request):
     
     return render(request, 'ventes/contrats/contrat_list.html', context)
 
-
 @login_required
 def contrat_create_step1(request):
     """Étape 1: Identifiants + associer un maître d'hôtel"""
     
-    # ✅ NETTOYER LA SESSION au début si c'est une nouvelle création
+    # Vérifier permissions
+    if request.user.role not in ['resp_ventes', 'vendeur']:
+        messages.error(request, "Vous n'avez pas la permission de créer un contrat")
+        return get_user_dashboard_redirect(request.user)
+    
+    # Nettoyer la session au début si c'est une nouvelle création
     if request.method == 'GET' and 'new' in request.GET:
-        # Supprimer les données de session si on commence une nouvelle création
         if 'contrat_step1' in request.session:
             del request.session['contrat_step1']
         if 'contrat_step2' in request.session:
@@ -1153,9 +1088,6 @@ def contrat_create_step1(request):
     }
     
     return render(request, 'ventes/contrats/contrat_create_step1.html', context)
-# Dans ventes/views.py - Remplacer la fonction contrat_create_step2
-
-from django.conf import settings
 
 @login_required
 def contrat_create_step2(request):
@@ -1192,7 +1124,7 @@ def contrat_create_step2(request):
             messages.error(request, "Veuillez remplir tous les champs obligatoires")
             context = {
                 'form_data': step2_data,
-                'google_api_key': settings.GOOGLE_PLACES_API_KEY,  # ✅ Ajouter la clé API
+                'google_api_key': settings.GOOGLE_MAPS_API_KEY,
             }
             return render(request, 'ventes/contrats/contrat_create_step2.html', context)
         
@@ -1202,15 +1134,13 @@ def contrat_create_step2(request):
         return redirect('ventes:contrat_create_step3')
     
     # GET - Afficher le formulaire
-    # Pré-remplir avec les données de la checklist si disponible
     form_data = request.session.get('contrat_step2', {})
     
-    # ✅ Si pas de données en session, utiliser les valeurs par défaut de la checklist (si existe)
+    # Si pas de données en session, utiliser les valeurs par défaut de la checklist (si existe)
     if not form_data:
         step1 = request.session.get('contrat_step1', {})
         if step1.get('checklist_id'):
             try:
-                from .models import Checklist
                 checklist = Checklist.objects.get(pk=step1['checklist_id'])
                 form_data = {
                     'date_evenement': checklist.date_evenement.strftime('%Y-%m-%d'),
@@ -1222,7 +1152,7 @@ def contrat_create_step2(request):
     
     context = {
         'form_data': form_data,
-        'google_api_key': settings.GOOGLE_MAPS_API_KEY,  # ✅ Ajouter la clé API
+        'google_api_key': settings.GOOGLE_MAPS_API_KEY,
     }
     
     return render(request, 'ventes/contrats/contrat_create_step2.html', context)
@@ -1324,7 +1254,6 @@ def contrat_create_step3(request):
     
     return render(request, 'ventes/contrats/contrat_create_step3.html', context)
 
-
 @login_required
 def contrat_detail(request, pk):
     """Détail d'un contrat"""
@@ -1346,7 +1275,6 @@ def contrat_detail(request, pk):
     }
     
     return render(request, 'ventes/contrats/contrat_detail.html', context)
-
 
 @login_required
 def contrat_edit(request, pk):
@@ -1404,7 +1332,6 @@ def contrat_edit(request, pk):
     
     return render(request, 'ventes/contrats/contrat_edit.html', context)
 
-
 @login_required
 def contrat_delete(request, pk):
     """Supprimer un contrat"""
@@ -1419,13 +1346,10 @@ def contrat_delete(request, pk):
         numero = contrat.numero_contrat
         contrat.delete()
         messages.success(request, f"Contrat {numero} supprimé avec succès")
-        return redirect('ventes:dashboard_vendeuse')
+        return get_user_dashboard_redirect(request.user)
     
     context = {'contrat': contrat}
     return render(request, 'ventes/contrats/contrat_confirm_delete.html', context)
-
-
-# Ajouter cette vue dans ventes/views.py
 
 @login_required
 def contrat_from_checklist(request, checklist_id):
@@ -1437,14 +1361,13 @@ def contrat_from_checklist(request, checklist_id):
     numero_commande = checklist.numero_commande.strip()
     
     # Si le numéro commence déjà par CMD-, on le garde tel quel
-    # Sinon, on l'ajoute
     if not numero_commande.startswith('CMD-'):
         numero_avec_prefix = f"CMD-{numero_commande}"
     else:
         numero_avec_prefix = numero_commande
     
     request.session['contrat_step1'] = {
-        'numero_contrat': numero_avec_prefix,  # ✅ AVEC le préfixe CMD-
+        'numero_contrat': numero_avec_prefix,
         'nom_evenement': checklist.nom,
         'maitre_hotel_id': None,
         'checklist_id': str(checklist.id),
@@ -1473,10 +1396,6 @@ def contrat_from_checklist(request, checklist_id):
     # Rediriger vers l'étape 2 (puisque l'étape 1 est déjà pré-remplie)
     return redirect('ventes:contrat_create_step2')
 
-# ventes/views.py - Ajouter à la fin du fichier
-
-from .models import Soumission
-
 # ============ CRUD SOUMISSIONS ============
 
 @login_required
@@ -1496,18 +1415,12 @@ def soumission_list(request):
     
     return render(request, 'ventes/soumissions/soumission_list.html', context)
 
-
-
-# ventes/views.py
-
-from django.conf import settings
-
 @login_required
 def soumission_create(request):
     """Créer une nouvelle soumission"""
     if request.user.role not in ['resp_ventes', 'vendeur']:
         messages.error(request, "Vous n'avez pas la permission de créer une soumission")
-        return redirect('ventes:dashboard_responsable')
+        return get_user_dashboard_redirect(request.user)
     
     if request.method == 'POST':
         nom_compagnie = request.POST.get('nom_compagnie')
@@ -1521,7 +1434,6 @@ def soumission_create(request):
         email = request.POST.get('email')
         telephone = request.POST.get('telephone')
         notes = request.POST.get('notes', '')
-        # notes_client supprimé
         
         # Validation
         if not all([nom_compagnie, date_evenement, nombre_personnes, 
@@ -1529,7 +1441,7 @@ def soumission_create(request):
             messages.error(request, "Veuillez remplir tous les champs obligatoires")
             context = {
                 'form_data': request.POST,
-                'google_api_key': settings.GOOGLE_MAPS_API_KEY,  # ✅ AJOUTÉ
+                'google_api_key': settings.GOOGLE_MAPS_API_KEY,
             }
             return render(request, 'ventes/soumissions/soumission_form.html', context)
         
@@ -1546,7 +1458,6 @@ def soumission_create(request):
                 email=email,
                 telephone=telephone,
                 notes=notes,
-                # notes_client supprimé
                 cree_par=request.user,
                 statut='en_cours'
             )
@@ -1560,10 +1471,9 @@ def soumission_create(request):
             traceback.print_exc()
     
     context = {
-        'google_api_key': settings.GOOGLE_MAPS_API_KEY,  # ✅ AJOUTÉ
+        'google_api_key': settings.GOOGLE_MAPS_API_KEY,
     }
     return render(request, 'ventes/soumissions/soumission_form.html', context)
-
 
 @login_required
 def soumission_edit(request, pk):
@@ -1574,6 +1484,18 @@ def soumission_edit(request, pk):
     if request.user.role not in ['resp_ventes', 'vendeur']:
         messages.error(request, "Vous n'avez pas la permission de modifier cette soumission")
         return redirect('ventes:soumission_detail', pk=pk)
+    
+    # Une vendeuse ne peut modifier que ses propres soumissions
+    if request.user.role == 'vendeur' and soumission.cree_par != request.user:
+        messages.error(request, "Vous ne pouvez modifier que vos propres soumissions")
+        return redirect('ventes:soumission_detail', pk=pk)
+    
+    # Récupérer tous les vendeurs pour la liste déroulante (uniquement pour resp_ventes)
+    vendeurs = []
+    if request.user.role == 'resp_ventes':
+        vendeurs = User.objects.filter(
+            role__in=['vendeur', 'resp_ventes']
+        ).order_by('first_name', 'last_name', 'username')
     
     if request.method == 'POST':
         nom_compagnie = request.POST.get('nom_compagnie')
@@ -1587,7 +1509,6 @@ def soumission_edit(request, pk):
         email = request.POST.get('email')
         telephone = request.POST.get('telephone')
         notes = request.POST.get('notes', '')
-        # notes_client supprimé
         statut = request.POST.get('statut', soumission.statut)
         
         # Validation
@@ -1596,11 +1517,31 @@ def soumission_edit(request, pk):
             messages.error(request, "Veuillez remplir tous les champs obligatoires")
             context = {
                 'soumission': soumission,
-                'google_api_key': settings.GOOGLE_MAPS_API_KEY,  # ✅ AJOUTÉ
+                'vendeurs': vendeurs,
+                'can_edit': True,
+                'google_api_key': settings.GOOGLE_MAPS_API_KEY,
             }
             return render(request, 'ventes/soumissions/soumission_form.html', context)
         
         try:
+            # Réassignation (uniquement pour resp_ventes)
+            if request.user.role == 'resp_ventes':
+                nouveau_vendeur_id = request.POST.get('cree_par')
+                if nouveau_vendeur_id:
+                    try:
+                        nouveau_vendeur = User.objects.get(id=nouveau_vendeur_id)
+                        if soumission.cree_par != nouveau_vendeur:
+                            ancien_vendeur = soumission.cree_par
+                            soumission.cree_par = nouveau_vendeur
+                            messages.info(
+                                request, 
+                                f"📋 Soumission réassignée de {ancien_vendeur.get_full_name() or ancien_vendeur.username} "
+                                f"à {nouveau_vendeur.get_full_name() or nouveau_vendeur.username}"
+                            )
+                    except User.DoesNotExist:
+                        messages.warning(request, "Vendeur non trouvé. La soumission n'a pas été réassignée.")
+            
+            # Mise à jour des champs
             soumission.nom_compagnie = nom_compagnie
             soumission.date_evenement = date_evenement
             soumission.nombre_personnes = int(nombre_personnes)
@@ -1612,7 +1553,6 @@ def soumission_edit(request, pk):
             soumission.email = email
             soumission.telephone = telephone
             soumission.notes = notes
-            # notes_client supprimé
             soumission.statut = statut
             soumission.save()
             
@@ -1624,9 +1564,12 @@ def soumission_edit(request, pk):
     
     context = {
         'soumission': soumission,
-        'google_api_key': settings.GOOGLE_MAPS_API_KEY,  # ✅ AJOUTÉ
+        'vendeurs': vendeurs,
+        'can_edit': True,
+        'google_api_key': settings.GOOGLE_MAPS_API_KEY,
     }
     return render(request, 'ventes/soumissions/soumission_form.html', context)
+
 
 @login_required
 def soumission_detail(request, pk):
@@ -1643,9 +1586,6 @@ def soumission_detail(request, pk):
     
     return render(request, 'ventes/soumissions/soumission_detail.html', context)
 
-
-
-
 @login_required
 def soumission_delete(request, pk):
     """Supprimer une soumission"""
@@ -1660,11 +1600,10 @@ def soumission_delete(request, pk):
         numero = soumission.numero_soumission
         soumission.delete()
         messages.success(request, f"Soumission {numero} supprimée avec succès")
-        return redirect('ventes:dashboard_responsable')
+        return get_user_dashboard_redirect(request.user)
     
     context = {'soumission': soumission}
     return render(request, 'ventes/soumissions/soumission_confirm_delete.html', context)
-
 
 @login_required
 def soumission_duplicate(request, pk):
@@ -1672,9 +1611,8 @@ def soumission_duplicate(request, pk):
     original = get_object_or_404(Soumission, pk=pk)
     
     try:
-        # ✅ Ne pas spécifier de numéro, il sera auto-généré
+        # Ne pas spécifier de numéro, il sera auto-généré
         nouvelle_soumission = Soumission.objects.create(
-            # numero_soumission sera auto-généré
             nom_compagnie=original.nom_compagnie,
             date_evenement=original.date_evenement,
             nombre_personnes=original.nombre_personnes,
@@ -1727,7 +1665,6 @@ def soumission_accepter(request, pk):
     
     return redirect('ventes:soumission_detail', pk=pk)
 
-
 @login_required
 def soumission_refuser(request, pk):
     """Marquer une soumission comme refusée"""
@@ -1744,3 +1681,30 @@ def soumission_refuser(request, pk):
         return redirect('ventes:soumission_detail', pk=pk)
     
     return redirect('ventes:soumission_detail', pk=pk)
+
+@login_required
+def item_add_comment(request, item_id):
+    """Ajouter/modifier un commentaire sur un item"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+    
+    item = get_object_or_404(ItemChecklist, id=item_id)
+    
+    # Vérifier les permissions
+    if not (request.user.role in ['resp_ventes', 'vendeur'] or 
+            item.checklist.creee_par == request.user):
+        return JsonResponse({'error': 'Permission refusée'}, status=403)
+    
+    commentaire = request.POST.get('commentaire', '').strip()
+    
+    try:
+        item.notes = commentaire
+        item.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Commentaire enregistré',
+            'commentaire': commentaire
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

@@ -306,7 +306,52 @@
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
     }
+    .btn-comment:hover {
+    background: #e5e7eb;
+    transform: translateY(-1px);
+}
 
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.comment-textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 0.875rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    font-size: 1rem;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.comment-textarea:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
     .alert {
         padding: 1rem;
         border-radius: 10px;
@@ -385,38 +430,58 @@
             <div id="tableContainer">
                 {% if items %}
                 <table class="items-table" id="itemsTable">
-                    <thead>
-                        <tr>
-                            <th>Objet</th>
-                            <th>Catégorie</th>
-                            <th>Quantité</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="itemsTableBody">
-                        {% for item in items %}
-                        <tr data-item-id="{{ item.objet.id }}" 
-                            data-db-item-id="{{ item.id }}"
-                            data-quantity="{{ item.quantite|stringformat:'g' }}">
-                            <td><strong>{{ item.objet.nom }}</strong></td>
-                            <td>{{ item.objet.categorie.nom }}</td>
-                            <td>
-                                <input type="number" 
-                                       class="qty-input" 
-                                       min="1" 
-                                       step="0.01"
-                                       value="{{ item.quantite|stringformat:'g' }}" 
-                                       data-object-id="{{ item.objet.id }}">
-                            </td>
-                            <td>
-                                <button type="button" class="btn-remove-item" onclick="removeItem({{ item.objet.id }})">
-                                    Supprimer
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <thead>
+        <tr>
+            <th>Objet</th>
+            <th>Catégorie</th>
+            <th>Quantité</th>
+            <th>Commentaire</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody id="itemsTableBody">
+        {% for item in items %}
+        <tr data-item-id="{{ item.objet.id }}" 
+            data-db-item-id="{{ item.id }}"
+            data-quantity="{{ item.quantite|stringformat:'g' }}">
+            <td><strong>{{ item.objet.nom }}</strong></td>
+            <td>{{ item.objet.categorie.nom }}</td>
+            <td>
+                <input type="number" 
+                       class="qty-input" 
+                       min="1" 
+                       step="0.01"
+                       value="{{ item.quantite|stringformat:'g' }}" 
+                       data-object-id="{{ item.objet.id }}">
+            </td>
+            <td>
+                <button type="button" 
+                        class="btn-comment" 
+                        onclick="openCommentModal({{ item.id }}, '{{ item.objet.nom|escapejs }}', '{{ item.notes|escapejs }}')"
+                        style="background: #f3f4f6; color: #374151; border: none; padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.875rem; font-weight: 600; transition: all 0.3s ease;">
+                    {% if item.notes %}
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="display: inline; vertical-align: middle;">
+                            <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"/>
+                            <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"/>
+                        </svg>
+                        Modifier
+                    {% else %}
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: inline; vertical-align: middle;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Ajouter
+                    {% endif %}
+                </button>
+            </td>
+            <td>
+                <button type="button" class="btn-remove-item" onclick="removeItem({{ item.objet.id }})">
+                    Supprimer
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
                 {% else %}
                 <div class="empty-state" id="emptyState">
                     <p>Aucun objet dans cette checklist. Ajoutez-en depuis la colonne de droite.</p>
@@ -469,8 +534,93 @@
         </div>
     </div>
 </div>
+<!-- Modal Commentaire -->
+<div id="commentModal" class="modal-overlay">
+    <div class="modal-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #1f2937;">
+                Commentaire
+            </h3>
+            <button onclick="closeCommentModal()" style="background: #f3f4f6; border: none; width: 40px; height: 40px; border-radius: 8px; cursor: pointer;">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        
+        <div style="margin-bottom: 1rem;">
+            <div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;" id="commentObjectName"></div>
+        </div>
+        
+        <textarea id="commentTextarea" 
+                  class="comment-textarea" 
+                  placeholder="Ajoutez un commentaire pour cet item..."></textarea>
+        
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <button onclick="closeCommentModal()" 
+                    style="flex: 1; padding: 0.875rem; background: #f3f4f6; color: #374151; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                Annuler
+            </button>
+            <button onclick="saveComment()" 
+                    style="flex: 1; padding: 0.875rem; background: #6366f1; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+                Enregistrer
+            </button>
+        </div>
+    </div>
+</div>
 
 <script>
+    let currentCommentItemId = null;
+
+function openCommentModal(itemId, objectName, currentComment) {
+    currentCommentItemId = itemId;
+    document.getElementById('commentObjectName').textContent = objectName;
+    document.getElementById('commentTextarea').value = currentComment || '';
+    document.getElementById('commentModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeCommentModal() {
+    document.getElementById('commentModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+    currentCommentItemId = null;
+}
+
+async function saveComment() {
+    if (!currentCommentItemId) return;
+    
+    const commentaire = document.getElementById('commentTextarea').value.trim();
+    
+    try {
+        const formData = new FormData();
+        formData.append('commentaire', commentaire);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        
+        const response = await fetch(`/ventes/item/${currentCommentItemId}/commentaire/`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            closeCommentModal();
+            location.reload(); // Recharger pour afficher le changement
+        } else {
+            alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue');
+    }
+}
+
+// Fermer le modal avec Échap
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeCommentModal();
+    }
+});
     // Stocker les quantités de tous les objets (initiaux ou modifiés)
     const objectQuantities = {};
     

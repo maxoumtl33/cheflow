@@ -417,27 +417,45 @@
                 </div>
 
                 <div class="options-list">
-                    <div class="option-item">
-                        <svg class="option-icon {% if not soumission.avec_service %}disabled{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                        </svg>
-                        <span>Avec service</span>
-                    </div>
+    <div class="option-item">
+        {% if soumission.avec_service %}
+            <svg class="option-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+        {% else %}
+            <svg class="option-icon disabled" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        {% endif %}
+        <span>Avec service</span>
+    </div>
 
-                    <div class="option-item">
-                        <svg class="option-icon {% if not soumission.location_materiel %}disabled{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                        </svg>
-                        <span>Location matériel</span>
-                    </div>
+    <div class="option-item">
+        {% if soumission.location_materiel %}
+            <svg class="option-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+        {% else %}
+            <svg class="option-icon disabled" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        {% endif %}
+        <span>Location matériel</span>
+    </div>
 
-                    <div class="option-item">
-                        <svg class="option-icon {% if not soumission.avec_alcool %}disabled{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                        </svg>
-                        <span>Avec alcool</span>
-                    </div>
-                </div>
+    <div class="option-item">
+        {% if soumission.avec_alcool %}
+            <svg class="option-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+        {% else %}
+            <svg class="option-icon disabled" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        {% endif %}
+        <span>Avec alcool</span>
+    </div>
+</div>
             </div>
 
             <!-- Coordonnées de contact -->

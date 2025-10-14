@@ -280,6 +280,16 @@
         color: #78350f;
     }
 
+    .item-comment-preview {
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        background: #fef3c7;
+        border-left: 3px solid #f59e0b;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        color: #92400e;
+    }
+
     /* Styles d'impression */
     @media print {
         body {
@@ -316,7 +326,7 @@
 
         .print-header {
             display: block !important;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
             padding: 1.5rem;
             border: 2px solid #000;
             page-break-after: avoid;
@@ -326,29 +336,31 @@
             font-size: 1.8rem;
             margin: 0 0 1rem 0;
             text-align: center;
+            text-transform: uppercase;
+            font-weight: bold;
         }
 
         .print-info-grid {
-            display: none;
-            grid-template-columns: repeat(3, 1fr);
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr);
             gap: 1rem;
             margin-top: 1rem;
         }
 
         .print-info-item {
-            text-align: center;
             padding: 0.5rem;
         }
 
         .print-info-label {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: #666;
             text-transform: uppercase;
             margin-bottom: 0.25rem;
+            font-weight: 600;
         }
 
         .print-info-value {
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: bold;
             color: #000;
         }
@@ -356,7 +368,7 @@
         .category-print-section {
             page-break-inside: avoid;
             margin-bottom: 2rem;
-            display: none;
+            display: block !important;
         }
 
         .category-print-header {
@@ -382,12 +394,14 @@
             padding: 0.5rem;
             text-align: left;
             font-size: 0.9rem;
+            font-weight: bold;
         }
 
         .print-table td {
             border: 1px solid #666;
             padding: 0.5rem;
             font-size: 0.85rem;
+            vertical-align: top;
         }
 
         .print-table tr:nth-child(even) {
@@ -407,6 +421,15 @@
 
         .item-status.en-attente {
             background: #fff9db !important;
+            color: #000 !important;
+        }
+
+        .item-comment-preview {
+            margin-top: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            background: #fff9db !important;
+            border-left: 2px solid #000;
+            font-size: 0.75rem;
             color: #000 !important;
         }
 
@@ -444,18 +467,26 @@
                 <div class="print-info-value">{{ checklist.numero_commande }}</div>
             </div>
             <div class="print-info-item">
-                <div class="print-info-label">Conseiller</div>
-                <div class="print-info-value">{{ checklist.creee_par.get_full_name|default:checklist.creee_par.username }}</div>
+                <div class="print-info-label">Nom</div>
+                <div class="print-info-value">{{ checklist.nom }}</div>
             </div>
             <div class="print-info-item">
-                <div class="print-info-label">Date</div>
+                <div class="print-info-label">Date événement</div>
                 <div class="print-info-value">{{ checklist.date_evenement|date:"d/m/Y" }}</div>
+            </div>
+            <div class="print-info-item">
+                <div class="print-info-label">Vendeur/Conseiller</div>
+                <div class="print-info-value">{{ checklist.creee_par.get_full_name|default:checklist.creee_par.username }}</div>
             </div>
         </div>
     </div>
 
     <div class="header-card">
-        <a href="{% url 'ventes:dashboard_vendeuse' %}" class="back-btn">
+        {% if request.user.role == 'resp_ventes' %}
+            <a href="{% url 'ventes:dashboard_responsable' %}" class="back-btn">
+        {% else %}
+            <a href="{% url 'ventes:dashboard_vendeuse' %}" class="back-btn">
+        {% endif %}
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
@@ -584,15 +615,23 @@
             <table class="print-table">
                 <thead>
                     <tr>
-                        <th style="width: 70%;">Objet</th>
-                        <th style="width: 30%;">Quantité</th>
+                        <th style="width: 50%;">Objet</th>
+                        <th style="width: 15%;">Quantité</th>
+                        <th style="width: 35%;">Commentaires</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in items %}
                     <tr>
                         <td>{{ item.objet.nom }}</td>
-                        <td>{{ item.quantite }} {{ item.objet.unite }}</td>
+                        <td>{{ item.quantite|floatformat:"-2" }} {{ item.objet.unite }}</td>
+                        <td>
+                            {% if item.notes %}
+                                {{ item.notes }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -608,6 +647,7 @@
                         <th>Catégorie</th>
                         <th>Objet</th>
                         <th>Quantité</th>
+                        <th>Commentaires</th>
                         <th>Statut</th>
                         <th>Vérifié par</th>
                     </tr>
@@ -617,8 +657,22 @@
                         {% for item in items %}
                         <tr>
                             <td><strong>{{ categorie }}</strong></td>
-                            <td>{{ item.objet.nom }}</td>
+                            <td>
+                                {{ item.objet.nom }}
+                                {% if item.notes %}
+                                <div class="item-comment-preview">
+                                    <strong>💬</strong> {{ item.notes }}
+                                </div>
+                                {% endif %}
+                            </td>
                             <td>{{ item.quantite }} {{ item.objet.unite }}</td>
+                            <td>
+                                {% if item.notes %}
+                                    {{ item.notes }}
+                                {% else %}
+                                    <span style="color: #9ca3af;">-</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if item.statut_verification == 'valide' %}
                                     <span class="item-status verifie">✓ Vérifié</span>

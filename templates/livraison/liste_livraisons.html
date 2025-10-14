@@ -496,14 +496,14 @@
         <div class="header-content">
             <div class="header-left">
                 <!-- Bouton retour dynamique selon le rôle -->
-                {% if user.role == 'resp_ventes' %}
+                {% if request.user.role == 'resp_ventes' %}
                 <a href="{% url 'ventes:dashboard_responsable' %}" class="btn-back">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
                     <span>Retour au tableau de bord</span>
                 </a>
-                {% elif user.role == 'vendeur' %}
+                {% elif request.user.role == 'vendeur' %}
                 <a href="{% url 'ventes:dashboard_vendeuse' %}" class="btn-back">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
