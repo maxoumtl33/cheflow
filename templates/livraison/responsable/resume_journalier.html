@@ -290,12 +290,27 @@
     .action-link {
         color: var(--primary-color);
         text-decoration: none;
-        margin-right: 1rem;
+        margin-right: 0.75rem;
         transition: all 0.3s ease;
+        font-size: 1.1rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem;
     }
 
     .action-link:hover {
         color: var(--primary-hover);
+        transform: scale(1.15);
+    }
+    
+    .action-link.delete-btn {
+        color: #ef4444;
+        margin-right: 0;
+    }
+    
+    .action-link.delete-btn:hover {
+        color: #dc2626;
     }
 
     .badge {
@@ -354,6 +369,11 @@
 
         .data-table td.hide-mobile {
             display: none;
+        }
+        
+        .action-link {
+            font-size: 0.95rem;
+            margin-right: 0.5rem;
         }
     }
 </style>
@@ -488,8 +508,18 @@
                 </thead>
                 <tbody>
                     {% for livraison in livraisons %}
+                    
                     <tr x-show="afficherLivraison('{{ livraison.id }}', '{{ livraison.status }}', '{{ livraison.nom_evenement|escapejs }} {{ livraison.client_nom|escapejs }} {{ livraison.adresse_complete|escapejs }}')"
                         x-data="{ visible: true }">
+                        {% if livraison.est_recuperation %}
+                        <td style="font-weight: 600; color: var(--text-dark); background-color: #ec74c6;">
+                            {{ livraison.numero_livraison }}
+                        </td>
+                        <td style="background-color: #ec74c6;">
+                            <div style="font-weight: 600; color: var(--text-dark);">{{ livraison.nom_evenement|default:"-" }}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-light);">{{ livraison.nb_convives }} convives</div>
+                        </td>
+                        {% else %}
                         <td style="font-weight: 600; color: var(--text-dark);">
                             {{ livraison.numero_livraison }}
                         </td>
@@ -497,6 +527,8 @@
                             <div style="font-weight: 600; color: var(--text-dark);">{{ livraison.nom_evenement|default:"-" }}</div>
                             <div style="font-size: 0.75rem; color: var(--text-light);">{{ livraison.nb_convives }} convives</div>
                         </td>
+                        {% endif %}
+                        
                         <td>
                             {{ livraison.client_nom }}
                         </td>
@@ -545,11 +577,21 @@
                             </select>
                         </td>
                         <td style="white-space: nowrap;">
-                            <a href="{% url 'livraison:editer_livraison' livraison.id %}" class="action-link">
+                            <a href="{% url 'livraison:detail_livraison_responsable' livraison.id %}" 
+                               class="action-link" 
+                               title="Voir les détails">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'livraison:editer_livraison' livraison.id %}" 
+                               class="action-link"
+                               title="Modifier">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            <button @click="voirDetails('{{ livraison.id }}')" class="action-link" style="background: none; border: none; cursor: pointer;">
-                                <i class="fas fa-eye"></i>
+                            <button @click="supprimerLivraison('{{ livraison.id }}')" 
+                                    class="action-link delete-btn" 
+                                    style="background: none; border: none; cursor: pointer;"
+                                    title="Supprimer">
+                                <i class="fas fa-trash"></i>
                             </button>
                         </td>
                     </tr>
@@ -630,8 +672,45 @@ function resumeJournalier() {
             }
         },
         
+        async supprimerLivraison(livraisonId) {
+            if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette livraison ?\n\nCette action est irréversible.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/livraison/api/livraisons/${livraisonId}/supprimer/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Animation de suppression
+                    const row = document.querySelector(`tr[x-show*="${livraisonId}"]`);
+                    if (row) {
+                        row.style.transition = 'all 0.3s ease';
+                        row.style.opacity = '0';
+                        row.style.transform = 'translateX(-20px)';
+                        
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 300);
+                    }
+                } else {
+                    alert('❌ Erreur: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('❌ Erreur lors de la suppression');
+            }
+        },
+        
         voirDetails(livraisonId) {
-            window.location.href = `/livraison/editer/${livraisonId}/`;
+            window.location.href = `/livraison/responsable/livraison/${livraisonId}/`;
         }
     }
 }

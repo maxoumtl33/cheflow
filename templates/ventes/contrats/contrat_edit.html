@@ -27,6 +27,80 @@
     .btn-primary:hover { background: #4f46e5; }
     .btn-secondary { background: #f3f4f6; color: #374151; }
     .btn-secondary:hover { background: #e5e7eb; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    
+    /* Documents existants */
+    .existing-documents {
+        margin-top: 1rem;
+    }
+    
+    .document-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+    }
+    
+    .document-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+    }
+    
+    .document-icon {
+        font-size: 1.5rem;
+    }
+    
+    .document-details {
+        flex: 1;
+    }
+    
+    .document-name {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 0.25rem;
+    }
+    
+    .document-meta {
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+    
+    /* Upload zone */
+    .upload-zone {
+        border: 2px dashed #d1d5db;
+        border-radius: 10px;
+        padding: 1.5rem;
+        text-align: center;
+        background: #f9fafb;
+        transition: all 0.3s;
+        cursor: pointer;
+        margin-top: 1rem;
+    }
+    
+    .upload-zone:hover {
+        border-color: #6366f1;
+        background: #f0f4ff;
+    }
+    
+    .upload-zone.dragover {
+        border-color: #10b981;
+        background: #d1fae5;
+    }
+    
+    .file-input {
+        display: none;
+    }
+    
+    .new-documents-list {
+        margin-top: 1rem;
+    }
     
     @media (max-width: 768px) {
         .form-grid { grid-template-columns: 1fr; }
@@ -42,7 +116,7 @@
             <div class="subtitle">{{ contrat.numero_contrat }} - {{ contrat.nom_evenement }}</div>
         </div>
 
-        <form method="post">
+        <form method="post" enctype="multipart/form-data" id="editForm">
             {% csrf_token %}
 
             <!-- Section Identifiants -->
@@ -201,6 +275,62 @@
                 </div>
             </div>
 
+            <!-- Section Documents -->
+            <div class="form-section">
+                <div class="section-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                    Documents
+                </div>
+
+                <!-- Documents existants -->
+                {% if contrat.documents.all %}
+                <div class="existing-documents">
+                    <label class="form-label">Documents actuels</label>
+                    {% for doc in contrat.documents.all %}
+                    <div class="document-item">
+                        <div class="document-info">
+                            <span class="document-icon">{{ doc.get_icone }}</span>
+                            <div class="document-details">
+                                <div class="document-name">{{ doc.titre }}</div>
+                                <div class="document-meta">
+                                    {{ doc.get_type_document_display }} • {{ doc.get_taille_lisible }} • {{ doc.date_upload|date:"d/m/Y H:i" }}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <a href="{{ doc.fichier.url }}" target="_blank" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.5rem 1rem;">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </a>
+                            <button type="button" class="btn btn-danger" style="font-size: 0.85rem; padding: 0.5rem 1rem;" onclick="deleteDocument({{ doc.id }})">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Ajouter de nouveaux documents -->
+                <div class="form-group" style="margin-top: 1.5rem;">
+                    <label class="form-label">Ajouter de nouveaux documents</label>
+                    <div class="upload-zone" id="uploadZone">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📁</div>
+                        <p style="font-weight: 600; margin-bottom: 0.5rem;">Cliquez ou glissez-déposez vos fichiers ici</p>
+                        <p style="font-size: 0.85rem; color: #6b7280;">PDF, DOC, XLS, images (max 10 Mo par fichier)</p>
+                        <input type="file" id="fileInput" name="documents" class="file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+                    </div>
+                    
+                    <div class="new-documents-list" id="newDocumentsList"></div>
+                </div>
+            </div>
+
             <div class="form-actions">
                 <a href="{% url 'ventes:contrat_detail' contrat.pk %}" class="btn btn-secondary">
                     Annuler
@@ -215,4 +345,202 @@
         </form>
     </div>
 </div>
+
+<script>
+// Upload de nouveaux documents
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const newDocumentsList = document.getElementById('newDocumentsList');
+    
+    const getFileIcon = (filename) => {
+        const ext = filename.split('.').pop().toLowerCase();
+        const icons = {
+            'pdf': '📄', 'doc': '📝', 'docx': '📝',
+            'xls': '📊', 'xlsx': '📊',
+            'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️',
+        };
+        return icons[ext] || '📎';
+    };
+    
+    const formatFileSize = (bytes) => {
+        if (bytes === 0) return '0 o';
+        const k = 1024;
+        const sizes = ['o', 'Ko', 'Mo', 'Go'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 10) / 10 + ' ' + sizes[i];
+    };
+    
+    const renderNewDocuments = () => {
+        newDocumentsList.innerHTML = '';
+        
+        // ✅ Utiliser directement fileInput.files
+        const files = fileInput.files;
+        
+        if (files.length === 0) {
+            return;
+        }
+        
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            
+            const docItem = document.createElement('div');
+            docItem.className = 'document-item';
+            docItem.style.marginTop = '0.75rem';
+            docItem.innerHTML = `
+                <div class="document-info">
+                    <span class="document-icon">${getFileIcon(file.name)}</span>
+                    <div class="document-details">
+                        <div class="document-name">${file.name}</div>
+                        <div class="document-meta">${formatFileSize(file.size)}</div>
+                    </div>
+                    <select name="new_document_types[]" class="form-input" style="width: auto; padding: 0.5rem; font-size: 0.85rem;">
+                        <option value="autre">Autre</option>
+                        <option value="soumission">Soumission</option>
+                        <option value="menu">Menu</option>
+                        <option value="plan_salle">Plan de salle</option>
+                        <option value="contrat_signe">Contrat signé</option>
+                        <option value="facture">Facture</option>
+                    </select>
+                </div>
+                <button type="button" class="btn btn-danger" style="font-size: 0.85rem; padding: 0.5rem;" onclick="clearFileInput()">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            `;
+            
+            newDocumentsList.appendChild(docItem);
+        }
+    };
+    
+    // ✅ Fonction globale pour vider l'input
+    window.clearFileInput = () => {
+        fileInput.value = '';
+        renderNewDocuments();
+    };
+    
+    // Click pour ouvrir le sélecteur
+    uploadZone.addEventListener('click', () => fileInput.click());
+    
+    // Quand l'utilisateur sélectionne des fichiers
+    fileInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        
+        // Vérifier la taille des fichiers
+        let hasError = false;
+        const validFiles = files.filter(file => {
+            if (file.size <= 10 * 1024 * 1024) {
+                return true;
+            } else {
+                alert(`❌ Le fichier "${file.name}" est trop volumineux (max 10 Mo)`);
+                hasError = true;
+                return false;
+            }
+        });
+        
+        // Si tous les fichiers sont valides, afficher
+        if (!hasError && validFiles.length > 0) {
+            renderNewDocuments();
+            
+            // Animation de succès
+            uploadZone.style.borderColor = '#10b981';
+            uploadZone.style.background = '#d1fae5';
+            setTimeout(() => {
+                uploadZone.style.borderColor = '';
+                uploadZone.style.background = '';
+            }, 500);
+        } else if (hasError) {
+            // Réinitialiser l'input si des fichiers invalides
+            fileInput.value = '';
+        }
+    });
+    
+    // Drag & Drop
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+    
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('dragover');
+    });
+    
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        
+        const files = Array.from(e.dataTransfer.files);
+        
+        // Filtrer les fichiers valides
+        let hasError = false;
+        const validFiles = files.filter(file => {
+            if (file.size <= 10 * 1024 * 1024) {
+                return true;
+            } else {
+                alert(`❌ Le fichier "${file.name}" est trop volumineux (max 10 Mo)`);
+                hasError = true;
+                return false;
+            }
+        });
+        
+        if (validFiles.length > 0) {
+            // Créer un nouveau DataTransfer avec les fichiers valides
+            const dt = new DataTransfer();
+            validFiles.forEach(file => dt.items.add(file));
+            
+            // Assigner au input
+            fileInput.files = dt.files;
+            
+            // Afficher
+            renderNewDocuments();
+            
+            if (!hasError) {
+                // Animation de succès
+                uploadZone.style.borderColor = '#10b981';
+                uploadZone.style.background = '#d1fae5';
+                setTimeout(() => {
+                    uploadZone.style.borderColor = '';
+                    uploadZone.style.background = '';
+                }, 500);
+            }
+        }
+    });
+    
+    // Debug: voir ce qui est dans l'input au moment de la soumission
+    const form = document.getElementById('editForm');
+    form.addEventListener('submit', (e) => {
+        console.log('🔍 DEBUG - Fichiers à uploader:', fileInput.files.length);
+        for (let i = 0; i < fileInput.files.length; i++) {
+            console.log(`  - ${fileInput.files[i].name} (${fileInput.files[i].size} bytes)`);
+        }
+    });
+});
+
+// Supprimer un document existant
+function deleteDocument(docId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) {
+        return;
+    }
+    
+    fetch(`/ventes/contrats/documents/${docId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erreur lors de la suppression');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Erreur lors de la suppression');
+    });
+}
+</script>
 {% endblock %}

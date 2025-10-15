@@ -1,0 +1,723 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Détail Livraison - {{ livraison.numero_livraison }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-section {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .section-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .info-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .info-value {
+        font-size: 15px;
+        color: #1f2937;
+        font-weight: 500;
+    }
+    
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+    
+    .status-non_assignee { background: #fee2e2; color: #991b1b; }
+    .status-assignee { background: #fef3c7; color: #92400e; }
+    .status-en_cours { background: #dbeafe; color: #1e40af; }
+    .status-livree { background: #d1fae5; color: #065f46; }
+    .status-annulee { background: #f3f4f6; color: #374151; }
+    
+    .photos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+    }
+    /* Style pour le bouton Retour au tableau de bord */
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #ffffff;
+    color: #374151;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    color: #1f2937;
+    transform: translateX(-2px);
+}
+
+.btn-back:active {
+    transform: translateX(-2px) scale(0.98);
+}
+
+.btn-back svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+}
+    .photo-item {
+        position: relative;
+        aspect-ratio: 4/3;
+        border-radius: 8px;
+        overflow: hidden;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    
+    .photo-item:hover {
+        transform: scale(1.05);
+    }
+    
+    .photo-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .signature-container {
+        border: 2px dashed #d1d5db;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .signature-image {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+    }
+    
+    .map-container {
+        height: 400px;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    
+    .besoins-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .besoin-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: #f3f4f6;
+        color: #374151;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+    
+    .besoin-badge.active {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+    
+    .btn-primary {
+        background: #3b82f6;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #2563eb;
+    }
+    
+    .btn-success {
+        background: #10b981;
+        color: white;
+    }
+    
+    .btn-danger {
+        background: #ef4444;
+        color: white;
+    }
+    
+    .btn-secondary {
+        background: #6b7280;
+        color: white;
+    }
+    
+    .route-info {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+    }
+    
+    .route-info h4 {
+        font-size: 15px;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 12px;
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal.active {
+        display: flex;
+    }
+    
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 90vh;
+        overflow: auto;
+        padding: 24px;
+    }
+    
+    .modal-image {
+        max-width: 100%;
+        height: auto;
+    }
+    
+    .close-modal {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 40px;
+        height: 40px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 24px;
+        color: #374151;
+    }
+    
+    .edit-inline {
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: background 0.2s;
+    }
+    
+    .edit-inline:hover {
+        background: #f3f4f6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">
+                {{ livraison.nom_evenement|default:livraison.numero_livraison }}
+            </h1>
+            <p class="text-gray-600 mt-1">
+                Numéro: {{ livraison.numero_livraison }}
+            </p>
+        </div>
+        
+        <div class="action-buttons">
+            <a href="{% url 'livraison:editer_livraison' livraison.id %}" class="btn btn-primary">
+                ✏️ Éditer
+            </a>
+        {% if request.user.role == 'resp_livraison' %}
+            <button onclick="supprimerLivraison()" class="btn btn-danger">
+                🗑️ Supprimer
+            </button>
+            {% endif %}
+            {% if request.user.role == 'resp_ventes' %}
+                <a href="{% url 'ventes:dashboard_responsable' %}" class="btn-back">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    <span>Retour au tableau de bord</span>
+                </a>
+                {% elif request.user.role == 'vendeur' %}
+                <a href="{% url 'ventes:dashboard_vendeuse' %}" class="btn-back">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    <span>Retour au tableau de bord</span>
+                </a>
+                {% else %}
+            <a href="{/livraison/responsable/resume/?date={{ livraison.date_livraison|date:'Y-m-d' }}}" class="btn btn-secondary">
+                ← Retour
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Informations principales -->
+    <div class="detail-section">
+        <div class="section-title">
+            <span>📦 Informations principales</span>
+            <span class="status-badge status-{{ livraison.status }}">
+                {{ livraison.get_status_display }}
+            </span>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Client</span>
+                <span class="info-value">{{ livraison.client_nom }}</span>
+            </div>
+            
+            <div class="info-item">
+                <span class="info-label">Téléphone</span>
+                <span class="info-value">
+                    {% if livraison.client_telephone %}
+                        <a href="tel:{{ livraison.client_telephone }}">{{ livraison.client_telephone }}</a>
+                    {% else %}
+                        Non renseigné
+                    {% endif %}
+                </span>
+            </div>
+            
+            <div class="info-item">
+                <span class="info-label">Date de livraison</span>
+                <span class="info-value">{{ livraison.date_livraison|date:"d/m/Y" }}</span>
+            </div>
+            
+            <div class="info-item">
+                <span class="info-label">Période</span>
+                <span class="info-value">{{ livraison.get_periode_display }}</span>
+            </div>
+            
+            <div class="info-item">
+                <span class="info-label">Heure souhaitée</span>
+                <span class="info-value">
+                    {% if livraison.heure_souhaitee %}
+                        {{ livraison.heure_souhaitee|time:"H:i" }}
+                    {% else %}
+                        Non définie
+                    {% endif %}
+                </span>
+            </div>
+            
+            <div class="info-item">
+                <span class="info-label">Mode d'envoi</span>
+                <span class="info-value">
+                    {% if livraison.mode_envoi %}
+                        <span style="color: {{ livraison.mode_envoi.couleur }};">
+                            ● {{ livraison.mode_envoi.nom }}
+                        </span>
+                    {% else %}
+                        Non défini
+                    {% endif %}
+                </span>
+            </div>
+            
+            <div class="info-item">
+                <span class="info-label">Nombre de convives</span>
+                <span class="info-value">{{ livraison.nb_convives }}</span>
+            </div>
+            
+            <div class="info-item">
+                <span class="info-label">Montant</span>
+                <span class="info-value">{{ livraison.montant }} $</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Adresse et carte -->
+    <div class="detail-section">
+        <div class="section-title">📍 Adresse de livraison</div>
+        
+        <div class="info-grid mb-4">
+            <div class="info-item">
+                <span class="info-label">Adresse complète</span>
+                <span class="info-value">{{ livraison.adresse_complete }}</span>
+            </div>
+            
+            {% if livraison.contact_sur_site %}
+            <div class="info-item">
+                <span class="info-label">Contact sur site</span>
+                <span class="info-value">{{ livraison.contact_sur_site }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if livraison.latitude and livraison.longitude %}
+        <div id="map" class="map-container"></div>
+        {% else %}
+        <div class="signature-container">
+            <p class="text-gray-500">⚠️ Adresse non géocodée</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Route assignée -->
+    {% if route %}
+    <div class="detail-section">
+        <div class="section-title">🚗 Route assignée</div>
+        
+        <div class="route-info">
+            <h4>{{ route.nom }}</h4>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Heure de départ</span>
+                    <span class="info-value">{{ route.heure_depart|time:"H:i" }}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Livreurs</span>
+                    <span class="info-value">
+                        {% for livreur in route.livreurs.all %}
+                            {{ livreur.get_full_name }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </span>
+                </div>
+                
+                {% if route.vehicule %}
+                <div class="info-item">
+                    <span class="info-label">Véhicule</span>
+                    <span class="info-value">{{ route.vehicule.marque }} {{ route.vehicule.modele }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="info-item">
+                    <span class="info-label">Statut de la route</span>
+                    <span class="info-value">{{ route.get_status_display }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Besoins spéciaux -->
+    <div class="detail-section">
+        <div class="section-title">✨ Besoins spéciaux</div>
+        
+        {% if besoins_list %}
+        <div class="besoins-list">
+            {% for besoin in besoins_list %}
+            <span class="besoin-badge active">
+                {% if besoin == "Café" %}☕{% elif besoin == "Thé" %}🍵{% elif besoin == "Sac de glace" %}🧊{% elif besoin == "Part chaud" %}🔥{% elif besoin == "Checklist" %}📋{% endif %}
+                {{ besoin }}
+            </span>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-500">Aucun besoin spécial</p>
+        {% endif %}
+        
+        {% if livraison.informations_supplementaires %}
+        <div class="mt-4">
+            <div class="info-label mb-2">Informations supplémentaires</div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+                {{ livraison.informations_supplementaires|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if livraison.notes_internes %}
+        <div class="mt-4">
+            <div class="info-label mb-2">Notes internes</div>
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                {{ livraison.notes_internes|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Photos -->
+    <div class="detail-section">
+        <div class="section-title">
+            <span>📸 Photos de livraison ({{ livraison.photos.count }})</span>
+        </div>
+        
+        {% if livraison.photos.exists %}
+        <div class="photos-grid">
+            {% for photo in livraison.photos.all %}
+            <div class="photo-item" onclick="openPhotoModal('{{ photo.image.url }}')">
+                <img src="{{ photo.image.url }}" alt="Photo {{ forloop.counter }}">
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="signature-container">
+            <p class="text-gray-500">Aucune photo disponible</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Signature -->
+    <div class="detail-section">
+        <div class="section-title">✍️ Signature du client</div>
+        
+        {% if livraison.signature_client %}
+        <div>
+            <div class="info-label mb-2">Signé par: {{ livraison.nom_signataire|default:"Non renseigné" }}</div>
+            <div class="signature-container bg-gray-50">
+                <img src="{{ livraison.signature_client.url }}" alt="Signature" class="signature-image mx-auto">
+            </div>
+            {% if livraison.heure_livraison_reelle %}
+            <p class="text-sm text-gray-600 mt-2 text-center">
+                Livré le {{ livraison.heure_livraison_reelle|date:"d/m/Y à H:i" }}
+            </p>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="signature-container">
+            <p class="text-gray-500">Aucune signature enregistrée</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Récupérations liées -->
+    {% if livraison.recuperations.exists %}
+    <div class="detail-section">
+        <div class="section-title">🔄 Récupérations prévues</div>
+        
+        <div class="space-y-2">
+            {% for recup in livraison.recuperations.all %}
+            <div class="route-info">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <strong>{{ recup.numero_livraison }}</strong>
+                        <p class="text-sm text-gray-600">
+                            {{ recup.date_livraison|date:"d/m/Y" }} - {{ recup.get_periode_display }}
+                        </p>
+                    </div>
+                    <span class="status-badge status-{{ recup.status }}">
+                        {{ recup.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Métadonnées -->
+    <div class="detail-section">
+        <div class="section-title">ℹ️ Métadonnées</div>
+        
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Créé le</span>
+                <span class="info-value">{{ livraison.date_creation|date:"d/m/Y H:i" }}</span>
+            </div>
+            
+            {% if livraison.cree_par %}
+            <div class="info-item">
+                <span class="info-label">Créé par</span>
+                <span class="info-value">{{ livraison.cree_par.get_full_name }}</span>
+            </div>
+            {% endif %}
+            
+            <div class="info-item">
+                <span class="info-label">Dernière modification</span>
+                <span class="info-value">{{ livraison.date_modification|date:"d/m/Y H:i" }}</span>
+            </div>
+            
+            {% if livraison.est_recuperation %}
+            <div class="info-item">
+                <span class="info-label">Type</span>
+                <span class="info-value">
+                    <span class="besoin-badge active">🔄 Récupération</span>
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour afficher les photos en grand -->
+<div id="photoModal" class="modal">
+    <span class="close-modal" onclick="closePhotoModal()">✕</span>
+    <img id="modalImage" class="modal-image" src="" alt="Photo en grand">
+</div>
+
+<script>
+// Initialiser la carte Google Maps
+{% if livraison.latitude and livraison.longitude %}
+function initMap() {
+    // Vérifier que Google Maps est chargé
+    if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+        console.error('Google Maps n\'est pas encore chargé');
+        return;
+    }
+    
+    const position = {
+        lat: parseFloat('{{ livraison.latitude }}'),
+        lng: parseFloat('{{ livraison.longitude }}')
+    };
+    
+    const mapElement = document.getElementById('map');
+    if (!mapElement) {
+        console.error('Element map non trouvé');
+        return;
+    }
+    
+    const map = new google.maps.Map(mapElement, {
+        zoom: 15,
+        center: position,
+        mapTypeControl: false
+    });
+    
+    new google.maps.Marker({
+        position: position,
+        map: map,
+        title: '{{ livraison.client_nom|escapejs }}'
+    });
+}
+
+// Fonction de callback pour Google Maps
+window.initMap = initMap;
+{% endif %}
+
+// Modal pour les photos
+function openPhotoModal(url) {
+    const modal = document.getElementById('photoModal');
+    const image = document.getElementById('modalImage');
+    if (modal && image) {
+        image.src = url;
+        modal.classList.add('active');
+    }
+}
+
+function closePhotoModal() {
+    const modal = document.getElementById('photoModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// Fermer le modal en cliquant en dehors de l'image
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('photoModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closePhotoModal();
+            }
+        });
+    }
+    
+    // Fermer avec la touche Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closePhotoModal();
+        }
+    });
+});
+
+// Supprimer la livraison
+function supprimerLivraison() {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette livraison ?')) {
+        return;
+    }
+    
+    fetch('/livraison/api/livraisons/{{ livraison.id }}/supprimer/', {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ Livraison supprimée');
+            window.location.href = '{% url "livraison:resume_journalier" %}?date={{ livraison.date_livraison }}';
+        } else {
+            alert('❌ Erreur: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('❌ Erreur lors de la suppression');
+    });
+}
+</script>
+
+{% if livraison.latitude and livraison.longitude %}
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places&callback=initMap">
+</script>
+{% endif %}
+{% endblock %}

@@ -1239,43 +1239,79 @@ function dashboardLivreur() {
         calendarDays: [],
         
         async init() {
-            console.log('🚀 Initialisation du dashboard livreur');
+            console.group('🚀 INITIALISATION DASHBOARD LIVREUR');
+            console.log('📅 Date actuelle:', new Date());
+            console.log('🌍 Timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+            console.log('⏰ Heure locale:', new Date().toLocaleString('fr-FR'));
+            console.log('⏰ Heure UTC:', new Date().toUTCString());
+            
+            console.log('🎨 Rendering calendar...');
             this.renderCalendar();
+            
+            console.log('📦 Chargement routes du mois...');
             await this.loadRoutesForMonth();
+            
+            console.log('🎯 Auto-sélection date du jour...');
             await this.autoSelectToday();
+            
+            console.log('✅ Initialisation terminée');
+            console.groupEnd();
         },
         
         peutDemarrerRoute(route) {
+            console.group('🔐 DEBUG DEMARRAGE ROUTE #' + route.id);
+            
             // Récupérer l'heure actuelle
             const now = new Date();
+            console.log('⏰ Heure actuelle complète:', now);
+            console.log('⏰ Heure actuelle ISO:', now.toISOString());
+            console.log('⏰ Heure actuelle locale:', now.toLocaleString('fr-FR'));
             
             // Parser l'heure de départ de la route (format "HH:MM")
+            console.log('📋 Heure départ route (brut):', route.heure_depart);
+            console.log('📋 Type heure_depart:', typeof route.heure_depart);
+            
             const [heures, minutes] = route.heure_depart.split(':').map(Number);
+            console.log('📋 Heures parsées:', heures);
+            console.log('📋 Minutes parsées:', minutes);
             
             // Créer une date pour l'heure de départ aujourd'hui
-            const heureDepart = new Date();
+            const heureDepart = new Date(this.selectedDate + 'T00:00:00');
             heureDepart.setHours(heures, minutes, 0, 0);
+            console.log('🎯 Heure départ complète:', heureDepart);
+            console.log('🎯 Heure départ ISO:', heureDepart.toISOString());
+            console.log('🎯 Heure départ locale:', heureDepart.toLocaleString('fr-FR'));
             
             // Calculer l'heure limite (1h avant le départ)
             const heureLimite = new Date(heureDepart.getTime() - 60 * 60 * 1000);
+            console.log('⏳ Heure limite (1h avant):', heureLimite);
+            console.log('⏳ Heure limite ISO:', heureLimite.toISOString());
+            console.log('⏳ Heure limite locale:', heureLimite.toLocaleString('fr-FR'));
+            
+            // Timestamps pour comparaison
+            console.log('🔢 Timestamp NOW:', now.getTime());
+            console.log('🔢 Timestamp LIMITE:', heureLimite.getTime());
+            console.log('🔢 Différence (ms):', now.getTime() - heureLimite.getTime());
+            console.log('🔢 Différence (minutes):', (now.getTime() - heureLimite.getTime()) / 1000 / 60);
             
             // Vérifier si on est après l'heure limite
             const peutDemarrer = now >= heureLimite;
+            console.log('✅ Peut démarrer?', peutDemarrer);
+            console.log('📊 Comparaison:', now, '>=', heureLimite, '=', peutDemarrer);
             
-            console.log('🔐 Vérification démarrage route:', {
-                routeId: route.id,
-                heureDepart: route.heure_depart,
-                heureActuelle: now.toLocaleTimeString('fr-FR'),
-                heureLimite: heureLimite.toLocaleTimeString('fr-FR'),
-                peutDemarrer: peutDemarrer
-            });
+            if (!peutDemarrer) {
+                const minutesRestantes = Math.ceil((heureLimite.getTime() - now.getTime()) / 1000 / 60);
+                console.warn('⏰ Temps restant avant déverrouillage:', minutesRestantes, 'minutes');
+            }
+            
+            console.groupEnd();
             
             return peutDemarrer;
         },
         
         getMessageVerrouillage(route) {
             const [heures, minutes] = route.heure_depart.split(':').map(Number);
-            const heureDepart = new Date();
+            const heureDepart = new Date(this.selectedDate + 'T00:00:00');
             heureDepart.setHours(heures, minutes, 0, 0);
             const heureLimite = new Date(heureDepart.getTime() - 60 * 60 * 1000);
             
@@ -1329,55 +1365,111 @@ function dashboardLivreur() {
         },
         
         async selectDate(dateStr) {
-            console.log('🎯 Sélection de la date:', dateStr);
+            console.group('🎯 SELECTION DATE: ' + dateStr);
+            console.log('📅 Date sélectionnée (brut):', dateStr);
+            
             this.selectedDate = dateStr;
             this.loadingRoutes = true;
             
             const date = new Date(dateStr + 'T12:00:00');
+            console.log('📅 Date objet créé:', date);
+            
             this.dateTitle = 'Routes du ' + date.toLocaleDateString('fr-FR', { 
                 weekday: 'long', 
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric'
             });
+            console.log('📝 Titre généré:', this.dateTitle);
             
             this.renderCalendar();
             
             try {
-                const response = await fetch(`/livraison/api/routes/date/?date=${dateStr}`);
+                const url = `/livraison/api/routes/date/?date=${dateStr}`;
+                console.log('📡 Appel API:', url);
+                
+                const response = await fetch(url);
+                console.log('📡 Réponse HTTP status:', response.status);
+                console.log('📡 Réponse HTTP ok:', response.ok);
+                
                 const data = await response.json();
+                console.log('📦 Données reçues (complètes):', data);
+                console.log('📦 Nombre de routes:', data.routes ? data.routes.length : 0);
                 
-                console.log('📦 Réponse API routes:', data);
-                
-                if (data.success) {
+                if (data.success && data.routes) {
+                    console.log('✅ Routes chargées avec succès');
+                    data.routes.forEach((route, index) => {
+                        console.group(`📋 Route ${index + 1}/${data.routes.length}`);
+                        console.log('ID:', route.id);
+                        console.log('Nom:', route.nom);
+                        console.log('Status:', route.status);
+                        console.log('Heure départ:', route.heure_depart);
+                        console.log('Livreur:', route.livreur_nom);
+                        console.log('Total livraisons:', route.total_livraisons);
+                        console.log('Livraisons (détail):', route.livraisons);
+                        console.log('Besoins:', route.besoins);
+                        console.groupEnd();
+                    });
+                    
                     this.routesDuJour = data.routes;
-                    console.log('✅ Routes chargées:', this.routesDuJour.length);
+                    console.log('✅ routesDuJour mis à jour:', this.routesDuJour.length, 'routes');
                 } else {
-                    console.warn('⚠️ Erreur API:', data);
+                    console.warn('⚠️ Erreur ou pas de routes:', data);
                     this.routesDuJour = [];
                 }
             } catch (error) {
-                console.error('❌ Erreur chargement routes:', error);
+                console.error('❌ ERREUR CRITIQUE lors du chargement:', error);
+                console.error('❌ Type erreur:', error.name);
+                console.error('❌ Message:', error.message);
+                console.error('❌ Stack:', error.stack);
                 this.routesDuJour = [];
             } finally {
                 this.loadingRoutes = false;
+                console.log('🏁 Chargement terminé');
+                console.groupEnd();
             }
         },
         
         async demarrerRoute(routeId) {
-            const route = this.routesDuJour.find(r => r.id === routeId);
+            console.group('🚀 TENTATIVE DEMARRAGE ROUTE #' + routeId);
             
-            if (!this.peutDemarrerRoute(route)) {
-                alert(this.getMessageVerrouillage(route));
+            const route = this.routesDuJour.find(r => r.id === routeId);
+            console.log('📋 Route trouvée:', route);
+            
+            if (!route) {
+                console.error('❌ Route non trouvée dans routesDuJour!');
+                console.log('📋 Routes disponibles:', this.routesDuJour.map(r => r.id));
+                console.groupEnd();
                 return;
             }
             
-            if (!confirm('Démarrer cette route maintenant?')) return;
+            console.log('🔍 Vérification permission démarrage...');
+            const peutDemarrer = this.peutDemarrerRoute(route);
             
-            console.log('🚀 Démarrage de la route:', routeId);
+            if (!peutDemarrer) {
+                const message = this.getMessageVerrouillage(route);
+                console.warn('⛔ Démarrage refusé:', message);
+                alert(message);
+                console.groupEnd();
+                return;
+            }
+            
+            console.log('✅ Permission accordée, demande confirmation utilisateur...');
+            
+            if (!confirm('Démarrer cette route maintenant?')) {
+                console.log('❌ Utilisateur a annulé');
+                console.groupEnd();
+                return;
+            }
+            
+            console.log('✅ Confirmation reçue, envoi requête API...');
             
             try {
-                const response = await fetch(`/livraison/livreur/route/${routeId}/demarrer/`, {
+                const url = `/livraison/livreur/route/${routeId}/demarrer/`;
+                console.log('📡 URL:', url);
+                console.log('📡 CSRF Token:', getCookie('csrftoken'));
+                
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: { 
                         'X-CSRFToken': getCookie('csrftoken'),
@@ -1385,19 +1477,30 @@ function dashboardLivreur() {
                     }
                 });
                 
+                console.log('📡 Status HTTP:', response.status);
+                console.log('📡 Status Text:', response.statusText);
+                console.log('📡 Response OK:', response.ok);
+                
                 const data = await response.json();
-                console.log('📡 Réponse démarrage:', data);
+                console.log('📦 Données reçues:', data);
                 
                 if (response.ok && data.success) {
-                    console.log('✅ Route démarrée avec succès');
+                    console.log('✅ Route démarrée avec succès!');
+                    console.log('🔄 Redirection vers:', `/livraison/livreur/route/${routeId}/vehicule/`);
                     window.location.href = `/livraison/livreur/route/${routeId}/vehicule/`;
                 } else {
-                    console.error('❌ Erreur:', data.error || 'Erreur inconnue');
+                    console.error('❌ Erreur API:', data.error || 'Erreur inconnue');
+                    console.error('📦 Réponse complète:', data);
                     alert(data.error || 'Erreur lors du démarrage de la route');
                 }
             } catch (error) {
-                console.error('❌ Erreur réseau:', error);
+                console.error('❌ ERREUR CRITIQUE:', error);
+                console.error('❌ Type:', error.name);
+                console.error('❌ Message:', error.message);
+                console.error('❌ Stack:', error.stack);
                 alert('Erreur de connexion. Veuillez réessayer.');
+            } finally {
+                console.groupEnd();
             }
         },
         

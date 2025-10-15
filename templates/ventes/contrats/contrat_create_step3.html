@@ -21,7 +21,7 @@
     .form-actions { display: flex; gap: 1rem; justify-content: space-between; margin-top: 2rem; }
     .btn { padding: 0.75rem 1.5rem; border-radius: 10px; font-weight: 600; cursor: pointer; border: none; transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; }
     .btn-primary { background: #10b981; color: white; }
-    .btn-primary:hover { background: #059669; }
+    .btn-primary:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4); }
     .btn-secondary { background: #f3f4f6; color: #374151; }
     .btn-secondary:hover { background: #e5e7eb; }
     
@@ -31,6 +31,99 @@
     .summary-item { display: flex; margin-bottom: 0.75rem; }
     .summary-label { font-weight: 600; color: #6b7280; min-width: 150px; font-size: 0.9rem; }
     .summary-value { color: #1f2937; font-size: 0.9rem; }
+    
+    /* Upload Zone */
+    .upload-zone {
+        border: 2px dashed #d1d5db;
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        background: #f9fafb;
+        transition: all 0.3s;
+        cursor: pointer;
+        margin-top: 1rem;
+    }
+    
+    .upload-zone:hover {
+        border-color: #6366f1;
+        background: #f0f4ff;
+    }
+    
+    .upload-zone.dragover {
+        border-color: #10b981;
+        background: #d1fae5;
+        transform: scale(1.02);
+    }
+    
+    .upload-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+    
+    .file-input {
+        display: none;
+    }
+    
+    .documents-list {
+        margin-top: 1.5rem;
+    }
+    
+    .document-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        transition: all 0.3s;
+    }
+    
+    .document-item:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .document-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+    }
+    
+    .document-icon {
+        font-size: 1.5rem;
+    }
+    
+    .document-details {
+        flex: 1;
+    }
+    
+    .document-name {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 0.25rem;
+    }
+    
+    .document-meta {
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+    
+    .btn-remove {
+        padding: 0.5rem;
+        background: #fee2e2;
+        color: #991b1b;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .btn-remove:hover {
+        background: #fecaca;
+        transform: scale(1.1);
+    }
     
     @media (max-width: 768px) {
         .summary-grid { grid-template-columns: 1fr; }
@@ -59,7 +152,7 @@
         </div>
     </div>
 
-    <form method="post" class="form-card">
+    <form method="post" enctype="multipart/form-data" class="form-card" id="contratForm">
         {% csrf_token %}
         
         <h2 style="margin-bottom: 1.5rem;">✅ Étape 3 : Déroulé & Confirmation</h2>
@@ -83,6 +176,28 @@
             </p>
         </div>
 
+        <!-- Upload de documents -->
+        <div class="form-group" style="margin-bottom: 3rem;">
+            <label class="form-label">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: inline; vertical-align: middle; margin-right: 0.5rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+                Documents (optionnel)
+            </label>
+            <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 1rem;">
+                📎 Ajoutez des documents liés à l'événement : soumission, menu, plan de salle, contrat signé, etc.
+            </p>
+            
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📁</div>
+                <p style="font-weight: 600; margin-bottom: 0.5rem;">Cliquez ou glissez-déposez vos fichiers ici</p>
+                <p style="font-size: 0.85rem; color: #6b7280;">PDF, DOC, XLS, images • Maximum 10 Mo par fichier</p>
+                <input type="file" id="fileInput" name="documents" class="file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+            </div>
+            
+            <div class="documents-list" id="documentsList"></div>
+        </div>
+
         <!-- Résumé des informations -->
         <div style="border-top: 2px solid #e5e7eb; padding-top: 2rem; margin-top: 2rem;">
             <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.5rem; color: #1f2937;">
@@ -97,7 +212,7 @@
                     </div>
                     <div class="summary-item">
                         <div class="summary-label">N° Événement MD:</div>
-                        <div class="summary-value">CMD-{{ step1.numero_contrat }}</div>
+                        <div class="summary-value">{{ step1.numero_contrat }}</div>
                     </div>
                     <div class="summary-item">
                         <div class="summary-label">Événement:</div>
@@ -196,4 +311,167 @@
         </div>
     </form>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const documentsList = document.getElementById('documentsList');
+    let selectedFiles = new DataTransfer();
+    
+    const typeLabels = {
+        'soumission': 'Soumission',
+        'menu': 'Menu',
+        'plan_salle': 'Plan de salle',
+        'contrat_signe': 'Contrat signé',
+        'facture': 'Facture',
+        'autre': 'Autre'
+    };
+    
+    const getFileIcon = (filename) => {
+        const ext = filename.split('.').pop().toLowerCase();
+        const icons = {
+            'pdf': '📄',
+            'doc': '📝',
+            'docx': '📝',
+            'xls': '📊',
+            'xlsx': '📊',
+            'jpg': '🖼️',
+            'jpeg': '🖼️',
+            'png': '🖼️',
+        };
+        return icons[ext] || '📎';
+    };
+    
+    const formatFileSize = (bytes) => {
+        if (bytes === 0) return '0 o';
+        const k = 1024;
+        const sizes = ['o', 'Ko', 'Mo', 'Go'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 10) / 10 + ' ' + sizes[i];
+    };
+    
+    const renderDocuments = () => {
+        documentsList.innerHTML = '';
+        
+        if (selectedFiles.files.length === 0) {
+            return;
+        }
+        
+        for (let i = 0; i < selectedFiles.files.length; i++) {
+            const file = selectedFiles.files[i];
+            
+            const docItem = document.createElement('div');
+            docItem.className = 'document-item';
+            docItem.innerHTML = `
+                <div class="document-info">
+                    <span class="document-icon">${getFileIcon(file.name)}</span>
+                    <div class="document-details">
+                        <div class="document-name">${file.name}</div>
+                        <div class="document-meta">${formatFileSize(file.size)}</div>
+                    </div>
+                    <select name="document_types[]" class="form-input" style="width: auto; padding: 0.5rem; font-size: 0.85rem; margin-left: 1rem;">
+                        <option value="autre">Autre</option>
+                        <option value="soumission">Soumission</option>
+                        <option value="menu">Menu</option>
+                        <option value="plan_salle">Plan de salle</option>
+                        <option value="contrat_signe">Contrat signé</option>
+                        <option value="facture">Facture</option>
+                    </select>
+                </div>
+                <button type="button" class="btn-remove" onclick="removeFile(${i})" title="Supprimer">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            `;
+            
+            documentsList.appendChild(docItem);
+        }
+    };
+    
+    window.removeFile = (index) => {
+        const dt = new DataTransfer();
+        for (let i = 0; i < selectedFiles.files.length; i++) {
+            if (i !== index) {
+                dt.items.add(selectedFiles.files[i]);
+            }
+        }
+        selectedFiles = dt;
+        fileInput.files = selectedFiles.files;
+        renderDocuments();
+    };
+    
+    // Click pour ouvrir le sélecteur de fichiers
+    uploadZone.addEventListener('click', () => fileInput.click());
+    
+    // Gestion du changement de fichiers
+    fileInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        let hasError = false;
+        
+        files.forEach(file => {
+            if (file.size <= 10 * 1024 * 1024) { // 10 Mo max
+                selectedFiles.items.add(file);
+            } else {
+                alert(`❌ Le fichier "${file.name}" est trop volumineux (max 10 Mo)`);
+                hasError = true;
+            }
+        });
+        
+        fileInput.files = selectedFiles.files;
+        renderDocuments();
+        
+        if (!hasError && files.length > 0) {
+            // Animation de succès
+            uploadZone.style.borderColor = '#10b981';
+            uploadZone.style.background = '#d1fae5';
+            setTimeout(() => {
+                uploadZone.style.borderColor = '';
+                uploadZone.style.background = '';
+            }, 500);
+        }
+    });
+    
+    // Drag & Drop
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+    
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('dragover');
+    });
+    
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        
+        const files = Array.from(e.dataTransfer.files);
+        let hasError = false;
+        
+        files.forEach(file => {
+            if (file.size <= 10 * 1024 * 1024) {
+                selectedFiles.items.add(file);
+            } else {
+                alert(`❌ Le fichier "${file.name}" est trop volumineux (max 10 Mo)`);
+                hasError = true;
+            }
+        });
+        
+        fileInput.files = selectedFiles.files;
+        renderDocuments();
+        
+        if (!hasError && files.length > 0) {
+            // Animation de succès
+            uploadZone.style.borderColor = '#10b981';
+            uploadZone.style.background = '#d1fae5';
+            setTimeout(() => {
+                uploadZone.style.borderColor = '';
+                uploadZone.style.background = '';
+            }, 500);
+        }
+    });
+});
+</script>
 {% endblock %}

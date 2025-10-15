@@ -88,4 +88,12 @@ path('livreur/livraison/<uuid:livraison_id>/signature/', views.sauvegarder_signa
 path('livreur/livraison/<uuid:livraison_id>/livree/', views.marquer_livree, name='marquer_livree'),
 path('livreur/route/<uuid:route_id>/terminer/', views.terminer_route, name='terminer_route'),
 path('livreur/photo/<int:photo_id>/supprimer/', views.supprimer_photo, name='supprimer_photo'),
+
+path('responsable/livraison/<uuid:livraison_id>/', views.detail_livraison_responsable, name='detail_livraison_responsable'),
+    
+    # API pour modification rapide
+    path('api/livraisons/<uuid:livraison_id>/modifier/', views.modifier_livraison_responsable, name='modifier_livraison_responsable'),
+    
+    # API pour suppression
+    path('api/livraisons/<uuid:livraison_id>/supprimer/', views.supprimer_livraison, name='supprimer_livraison'),
 ]

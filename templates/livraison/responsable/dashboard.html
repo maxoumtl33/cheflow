@@ -281,6 +281,16 @@
 
     .main-layout {
         display: grid;
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .map-full-width {
+        grid-column: 1 / -1;
+    }
+
+    .content-grid {
+        display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 2rem;
     }
@@ -340,12 +350,12 @@
 
     .card-body {
         padding: 1.5rem;
-        max-height: 500px;
+        max-height: 600px;
         overflow-y: auto;
     }
 
     #map {
-        height: 400px;
+        height: 600px;
         border-radius: 0 0 16px 16px;
     }
 
@@ -374,6 +384,16 @@
     .livraison-card.selected {
         border-color: var(--success-color);
         background: #ecfdf5;
+    }
+
+    .livraison-card.recuperation {
+        background: #fce7f3;
+        border-color: #ec4899;
+    }
+
+    .route-delivery-item.recuperation {
+        background: #fce7f3;
+        border-color: #ec4899;
     }
 
     .livraison-header {
@@ -463,6 +483,10 @@
         overflow: hidden;
     }
 
+    .route-card.collapsed .route-zone {
+        display: none;
+    }
+
     .route-header {
         background: var(--bg-light);
         padding: 1.25rem;
@@ -481,6 +505,22 @@
         font-weight: 700;
         color: var(--text-dark);
         margin: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .route-name:hover {
+        color: var(--primary-color);
+    }
+
+    .route-toggle-icon {
+        transition: transform 0.3s ease;
+    }
+
+    .route-card.collapsed .route-toggle-icon {
+        transform: rotate(-90deg);
     }
 
     .route-actions {
@@ -745,16 +785,26 @@
     }
 
     .sortable-ghost {
-        opacity: 0.4;
+        opacity: 0.3;
         background: var(--bg-light);
     }
 
     .sortable-drag {
-        opacity: 0.8;
+        opacity: 0.9;
+        cursor: grabbing !important;
     }
 
+    .sortable-chosen {
+        cursor: grabbing !important;
+    }
+    .livraison-card.recuperation,
+.route-delivery-item.recuperation {
+    background: #ec74c6 !important;
+    border-color: #ed78b2 !important;
+}
+
     @media (max-width: 1024px) {
-        .main-layout {
+        .content-grid {
             grid-template-columns: 1fr;
         }
 
@@ -923,19 +973,20 @@
         </div>
         
         <div class="main-layout">
-            
-            <div style="display: flex; flex-direction: column; gap: 2rem;">
-                
-                <div class="card-section">
-                    <div class="card-header gradient-blue">
-                        <h3 class="card-title">
-                            <i class="fas fa-map-marked-alt"></i>
-                            Carte des livraisons
-                        </h3>
-                    </div>
-                    <div id="map"></div>
+            <!-- Carte en pleine largeur -->
+            <div class="card-section map-full-width">
+                <div class="card-header gradient-blue">
+                    <h3 class="card-title">
+                        <i class="fas fa-map-marked-alt"></i>
+                        Carte des livraisons
+                    </h3>
                 </div>
-                
+                <div id="map"></div>
+            </div>
+            
+            <!-- Grid avec 2 colonnes pour le reste -->
+            <div class="content-grid">
+                <!-- Colonne gauche : Livraisons à assigner -->
                 <div class="card-section">
                     <div class="card-header gradient-orange">
                         <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
@@ -963,6 +1014,20 @@
                                 <i class="fas fa-compress-arrows-alt"></i>
                                 Fusionner (<span x-text="livraisonsSelectionnees.length"></span>)
                             </button>
+
+                            <button 
+        @click="toggleAfficherRecuperations()"
+        :class="afficherRecuperations ? 'btn-orange' : 'btn-purple'"
+        class="btn"
+        style="position: relative;">
+        <i class="fas fa-redo"></i>
+        <span x-text="afficherRecuperations ? 'Masquer récup.' : 'Voir récup.'"></span>
+        <span x-show="nombreRecuperations > 0" 
+              class="badge-count"
+              x-text="nombreRecuperations"
+              style="position: absolute; top: -8px; right: -8px; background: #ec4899; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; border: 2px solid white;">
+        </span>
+    </button>
                         </div>
                     </div>
                     
@@ -977,8 +1042,11 @@
                         <div class="livraisons-list">
                             <template x-for="livraison in livraisonsNonAssignees" :key="livraison.id">
                                 <div :data-id="livraison.id" 
-                                     :class="livraisonsSelectionnees.includes(livraison.id) ? 'selected' : ''"
-                                     class="livraison-card">
+                                    :class="{ 
+                                        'selected': livraisonsSelectionnees.includes(livraison.id),
+                                        'recuperation': livraison.est_recuperation
+                                    }"
+                                    class="livraison-card">
                                     
                                     <div x-show="modeFusion" 
                                          x-cloak
@@ -1031,110 +1099,114 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div style="display: flex; flex-direction: column; gap: 2rem;">
                 
-                <button 
-                    @click="ouvrirModalRoute()"
-                    class="btn btn-success"
-                    style="padding: 1.25rem; font-size: 1rem; justify-content: center;">
-                    <i class="fas fa-plus-circle"></i>
-                    Créer une nouvelle route
-                </button>
-                
-                <div class="routes-list">
-                    <template x-if="routes.length === 0">
-                        <div class="card-section">
-                            <div class="card-body">
-                                <div class="empty-state">
-                                    <div class="empty-state-icon">🚚</div>
-                                    <p>Aucune route créée pour cette période</p>
-                                </div>
-                            </div>
-                        </div>
-                    </template>
+                <!-- Colonne droite : Routes -->
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+                    <button 
+                        @click="ouvrirModalRoute()"
+                        class="btn btn-success"
+                        style="padding: 1.25rem; font-size: 1rem; justify-content: center;">
+                        <i class="fas fa-plus-circle"></i>
+                        Créer une nouvelle route
+                    </button>
                     
-                    <template x-for="route in routes" :key="route.id">
-                        <div class="route-card">
-                            
-                            <div class="route-header">
-                                <div class="route-header-top">
-                                    <h4 class="route-name" x-text="route.nom"></h4>
-                                    <div class="route-actions">
-                                        <button @click="modifierRoute(route)" style="color: #3b82f6;">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button @click="supprimerRoute(route.id)" style="color: #ef4444;">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                    <div class="routes-list">
+                        <template x-if="routes.length === 0">
+                            <div class="card-section">
+                                <div class="card-body">
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">🚚</div>
+                                        <p>Aucune route créée pour cette période</p>
                                     </div>
                                 </div>
-                                
-                                <div class="route-info">
-                                    <div class="route-info-item">
-                                        <i class="fas fa-clock" style="color: #3b82f6;"></i>
-                                        <strong x-text="route.heure_depart"></strong>
-                                    </div>
-                                    <div class="route-info-item">
-                                        <i class="fas fa-user" style="color: #8b5cf6;"></i>
-                                        <strong x-text="route.livreurs.join(', ')"></strong>
-                                    </div>
-                                </div>
-                                
-                                <template x-if="route.commentaire">
-                                    <p class="route-comment" x-text="route.commentaire"></p>
-                                </template>
                             </div>
-                            
-                            <div :data-route-id="route.id" 
-                                 :class="route.livraisons.length === 0 ? 'empty' : ''"
-                                 class="route-zone">
+                        </template>
+                        
+                        <template x-for="route in routes" :key="route.id">
+                            <div class="route-card" :class="{ 'collapsed': routesCollapsed[route.id] }">
                                 
-                                <template x-if="route.livraisons.length === 0">
-                                    <div style="text-align: center;">
-                                        <i class="fas fa-hand-pointer" style="font-size: 2.5rem; opacity: 0.3; margin-bottom: 0.5rem;"></i>
-                                        <p style="font-size: 0.875rem;">Glissez des livraisons ici</p>
-                                    </div>
-                                </template>
-                                
-                                <div class="route-deliveries">
-                                    <template x-for="(livraison, index) in route.livraisons" :key="livraison.id">
-                                        <div :data-id="livraison.id" 
-                                             @click="ouvrirDetailLivraison(livraison)"
-                                             class="route-delivery-item">
-                                            
-                                            <div class="delivery-number" x-text="index + 1"></div>
-                                            
-                                            <div class="delivery-content">
-                                                <h5 class="delivery-name" x-text="livraison.nom_evenement || livraison.numero"></h5>
-                                                <p class="delivery-client" x-text="livraison.client"></p>
-                                            </div>
-                                            
-                                            <div class="delivery-meta">
-                                                <span class="delivery-time" x-text="livraison.heure"></span>
-                                                
-                                                <div class="delivery-icons">
-                                                    <template x-if="livraison.cafe">
-                                                        <i class="fas fa-coffee" style="color: #f59e0b; font-size: 0.75rem;" title="Café"></i>
-                                                    </template>
-                                                    <template x-if="livraison.the">
-                                                        <i class="fas fa-mug-hot" style="color: #10b981; font-size: 0.75rem;" title="Thé"></i>
-                                                    </template>
-                                                    <template x-if="livraison.glace">
-                                                        <i class="fas fa-snowflake" style="color: #3b82f6; font-size: 0.75rem;" title="Glace"></i>
-                                                    </template>
-                                                    <template x-if="livraison.chaud">
-                                                        <i class="fas fa-fire" style="color: #ef4444; font-size: 0.75rem;" title="Chaud"></i>
-                                                    </template>
-                                                </div>
-                                            </div>
+                                <div class="route-header">
+                                    <div class="route-header-top">
+                                        <h4 class="route-name" @click="toggleRouteCollapse(route.id)">
+                                            <i class="fas fa-chevron-down route-toggle-icon"></i>
+                                            <span x-text="route.nom"></span>
+                                        </h4>
+                                        <div class="route-actions">
+                                            <button @click="modifierRoute(route)" style="color: #3b82f6;">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button @click="supprimerRoute(route.id)" style="color: #ef4444;">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
                                         </div>
+                                    </div>
+                                    
+                                    <div class="route-info">
+                                        <div class="route-info-item">
+                                            <i class="fas fa-clock" style="color: #3b82f6;"></i>
+                                            <strong x-text="route.heure_depart"></strong>
+                                        </div>
+                                        <div class="route-info-item">
+                                            <i class="fas fa-user" style="color: #8b5cf6;"></i>
+                                            <strong x-text="route.livreurs.join(', ')"></strong>
+                                        </div>
+                                    </div>
+                                    
+                                    <template x-if="route.commentaire">
+                                        <p class="route-comment" x-text="route.commentaire"></p>
                                     </template>
                                 </div>
+                                
+                                <div :data-route-id="route.id" 
+                                     :class="route.livraisons.length === 0 ? 'empty' : ''"
+                                     class="route-zone">
+                                    
+                                    <template x-if="route.livraisons.length === 0">
+                                        <div style="text-align: center;">
+                                            <i class="fas fa-hand-pointer" style="font-size: 2.5rem; opacity: 0.3; margin-bottom: 0.5rem;"></i>
+                                            <p style="font-size: 0.875rem;">Glissez des livraisons ici</p>
+                                        </div>
+                                    </template>
+                                    
+                                    <div class="route-deliveries">
+                                        <template x-for="(livraison, index) in route.livraisons" :key="livraison.id">
+                                            <div :data-id="livraison.id" 
+                                                 @click="ouvrirDetailLivraison(livraison)"
+                                                 :class="{ 'recuperation': livraison.est_recuperation }"
+                                                 class="route-delivery-item">
+                                                
+                                                <div class="delivery-number" x-text="index + 1"></div>
+                                                
+                                                <div class="delivery-content">
+                                                    <h5 class="delivery-name" x-text="livraison.nom_evenement || livraison.numero"></h5>
+                                                    <p class="delivery-client" x-text="livraison.client"></p>
+                                                </div>
+                                                
+                                                <div class="delivery-meta">
+                                                    <span class="delivery-time" x-text="livraison.heure"></span>
+                                                    
+                                                    <div class="delivery-icons">
+                                                        <template x-if="livraison.cafe">
+                                                            <i class="fas fa-coffee" style="color: #f59e0b; font-size: 0.75rem;" title="Café"></i>
+                                                        </template>
+                                                        <template x-if="livraison.the">
+                                                            <i class="fas fa-mug-hot" style="color: #10b981; font-size: 0.75rem;" title="Thé"></i>
+                                                        </template>
+                                                        <template x-if="livraison.glace">
+                                                            <i class="fas fa-snowflake" style="color: #3b82f6; font-size: 0.75rem;" title="Glace"></i>
+                                                        </template>
+                                                        <template x-if="livraison.chaud">
+                                                            <i class="fas fa-fire" style="color: #ef4444; font-size: 0.75rem;" title="Chaud"></i>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </template>
+                        </template>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1223,6 +1295,16 @@
                         <template x-for="livreur in livreursDisponibles" :key="livreur.id">
                             <option :value="livreur.id" x-text="livreur.nom"></option>
                         </template>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Statut</label>
+                    <select x-model="routeEnEdition.status" class="form-select">
+                        <option value="non_assignee">Non assignée</option>
+                        <option value="assignee">Assignée</option>
+                        <option value="en_cours">En cours</option>
+                        <option value="livree">Livrée</option>
                     </select>
                 </div>
                 
@@ -1397,6 +1479,8 @@
     
 </div>
 
+
+
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC2GqoZLMIMuAihXl8271sJN3kJ_57smdM&libraries=places,geometry"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
@@ -1414,18 +1498,28 @@ function dashboardData() {
             nom: '',
             heure_depart: '',
             livreurs: [],
-            commentaire: ''
+            commentaire: '',
+            status: 'assignee'
         },
         map: null,
         markers: [],
         infoWindow: null,
         
         livraisonsNonAssignees: [],
+        livraisonsToutesNonAssignees: [],
         routes: [],
         livreursDisponibles: [],
         
+        routesCollapsed: {},
+        
         livraisonsSelectionnees: [],
         modeFusion: false,
+        reorderTimeout: null,
+        isUpdating: false,
+        pendingOperations: new Set(),
+        
+        afficherRecuperations: false,
+        nombreRecuperations: 0,
         
         besoins: {
             nom_evenement: '',
@@ -1498,11 +1592,38 @@ function dashboardData() {
             try {
                 const response = await fetch(`/livraison/api/livraisons/?date=${this.dateSelectionnee}&periode=${this.periodeActive}`);
                 const data = await response.json();
-                this.livraisonsNonAssignees = data.livraisons;
+                
+                // Stocker toutes les livraisons
+                this.livraisonsToutesNonAssignees = data.livraisons;
+                
+                // Compter les récupérations
+                this.nombreRecuperations = data.livraisons.filter(l => l.est_recuperation).length;
+                
+                // Filtrer selon l'état du toggle
+                this.appliquerFiltreRecuperations();
+                
                 this.updateMap();
             } catch (error) {
-                console.error('Erreur:', error);
+                console.error('Erreur chargement livraisons:', error);
             }
+        },
+        
+        appliquerFiltreRecuperations() {
+            if (this.afficherRecuperations) {
+                // Afficher toutes les livraisons
+                this.livraisonsNonAssignees = [...this.livraisonsToutesNonAssignees];
+            } else {
+                // Masquer les récupérations
+                this.livraisonsNonAssignees = this.livraisonsToutesNonAssignees.filter(
+                    l => !l.est_recuperation
+                );
+            }
+        },
+        
+        toggleAfficherRecuperations() {
+            this.afficherRecuperations = !this.afficherRecuperations;
+            this.appliquerFiltreRecuperations();
+            this.updateMap();
         },
         
         async chargerRoutes() {
@@ -1511,11 +1632,17 @@ function dashboardData() {
                 const data = await response.json();
                 this.routes = data.routes;
                 
+                this.routes.forEach(route => {
+                    if (!(route.id in this.routesCollapsed)) {
+                        this.routesCollapsed[route.id] = false;
+                    }
+                });
+                
                 this.$nextTick(() => {
                     this.initDragAndDrop();
                 });
             } catch (error) {
-                console.error('Erreur:', error);
+                console.error('Erreur chargement routes:', error);
             }
         },
         
@@ -1525,7 +1652,7 @@ function dashboardData() {
                 const data = await response.json();
                 this.livreursDisponibles = data.livreurs;
             } catch (error) {
-                console.error('Erreur:', error);
+                console.error('Erreur chargement livreurs:', error);
             }
         },
         
@@ -1575,19 +1702,26 @@ function dashboardData() {
                 const [lat, lng] = coords.split(',').map(parseFloat);
                 const position = { lat, lng };
                 
-                const periodesCount = {};
-                livraisons.forEach(liv => {
-                    const heure = parseInt(liv.heure.split(':')[0]);
-                    let periode = 'apres_midi';
-                    if (heure < 10) periode = 'matin';
-                    else if (heure < 13) periode = 'midi';
-                    periodesCount[periode] = (periodesCount[periode] || 0) + 1;
-                });
-                const periodeDominante = Object.keys(periodesCount).reduce((a, b) => 
-                    periodesCount[a] > periodesCount[b] ? a : b
-                );
+                // Si toutes les livraisons à cette position sont des récupérations, utiliser la couleur rose
+                const toutesRecuperations = livraisons.every(l => l.est_recuperation);
                 
-                const couleur = couleursPeriode[periodeDominante] || '#3B82F6';
+                let couleur;
+                if (toutesRecuperations) {
+                    couleur = '#ec4899'; // Rose pour récupérations
+                } else {
+                    const periodesCount = {};
+                    livraisons.forEach(liv => {
+                        const heure = parseInt(liv.heure.split(':')[0]);
+                        let periode = 'apres_midi';
+                        if (heure < 10) periode = 'matin';
+                        else if (heure < 13) periode = 'midi';
+                        periodesCount[periode] = (periodesCount[periode] || 0) + 1;
+                    });
+                    const periodeDominante = Object.keys(periodesCount).reduce((a, b) => 
+                        periodesCount[a] > periodesCount[b] ? a : b
+                    );
+                    couleur = couleursPeriode[periodeDominante] || '#3B82F6';
+                }
                 
                 const marker = new google.maps.Marker({
                     position: position,
@@ -1631,9 +1765,11 @@ function dashboardData() {
                         if (heureInt >= 10 && heureInt < 13) iconePeriode = '☀️';
                         else if (heureInt >= 13) iconePeriode = '🌤️';
                         
+                        const recupBadge = liv.est_recuperation ? '<span style="background: #ec4899; color: white; padding: 2px 6px; border-radius: 8px; font-size: 10px; margin-left: 4px;">RÉCUP</span>' : '';
+                        
                         content += `<div style="padding: 8px; ${i % 2 === 0 ? 'background: #f9fafb' : ''}; border-left: 3px solid ${couleur};">
                             <div style="display: flex; justify-content: space-between; align-items: start;">
-                                <strong style="color: #1f2937; font-size: 13px;">${liv.nom_evenement || liv.numero}</strong>
+                                <strong style="color: #1f2937; font-size: 13px;">${liv.nom_evenement || liv.numero}${recupBadge}</strong>
                                 <span style="background: ${couleur}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; white-space: nowrap; margin-left: 8px;">
                                     ${iconePeriode} ${liv.heure}
                                 </span>
@@ -1655,6 +1791,8 @@ function dashboardData() {
                         textePeriode = 'Après-midi';
                     }
                     
+                    const recupBadge = liv.est_recuperation ? '<div style="background: #ec4899; color: white; padding: 4px 8px; border-radius: 8px; font-size: 11px; margin-top: 6px; text-align: center;">🔄 RÉCUPÉRATION</div>' : '';
+                    
                     content = `<div style="padding: 10px; min-width: 200px;">
                         <div style="background: ${couleur}; color: white; padding: 6px 10px; margin: -10px -10px 10px -10px; border-radius: 4px 4px 0 0;">
                             <strong style="font-size: 14px;">${liv.nom_evenement || liv.numero}</strong>
@@ -1666,6 +1804,7 @@ function dashboardData() {
                             <span style="font-weight: bold; color: ${couleur};">${iconePeriode} ${liv.heure}</span>
                             <span style="font-size: 11px; color: #6b7280;">${textePeriode}</span>
                         </div>
+                        ${recupBadge}
                     </div>`;
                 }
                 
@@ -1684,18 +1823,25 @@ function dashboardData() {
         },
 
         initDragAndDrop() {
-            console.log('🎬 Initialisation Drag & Drop...');
+            console.log('🎬 Initialisation Drag & Drop ULTRA');
             
-            // Détruire les instances existantes
             Object.values(this.sortableInstances).forEach(instance => {
-                if (instance) instance.destroy();
+                if (instance) {
+                    try {
+                        instance.destroy();
+                    } catch (e) {
+                        console.warn('Erreur destruction:', e);
+                    }
+                }
             });
             this.sortableInstances = {};
             
-            // ====== POOL DE LIVRAISONS ======
+            document.querySelectorAll('.sortable-ghost, .sortable-drag, .sortable-chosen, .sortable-fallback').forEach(el => {
+                el.remove();
+            });
+            
             const poolContainer = document.querySelector('#livraisons-pool .livraisons-list');
             if (poolContainer) {
-                console.log('📦 Initialisation du pool');
                 this.sortableInstances['pool'] = new Sortable(poolContainer, {
                     group: {
                         name: 'livraisons',
@@ -1704,113 +1850,165 @@ function dashboardData() {
                     },
                     animation: 150,
                     sort: false,
-                    draggable: '.livraison-card, .route-delivery-item',
-                    
-                    onClone: (evt) => {
-                        console.log('📋 Clone créé');
-                        const original = evt.item;
-                        const clone = evt.clone;
-                        const livraisonId = original.dataset.id;
-                        
-                        if (livraisonId) {
-                            clone.setAttribute('data-id', livraisonId);
-                            console.log('✅ data-id copié sur le clone:', livraisonId);
-                        } else {
-                            console.error('❌ Pas de data-id sur l\'original');
-                        }
-                    },
+                    draggable: '.livraison-card',
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    dragClass: 'sortable-drag',
+                    forceFallback: true,
+                    fallbackTolerance: 5,
                     
                     onStart: (evt) => {
-                        console.log('🎯 Début drag depuis pool:', evt.item.dataset.id);
+                        console.log('🟢 Début drag depuis pool:', evt.item.dataset.id);
+                        evt.item.style.opacity = '0.4';
                     },
                     
                     onAdd: async (evt) => {
-                        console.log('🔙 Livraison retournée au pool');
                         const livraisonId = evt.item.dataset.id;
+                        console.log('📥 Retour pool:', livraisonId);
                         
-                        if (!livraisonId) {
-                            console.error('❌ Pas d\'ID');
-                            evt.item.remove();
+                        evt.item.remove();
+                        
+                        if (!livraisonId) return;
+                        
+                        const opKey = `remove-${livraisonId}`;
+                        if (this.pendingOperations.has(opKey)) {
+                            console.log('⏸️ Opération déjà en cours, skip');
                             return;
                         }
                         
-                        evt.item.remove();
-                        await this.retirerLivraisonRoute(livraisonId);
+                        this.pendingOperations.add(opKey);
+                        
+                        try {
+                            await this.retirerLivraisonRoute(livraisonId);
+                        } finally {
+                            this.pendingOperations.delete(opKey);
+                        }
                     },
                     
                     onEnd: (evt) => {
-                        console.log('✅ Fin drag');
-                        
                         setTimeout(() => {
-                            const clones = poolContainer.querySelectorAll('.livraison-card:not([data-id])');
-                            console.log(`🧹 Nettoyage de ${clones.length} clone(s) orphelin(s)`);
-                            clones.forEach(clone => clone.remove());
+                            poolContainer.querySelectorAll('.livraison-card').forEach(card => {
+                                card.style.opacity = '';
+                                if (!card.dataset.id) {
+                                    card.remove();
+                                }
+                            });
                         }, 100);
                     }
                 });
+                
+                console.log('✅ Pool configuré');
             }
             
-            // ====== ROUTES - ZONES DE DÉPÔT ======
             document.querySelectorAll('.route-zone').forEach(zone => {
                 const routeId = zone.dataset.routeId;
                 const deliveriesContainer = zone.querySelector('.route-deliveries');
                 
-                if (!deliveriesContainer) return;
+                if (!deliveriesContainer || !routeId) return;
                 
-                console.log(`🚚 Initialisation route: ${routeId}`);
-                
-                this.sortableInstances[routeId] = new Sortable(deliveriesContainer, {
-                    group: 'livraisons',
+                this.sortableInstances[`route-${routeId}`] = new Sortable(deliveriesContainer, {
+                    group: {
+                        name: 'livraisons',
+                        pull: true,
+                        put: true
+                    },
                     animation: 150,
-                    draggable: '.livraison-card, .route-delivery-item',
+                    draggable: '.route-delivery-item',
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    dragClass: 'sortable-drag',
+                    forceFallback: true,
+                    fallbackTolerance: 5,
+                    
+                    onStart: (evt) => {
+                        console.log(`🟢 Début drag depuis route ${routeId}:`, evt.item.dataset.id);
+                        evt.item.style.opacity = '0.4';
+                    },
                     
                     onAdd: async (evt) => {
-                        console.log('🎉 ========== onAdd DÉCLENCHÉ ==========');
-                        console.log('📦 Route:', routeId);
-                        console.log('📦 Evt.item:', evt.item);
-                        console.log('📦 Evt.item.dataset:', evt.item.dataset);
-                        
                         const livraisonId = evt.item.dataset.id;
-                        console.log('🔑 ID livraison récupéré:', livraisonId);
+                        const newIndex = evt.newIndex;
                         
-                        if (!livraisonId) {
-                            console.error('❌ Pas d\'ID trouvé sur l\'élément');
-                            console.error('   Classes:', evt.item.className);
-                            console.error('   Dataset:', evt.item.dataset);
-                            evt.item.remove();
+                        console.log(`📥 Ajout route ${routeId}:`, livraisonId, 'position:', newIndex);
+                        
+                        evt.item.remove();
+                        
+                        if (!livraisonId) return;
+                        
+                        const opKey = `add-${routeId}-${livraisonId}`;
+                        if (this.pendingOperations.has(opKey)) {
+                            console.log('⏸️ Opération déjà en cours, skip');
                             return;
                         }
                         
-                        evt.item.remove();
-                        console.log('🗑️ Clone supprimé visuellement');
+                        this.pendingOperations.add(opKey);
                         
-                        console.log('🌐 Appel API ajouterLivraisonRoute...');
-                        await this.ajouterLivraisonRoute(routeId, livraisonId);
+                        try {
+                            await this.ajouterLivraisonRoute(routeId, livraisonId, newIndex);
+                        } finally {
+                            this.pendingOperations.delete(opKey);
+                        }
                     },
                     
                     onUpdate: async (evt) => {
-                        console.log('🔄 Réorganisation dans route:', routeId);
-                        await this.reordonnerRoute(routeId);
+                        console.log(`🔄 Réordre route ${routeId}`);
+                        
+                        clearTimeout(this.reorderTimeout);
+                        this.reorderTimeout = setTimeout(async () => {
+                            await this.reordonnerRoute(routeId);
+                        }, 400);
                     },
                     
-                    onRemove: (evt) => {
-                        console.log('➖ Élément retiré de route:', routeId);
+                    onEnd: (evt) => {
+                        setTimeout(() => {
+                            deliveriesContainer.querySelectorAll('.route-delivery-item').forEach(item => {
+                                item.style.opacity = '';
+                                if (!item.dataset.id) {
+                                    item.remove();
+                                }
+                            });
+                        }, 100);
                     }
                 });
+                
+                console.log(`✅ Route ${routeId} configurée`);
             });
             
-            console.log('✅ Drag & Drop initialisé pour', Object.keys(this.sortableInstances).length, 'zones');
+            console.log('✅✅✅ Drag & Drop ULTRA initialisé');
         },
-        
+
         async reordonnerRoute(routeId) {
+            if (this.isUpdating) {
+                console.log('⏳ Mise à jour globale en cours');
+                return;
+            }
+            
+            const opKey = `reorder-${routeId}`;
+            if (this.pendingOperations.has(opKey)) {
+                console.log('⏸️ Réordre déjà en cours');
+                return;
+            }
+            
+            this.pendingOperations.add(opKey);
+            
             try {
                 const zone = document.querySelector(`[data-route-id="${routeId}"]`);
-                const deliveriesContainer = zone.querySelector('.route-deliveries');
+                const container = zone?.querySelector('.route-deliveries');
                 
-                if (!deliveriesContainer) return;
+                if (!container) {
+                    console.warn('⚠️ Container introuvable');
+                    return;
+                }
                 
-                const cards = deliveriesContainer.querySelectorAll('.route-delivery-item[data-id]');
-                const ordre = Array.from(cards).map(card => card.dataset.id);
+                const cards = container.querySelectorAll('.route-delivery-item[data-id]');
+                const ordre = Array.from(cards).map(c => c.dataset.id);
+                
+                if (ordre.length === 0) {
+                    console.log('📭 Aucune livraison');
+                    return;
+                }
+                
+                console.log('📊 Ordre:', ordre);
                 
                 const response = await fetch(`/livraison/api/routes/${routeId}/reordonner/`, {
                     method: 'POST',
@@ -1818,18 +2016,170 @@ function dashboardData() {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': this.getCookie('csrftoken')
                     },
-                    body: JSON.stringify({ ordre: ordre })
+                    body: JSON.stringify({ ordre })
                 });
                 
-                if (response.ok) {
-                    await this.chargerRoutes();
-                    this.$nextTick(() => {
-                        this.initDragAndDrop();
-                    });
+                const data = await response.json();
+                
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Échec réordre');
                 }
+                
+                const route = this.routes.find(r => r.id.toString() === routeId.toString());
+                if (route && data.livraisons) {
+                    route.livraisons = data.livraisons;
+                    console.log('✅ Route màj');
+                }
+                
             } catch (error) {
-                console.error('Erreur:', error);
+                console.error('❌ Erreur réordre:', error);
+                await this.rechargerTout();
+            } finally {
+                this.pendingOperations.delete(opKey);
             }
+        },
+
+        async ajouterLivraisonRoute(routeId, livraisonId, position = null) {
+            if (this.isUpdating) {
+                console.log('⏳ Mise à jour globale en cours');
+                return;
+            }
+            
+            this.isUpdating = true;
+            
+            try {
+                console.log(`➕ AJOUT: route=${routeId}, liv=${livraisonId}, pos=${position}`);
+                
+                const response = await fetch('/livraison/api/routes/ajouter-livraison/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        route_id: routeId,
+                        livraison_id: livraisonId,
+                        position: position
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Échec ajout');
+                }
+                
+                console.log('✅ Ajout API OK');
+                
+                const idx = this.livraisonsToutesNonAssignees.findIndex(
+                    l => l.id.toString() === livraisonId.toString()
+                );
+                
+                if (idx !== -1) {
+                    this.livraisonsToutesNonAssignees.splice(idx, 1);
+                }
+                
+                this.appliquerFiltreRecuperations();
+                
+                const route = this.routes.find(r => r.id.toString() === routeId.toString());
+                if (route && data.livraisons) {
+                    route.livraisons = data.livraisons;
+                }
+                
+                this.livraisonsToutesNonAssignees = [...this.livraisonsToutesNonAssignees];
+                this.routes = [...this.routes];
+                
+                await this.$nextTick();
+                this.initDragAndDrop();
+                this.updateMap();
+                
+            } catch (error) {
+                console.error('❌ Erreur ajout:', error);
+                alert('Erreur: ' + error.message);
+                await this.rechargerTout();
+            } finally {
+                this.isUpdating = false;
+            }
+        },
+
+        async retirerLivraisonRoute(livraisonId) {
+            if (this.isUpdating) {
+                console.log('⏳ Mise à jour globale en cours');
+                return;
+            }
+            
+            this.isUpdating = true;
+            
+            try {
+                console.log(`➖ RETRAIT: liv=${livraisonId}`);
+                
+                let livraisonRetiree = null;
+                
+                for (const route of this.routes) {
+                    const idx = route.livraisons.findIndex(
+                        l => l.id.toString() === livraisonId.toString()
+                    );
+                    if (idx !== -1) {
+                        livraisonRetiree = route.livraisons.splice(idx, 1)[0];
+                        break;
+                    }
+                }
+                
+                if (!livraisonRetiree) {
+                    console.warn('⚠️ Livraison non trouvée');
+                    return;
+                }
+                
+                this.livraisonsToutesNonAssignees.push(livraisonRetiree);
+                this.appliquerFiltreRecuperations();
+                
+                this.livraisonsToutesNonAssignees = [...this.livraisonsToutesNonAssignees];
+                this.routes = [...this.routes];
+                
+                console.log('✅ Retrait local OK');
+                
+                const response = await fetch('/livraison/api/routes/retirer-livraison/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ livraison_id: livraisonId })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Échec retrait');
+                }
+                
+                console.log('✅ Retrait API OK');
+                
+                await this.$nextTick();
+                this.initDragAndDrop();
+                this.updateMap();
+                
+            } catch (error) {
+                console.error('❌ Erreur retrait:', error);
+                alert('Erreur: ' + error.message);
+                await this.rechargerTout();
+            } finally {
+                this.isUpdating = false;
+            }
+        },
+        
+        async rechargerTout() {
+            console.log('🔄 Rechargement complet...');
+            await this.chargerLivraisons();
+            await this.chargerRoutes();
+            this.$nextTick(() => {
+                this.initDragAndDrop();
+                this.updateMap();
+            });
+        },
+        
+        toggleRouteCollapse(routeId) {
+            this.routesCollapsed[routeId] = !this.routesCollapsed[routeId];
         },
         
         toggleSelection(livraisonId) {
@@ -1848,17 +2198,15 @@ function dashboardData() {
         
         async fusionnerLivraisons() {
             if (this.livraisonsSelectionnees.length < 2) {
-                alert('Sélectionnez au moins 2 livraisons à fusionner');
+                alert('Sélectionnez au moins 2 livraisons');
                 return;
             }
             
-            // Récupérer les détails des livraisons sélectionnées
-            const livraisonsDetails = this.livraisonsSelectionnees.map(id => 
+            const details = this.livraisonsSelectionnees.map(id => 
                 this.livraisonsNonAssignees.find(l => l.id === id)
             ).filter(Boolean);
             
-            // Générer l'aperçu du nom fusionné
-            const nomFusionne = this.genererNomFusionne(livraisonsDetails);
+            const nomFusionne = this.genererNomFusionne(details);
             
             if (!confirm(`Fusionner ${this.livraisonsSelectionnees.length} livraisons en:\n"${nomFusionne}" ?`)) {
                 return;
@@ -1887,22 +2235,18 @@ function dashboardData() {
                     alert('❌ Erreur: ' + data.error);
                 }
             } catch (error) {
-                console.error('Erreur:', error);
-                alert('Erreur lors de la fusion');
+                console.error('Erreur fusion:', error);
+                alert('Erreur fusion');
             }
         },
         
         genererNomFusionne(livraisons) {
             if (livraisons.length === 0) return '';
             
-            // Extraire le nom de base et les numéros de version
-            // Ex: "Sandrine Lima 1.1 @ZONE 9" -> base: "Sandrine Lima", numero: "1.1", zone: "@ZONE 9"
             const pattern = /^(.+?)\s+(\d+(?:\.\d+)?)\s*(@.+)?$/;
-            
-            let nomBase = '';
+            let nomBase = '', zone = '';
             let numerosPrincipaux = new Set();
             let sousNumeros = [];
-            let zone = '';
             
             livraisons.forEach(liv => {
                 const nom = liv.nom_evenement || liv.numero;
@@ -1910,173 +2254,40 @@ function dashboardData() {
                 
                 if (match) {
                     const [, base, numero, zoneMatch] = match;
+                    if (!nomBase) nomBase = base.trim();
                     
-                    if (!nomBase) {
-                        nomBase = base.trim();
-                    }
-                    
-                    // Séparer numéro principal et sous-numéro
                     const [principal, sous] = numero.split('.');
                     numerosPrincipaux.add(principal);
+                    sousNumeros.push(sous || principal);
                     
-                    if (sous) {
-                        sousNumeros.push(sous);
-                    } else {
-                        sousNumeros.push(principal);
-                    }
-                    
-                    if (zoneMatch && !zone) {
-                        zone = zoneMatch.trim();
-                    }
+                    if (zoneMatch && !zone) zone = zoneMatch.trim();
                 } else {
-                    // Si le pattern ne match pas, utiliser le nom tel quel
-                    if (!nomBase) {
-                        nomBase = nom;
-                    }
+                    if (!nomBase) nomBase = nom;
                 }
             });
             
-            // Construire le nom fusionné
             if (numerosPrincipaux.size === 1) {
-                // Même numéro principal -> "Sandrine Lima 1+1.1+1.3 @ZONE 9"
                 const principal = Array.from(numerosPrincipaux)[0];
-                const numerosFormattes = sousNumeros.map(n => 
-                    n === principal ? principal : `${principal}.${n}`
-                );
                 return `${nomBase} ${principal}+${sousNumeros.join('+')} ${zone}`.trim();
-            } else {
-                // Numéros principaux différents -> "Sandrine Lima 1+2+3 @ZONE 9"
-                return `${nomBase} ${sousNumeros.join('+')} ${zone}`.trim();
             }
+            return `${nomBase} ${sousNumeros.join('+')} ${zone}`.trim();
         },
         
         async supprimerRoute(routeId) {
-            if (!confirm('Supprimer cette route ? Les livraisons redeviendront non assignées.')) {
-                return;
-            }
+            if (!confirm('Supprimer cette route ?')) return;
             
             try {
                 const response = await fetch(`/livraison/api/routes/supprimer/${routeId}/`, {
                     method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': this.getCookie('csrftoken')
-                    }
+                    headers: { 'X-CSRFToken': this.getCookie('csrftoken') }
                 });
                 
                 if (response.ok) {
                     alert('Route supprimée');
-                    await this.chargerLivraisons();
-                    await this.chargerRoutes();
+                    await this.rechargerTout();
                 }
             } catch (error) {
-                console.error('Erreur:', error);
-            }
-        },
-        
-        async ajouterLivraisonRoute(routeId, livraisonId) {
-            console.log('📤 ajouterLivraisonRoute appelé');
-            console.log('  Route ID:', routeId);
-            console.log('  Livraison ID:', livraisonId);
-            
-            try {
-                const requestBody = {
-                    route_id: routeId,
-                    livraison_id: livraisonId
-                };
-                
-                console.log('📨 Envoi requête:', requestBody);
-                
-                const response = await fetch('/livraison/api/routes/ajouter-livraison/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': this.getCookie('csrftoken')
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-                
-                console.log('📬 Réponse status:', response.status);
-                
-                const data = await response.json();
-                console.log('📬 Réponse data:', data);
-                
-                if (response.ok && data.success) {
-                    console.log('✅ Livraison ajoutée avec succès!');
-                    
-                    await this.chargerLivraisons();
-                    await this.chargerRoutes();
-                    
-                    this.$nextTick(() => {
-                        this.initDragAndDrop();
-                    });
-                } else {
-                    console.error('❌ Erreur API:', data.error);
-                    alert('Erreur: ' + (data.error || 'Impossible d\'ajouter la livraison'));
-                    
-                    await this.chargerLivraisons();
-                    await this.chargerRoutes();
-                    this.$nextTick(() => {
-                        this.initDragAndDrop();
-                    });
-                }
-            } catch (error) {
-                console.error('❌ Erreur catch:', error);
-                alert('Erreur lors de l\'ajout de la livraison: ' + error.message);
-                
-                await this.chargerLivraisons();
-                await this.chargerRoutes();
-                this.$nextTick(() => {
-                    this.initDragAndDrop();
-                });
-            }
-        },
-        
-        async retirerLivraisonRoute(livraisonId) {
-            console.log('🔙 retirerLivraisonRoute appelé');
-            console.log('  Livraison ID:', livraisonId);
-            
-            try {
-                const response = await fetch('/livraison/api/routes/retirer-livraison/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': this.getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({
-                        livraison_id: livraisonId
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    console.log('✅ Livraison retirée avec succès!');
-                    
-                    await this.chargerLivraisons();
-                    await this.chargerRoutes();
-                    
-                    this.$nextTick(() => {
-                        this.initDragAndDrop();
-                    });
-                } else {
-                    console.error('❌ Erreur:', data.error);
-                    alert('Erreur: ' + (data.error || 'Impossible de retirer la livraison'));
-                    
-                    await this.chargerLivraisons();
-                    await this.chargerRoutes();
-                    this.$nextTick(() => {
-                        this.initDragAndDrop();
-                    });
-                }
-            } catch (error) {
-                console.error('❌ Erreur:', error);
-                alert('Erreur: ' + error.message);
-                
-                await this.chargerLivraisons();
-                await this.chargerRoutes();
-                this.$nextTick(() => {
-                    this.initDragAndDrop();
-                });
+                console.error('Erreur suppression:', error);
             }
         },
         
@@ -2096,7 +2307,8 @@ function dashboardData() {
                 nom: route.nom,
                 heure_depart: route.heure_depart,
                 livreurs: route.livreurs_ids || [],
-                commentaire: route.commentaire || ''
+                commentaire: route.commentaire || '',
+                status: route.status || 'assignee'
             };
             this.modalModifierRoute = true;
         },
@@ -2118,15 +2330,13 @@ function dashboardData() {
                     await this.chargerRoutes();
                 }
             } catch (error) {
-                console.error('Erreur:', error);
-                alert('Erreur lors de la modification');
+                console.error('Erreur modification:', error);
             }
         },
         
         ouvrirDetailLivraison(livraison) {
             if (!this.modeFusion) {
                 this.livraisonSelectionnee = livraison;
-                
                 this.besoins = {
                     nom_evenement: livraison.nom_evenement || '',
                     heure: livraison.heure || '',
@@ -2143,7 +2353,6 @@ function dashboardData() {
                     checklist: false,
                     checklist_notes: ''
                 };
-                
                 this.modalDetailLivraison = true;
             }
         },
@@ -2162,35 +2371,27 @@ function dashboardData() {
                 const data = await response.json();
                 
                 if (response.ok) {
-                    alert('✅ Informations sauvegardées!');
+                    alert('✅ Sauvegardé!');
                     this.modalDetailLivraison = false;
                     
-                    // Mettre à jour le nom localement
                     if (data.nom_evenement) {
-                        const livraison = this.livraisonsNonAssignees.find(
+                        const liv = this.livraisonsNonAssignees.find(
                             l => l.id === this.livraisonSelectionnee.id
                         );
-                        if (livraison) {
-                            livraison.nom_evenement = data.nom_evenement;
-                        }
+                        if (liv) liv.nom_evenement = data.nom_evenement;
                     }
                     
-                    await this.chargerLivraisons();
-                    await this.chargerRoutes();
+                    await this.rechargerTout();
                 } else {
-                    alert('❌ Erreur: ' + (data.error || 'Erreur inconnue'));
+                    alert('❌ Erreur: ' + (data.error || 'Inconnue'));
                 }
             } catch (error) {
-                console.error('Erreur:', error);
-                alert('Erreur lors de la sauvegarde');
+                console.error('Erreur sauvegarde:', error);
             }
         },
         
         async creerRoute() {
             try {
-                console.log('Création de route...');
-                console.log('CSRF Token:', this.getCookie('csrftoken'));
-                
                 const response = await fetch('/livraison/api/routes/creer/', {
                     method: 'POST',
                     headers: {
@@ -2207,23 +2408,23 @@ function dashboardData() {
                     })
                 });
                 
-                console.log('Response status:', response.status);
                 const data = await response.json();
-                console.log('Response data:', data);
                 
                 if (response.ok && data.success) {
-                    alert('Route créée avec succès!');
+                    alert('Route créée!');
                     this.modalRoute = false;
                     await this.chargerRoutes();
                 } else {
-                    alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+                    alert('Erreur: ' + (data.error || 'Inconnue'));
                 }
             } catch (error) {
-                console.error('Erreur complète:', error);
+                console.error('Erreur création:', error);
                 alert('Erreur: ' + error.message);
             }
         }
     }
 }
 </script>
+
+
 {% endblock %}

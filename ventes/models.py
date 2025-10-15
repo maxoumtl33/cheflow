@@ -440,3 +440,5 @@ class Soumission(models.Model):
         self.statut = 'refuse'
         self.date_reponse = timezone.now()
         self.save()
+
+

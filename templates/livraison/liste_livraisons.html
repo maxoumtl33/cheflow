@@ -463,6 +463,41 @@
         margin-top: 0.5rem;
     }
 
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin: 0 0.25rem;
+        background: transparent;
+        text-decoration: none;
+    }
+
+    .action-btn:hover {
+        transform: scale(1.1);
+    }
+
+    .action-btn.view {
+        color: var(--primary-color);
+    }
+
+    .action-btn.view:hover {
+        background: rgba(99, 102, 241, 0.1);
+    }
+
+    .action-btn.edit {
+        color: var(--warning-color);
+    }
+
+    .action-btn.edit:hover {
+        background: rgba(245, 158, 11, 0.1);
+    }
+
     @media (max-width: 1024px) {
         .calendar-section {
             grid-template-columns: 1fr;
@@ -614,6 +649,7 @@
                                 <th>Client</th>
                                 <th>Livreur(s)</th>
                                 <th>Statut</th>
+                                <th style="width: 120px; text-align: center;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="selectedDateTable"></tbody>
@@ -870,7 +906,7 @@
         if (currentLivraisons.length === 0) {
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="5" style="text-align: center; padding: 2rem; color: #6b7280;">
+                    <td colspan="6" style="text-align: center; padding: 2rem; color: #6b7280;">
                         Aucune livraison pour cette date
                     </td>
                 </tr>
@@ -881,7 +917,7 @@
         if (filteredLivraisons.length === 0) {
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="5" style="text-align: center; padding: 2rem; color: #6b7280;">
+                    <td colspan="6" style="text-align: center; padding: 2rem; color: #6b7280;">
                         Aucune livraison ne correspond à votre recherche
                     </td>
                 </tr>
@@ -909,6 +945,19 @@
                     <td>${l.client}</td>
                     <td>${livreurs}</td>
                     <td>${statusBadge}</td>
+                    <td style="text-align: center; white-space: nowrap;">
+                        <a href="/livraison/responsable/livraison/${l.id}/" class="action-btn view" title="Voir les détails">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </a>
+                        <a href="/livraison/editer/${l.id}/" class="action-btn edit" title="Modifier">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </a>
+                    </td>
                 </tr>
             `;
         }).join('');

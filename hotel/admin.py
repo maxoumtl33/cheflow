@@ -1,6 +1,6 @@
 # maitre_hotel/admin.py
 from django.contrib import admin
-from .models import Contrat, PhotoContrat, HistoriqueContrat
+from .models import Contrat, PhotoContrat, HistoriqueContrat, DocumentContrat
 
 
 @admin.register(Contrat)
@@ -98,6 +98,8 @@ class PhotoContratAdmin(admin.ModelAdmin):
     list_filter = ['date_ajout', 'contrat']
     search_fields = ['contrat__numero_contrat', 'contrat__nom_evenement', 'legende']
     readonly_fields = ['date_ajout']
+
+
 
 
 @admin.register(HistoriqueContrat)

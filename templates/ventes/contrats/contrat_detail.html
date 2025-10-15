@@ -239,6 +239,60 @@
         color: #1f2937; 
     }
     
+    /* Documents */
+    .document-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        margin-bottom: 0.75rem;
+        transition: all 0.3s;
+    }
+    
+    .document-item:hover {
+        background: #f3f4f6;
+        transform: translateX(5px);
+    }
+    
+    .document-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+    }
+    
+    .document-icon {
+        font-size: 1.5rem;
+    }
+    
+    .document-details {
+        flex: 1;
+    }
+    
+    .document-name {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 0.25rem;
+    }
+    
+    .document-meta {
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+    
+    .document-type-badge {
+        padding: 0.25rem 0.75rem;
+        background: #e0e7ff;
+        color: #3730a3;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+    
     .photo-grid { 
         display: grid; 
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
@@ -270,13 +324,6 @@
         color: #6b7280;
     }
     
-    .empty-state svg {
-        width: 48px;
-        height: 48px;
-        margin: 0 auto 1rem;
-        opacity: 0.5;
-    }
-    
     @media (max-width: 1024px) {
         .content-grid { grid-template-columns: 1fr; }
         .info-grid { grid-template-columns: 1fr; }
@@ -287,7 +334,7 @@
 {% block content %}
 <div class="detail-container">
     <!-- Bouton retour -->
-     {% if request.user.role == 'resp_ventes' %}
+    {% if request.user.role == 'resp_ventes' %}
     <a href="{% url 'ventes:dashboard_responsable' %}" class="back-button">
         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -302,6 +349,7 @@
         Retour au tableau de bord
     </a>
     {% endif %}
+    
     <!-- En-tête -->
     <div class="header-card">
         <div class="header-content">
@@ -385,6 +433,12 @@
                         <div class="info-label">Adresse</div>
                         <div class="info-value">{{ contrat.adresse_complete }}, {{ contrat.ville }}</div>
                     </div>
+                    {% if contrat.code_postal %}
+                    <div class="info-item">
+                        <div class="info-label">Code postal</div>
+                        <div class="info-value">{{ contrat.code_postal }}</div>
+                    </div>
+                    {% endif %}
                     {% if contrat.maitre_hotel %}
                     <div class="info-item">
                         <div class="info-label">Maître d'hôtel</div>
@@ -393,6 +447,39 @@
                     {% endif %}
                 </div>
             </div>
+
+            <!-- Horaires réels (si remplis) -->
+            {% if contrat.heure_debut_reelle or contrat.heure_fin_reelle %}
+            <div class="card">
+                <h3 class="card-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Horaires réels
+                </h3>
+                
+                <div class="info-grid">
+                    {% if contrat.heure_debut_reelle %}
+                    <div class="info-item">
+                        <div class="info-label">Début réel</div>
+                        <div class="info-value">{{ contrat.heure_debut_reelle|date:"d/m/Y H:i" }}</div>
+                    </div>
+                    {% endif %}
+                    {% if contrat.heure_fin_reelle %}
+                    <div class="info-item">
+                        <div class="info-label">Fin réelle</div>
+                        <div class="info-value">{{ contrat.heure_fin_reelle|date:"d/m/Y H:i" }}</div>
+                    </div>
+                    {% endif %}
+                    {% if contrat.duree_reelle %}
+                    <div class="info-item">
+                        <div class="info-label">Durée réelle</div>
+                        <div class="info-value">{{ contrat.duree_reelle }} heures</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Déroulé de l'événement -->
             {% if contrat.deroule_evenement %}
@@ -430,6 +517,70 @@
                     <div class="deroule-box" style="margin-top: 0.5rem;">{{ contrat.instructions_speciales }}</div>
                 </div>
                 {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Rapports (si remplis) -->
+            {% if contrat.rapport_boissons or contrat.notes_finales %}
+            <div class="card">
+                <h3 class="card-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Rapports
+                </h3>
+                
+                {% if contrat.rapport_boissons %}
+                <div style="margin-bottom: 1rem;">
+                    <div class="info-label">Rapport boissons</div>
+                    <div class="deroule-box" style="margin-top: 0.5rem;">{{ contrat.rapport_boissons }}</div>
+                </div>
+                {% endif %}
+                
+                {% if contrat.notes_finales %}
+                <div>
+                    <div class="info-label">Notes finales</div>
+                    <div class="deroule-box" style="margin-top: 0.5rem;">{{ contrat.notes_finales }}</div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Documents -->
+            {% if documents %}
+            <div class="card">
+                <h3 class="card-title">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                    Documents ({{ documents.count }})
+                </h3>
+                
+                {% for doc in documents %}
+                <div class="document-item">
+                    <div class="document-info">
+                        <span class="document-icon">{{ doc.get_icone }}</span>
+                        <div class="document-details">
+                            <div class="document-name">
+                                {{ doc.titre }}
+                                <span class="document-type-badge">{{ doc.get_type_document_display }}</span>
+                            </div>
+                            <div class="document-meta">
+                                {{ doc.get_taille_lisible }} • Uploadé le {{ doc.date_upload|date:"d/m/Y à H:i" }}
+                                {% if doc.uploade_par %}
+                                par {{ doc.uploade_par.get_full_name|default:doc.uploade_par.username }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{{ doc.fichier.url }}" target="_blank" download class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.5rem 1rem;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        Télécharger
+                    </a>
+                </div>
+                {% endfor %}
             </div>
             {% endif %}
 

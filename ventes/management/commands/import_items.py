@@ -1,21 +1,25 @@
 """
-Commande Django management pour importer les items
+Commande Django management pour importer les soumissions
 
-Placer ce fichier dans: votre_app/management/commands/import_items.py
+Placer ce fichier dans: votre_app/management/commands/import_soumissions.py
 
 Usage:
-    python manage.py import_items Items.xlsx
-    python manage.py import_items Items.xlsx --clear  # Efface les données existantes
+    python manage.py import_soumissions soumissions_nom.xlsx
+    python manage.py import_soumissions soumissions_nom.xlsx --update  # Met à jour les existantes
 """
 
 import openpyxl
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from ventes.models import ObjetChecklist, CategorieObjet
+from django.contrib.auth import get_user_model
+from ventes.models import Soumission
+from datetime import datetime
+
+User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = 'Importe les items depuis un fichier Excel vers les modèles ObjetChecklist et CategorieObjet'
+    help = 'Importe les soumissions depuis un fichier Excel et les lie aux vendeurs'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -24,9 +28,9 @@ class Command(BaseCommand):
             help='Chemin vers le fichier Excel à importer'
         )
         parser.add_argument(
-            '--clear',
+            '--update',
             action='store_true',
-            help='Efface toutes les données existantes avant l\'importation'
+            help='Met à jour les soumissions existantes si elles existent déjà'
         )
         parser.add_argument(
             '--dry-run',
@@ -34,47 +38,63 @@ class Command(BaseCommand):
             help='Simule l\'importation sans modifier la base de données'
         )
 
-    def obtenir_couleur_icone(self, nom_categorie):
-        """Assigne une couleur et une icône selon la catégorie"""
-        mapping = {
-            'ÉQUIPEMENT DE CUISSON': ('red', 'fa-fire-burner'),
-            'SANS ALCOOL': ('blue', 'fa-bottle-water'),
-            'ACCESSOIRES DE DÉCOR': ('pink', 'fa-paintbrush'),
-            'ÉQUIPEMENT POUR SERVICE CAFÉ': ('amber', 'fa-mug-hot'),
-            'ÉQUIPEMENT DE SERVICE': ('slate', 'fa-plate-utensils'),
-            'VAISSELLE': ('indigo', 'fa-plate-wheat'),
-            'USTENSILES': ('orange', 'fa-utensils'),
-            'MOBILIER': ('emerald', 'fa-chair'),
-            'LINGE': ('cyan', 'fa-shirt'),
-            'ÉLECTROMÉNAGER': ('violet', 'fa-blender'),
-            'ALCOOL': ('rose', 'fa-wine-glass'),
-            'RÉFRIGÉRATION': ('sky', 'fa-temperature-snow'),
-            'CHAUFFAGE': ('red', 'fa-temperature-hot'),
-            'ÉCLAIRAGE': ('yellow', 'fa-lightbulb'),
-            'SONORISATION': ('purple', 'fa-volume-high'),
-            'TRANSPORT': ('gray', 'fa-truck'),
-            'SÉCURITÉ': ('green', 'fa-shield'),
-        }
+    def parse_date(self, date_value):
+        """Parse une date depuis différents formats"""
+        if not date_value:
+            return None
         
-        for cle, (couleur, icone) in mapping.items():
-            if cle in nom_categorie.upper():
-                return couleur, icone
+        if isinstance(date_value, datetime):
+            return date_value.date()
         
-        return 'slate', 'fa-box'
+        try:
+            return datetime.strptime(str(date_value), '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return None
+
+    def parse_datetime(self, datetime_value):
+        """Parse un datetime depuis différents formats"""
+        if not datetime_value:
+            return None
+        
+        if isinstance(datetime_value, datetime):
+            return datetime_value
+        
+        try:
+            return datetime.strptime(str(datetime_value), '%Y-%m-%d %H:%M:%S')
+        except (ValueError, TypeError):
+            return None
+
+    def bool_from_string(self, value):
+        """Convertit une valeur en booléen"""
+        if value in [True, 1, '1', 'True', 'true', 'TRUE']:
+            return True
+        return False
+
+    def get_user_by_identifier(self, user_identifier):
+        """Trouve un utilisateur par nom d'utilisateur ou ID"""
+        if not user_identifier:
+            return None
+        
+        try:
+            if isinstance(user_identifier, (int, float)):
+                return User.objects.get(id=int(user_identifier))
+            
+            user_str = str(user_identifier).strip()
+            return User.objects.filter(username__iexact=user_str).first()
+        except User.DoesNotExist:
+            return None
+
+    def get_or_create_numero_soumission(self, index):
+        """Génère un numéro de soumission unique"""
+        return f"SOU-{index:05d}"
 
     def handle(self, *args, **options):
         fichier = options['fichier']
-        clear = options['clear']
+        update = options['update']
         dry_run = options['dry_run']
         
         if dry_run:
             self.stdout.write(self.style.WARNING('🔍 MODE DRY-RUN - Aucune modification ne sera effectuée'))
-        
-        if clear and not dry_run:
-            self.stdout.write(self.style.WARNING('⚠️  Suppression des données existantes...'))
-            ObjetChecklist.objects.all().delete()
-            CategorieObjet.objects.all().delete()
-            self.stdout.write(self.style.SUCCESS('✅ Données effacées'))
         
         try:
             workbook = openpyxl.load_workbook(fichier)
@@ -88,87 +108,114 @@ class Command(BaseCommand):
         sheet = workbook.active
         
         stats = {
-            'categories_creees': 0,
-            'objets_crees': 0,
-            'objets_mis_a_jour': 0,
-            'erreurs': 0
+            'soumissions_creees': 0,
+            'soumissions_mises_a_jour': 0,
+            'erreurs': 0,
+            'utilisateurs_non_trouves': set(),
         }
         
-        categories_cache = {}
-        
         def traiter_importation():
-            for index, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+            for index, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=1):
                 try:
-                    nom_item = row[0]
-                    quantite = row[1] or 0
-                    nom_categorie_raw = row[2]
+                    user_identifier = row[0]  # user (colonne A)
+                    nom_compagnie = row[1] if len(row) > 1 else None  # company_name (colonne B)
+                    adresse = row[2] if len(row) > 2 else None  # event_location (colonne C)
+                    commande_par = row[3] if len(row) > 3 else None  # ordered_by (colonne D)
+                    telephone = row[4] if len(row) > 4 else None  # phone (colonne E)
+                    email = row[5] if len(row) > 5 else None  # email (colonne F)
+                    avec_service = self.bool_from_string(row[6] if len(row) > 6 else False)  # avec_service (G)
+                    avec_alcool = self.bool_from_string(row[8] if len(row) > 8 else False)  # avec_alcool (I)
+                    location_materiel = self.bool_from_string(row[9] if len(row) > 9 else False)  # location_materiel (J)
+                    date_evenement = self.parse_date(row[10] if len(row) > 10 else None)  # date (K)
+                    nombre_personnes = row[11] if len(row) > 11 else 0  # guest_count (L)
+                    created_at = self.parse_datetime(row[12] if len(row) > 12 else None)  # created_at (M)
+                    updated_at = self.parse_datetime(row[13] if len(row) > 13 else None)  # updated_at (N)
+                    sent_at = self.parse_datetime(row[14] if len(row) > 14 else None)  # sent_at (O)
+                    status = row[17] if len(row) > 17 else 'en_cours'  # status (R)
                     
-                    if not nom_item or not nom_categorie_raw:
+                    if not user_identifier:
                         self.stdout.write(
-                            self.style.WARNING(f'⚠️  Ligne {index}: données manquantes, ignorée')
+                            self.style.WARNING(f'⚠️  Ligne {index + 1}: utilisateur manquant, ignorée')
                         )
                         continue
                     
-                    nom_categorie = nom_categorie_raw.strip().title()
+                    utilisateur = self.get_user_by_identifier(user_identifier)
+                    if not utilisateur:
+                        stats['utilisateurs_non_trouves'].add(str(user_identifier))
+                        self.stdout.write(
+                            self.style.WARNING(
+                                f'⚠️  Ligne {index + 1}: Utilisateur "{user_identifier}" non trouvé'
+                            )
+                        )
                     
-                    # Créer ou récupérer la catégorie
-                    if nom_categorie not in categories_cache:
-                        couleur, icone = self.obtenir_couleur_icone(nom_categorie)
-                        
-                        if not dry_run:
-                            categorie, created = CategorieObjet.objects.get_or_create(
-                                nom=nom_categorie,
-                                defaults={
-                                    'icone': icone,
-                                    'couleur': couleur,
-                                    'ordre': len(categories_cache),
-                                    'actif': True
-                                }
+                    if not date_evenement:
+                        self.stdout.write(
+                            self.style.WARNING(f'⚠️  Ligne {index + 1}: date manquante, ignorée')
+                        )
+                        continue
+                    
+                    numero_soumission = self.get_or_create_numero_soumission(index)
+                    
+                    soumission_data = {
+                        'nom_compagnie': nom_compagnie or '',
+                        'adresse': adresse or '',
+                        'commande_par': commande_par or '',
+                        'telephone': telephone or '',
+                        'email': email or '',
+                        'avec_service': avec_service,
+                        'avec_alcool': avec_alcool,
+                        'location_materiel': location_materiel,
+                        'date_evenement': date_evenement,
+                        'nombre_personnes': int(nombre_personnes) if nombre_personnes else 0,
+                        'statut': status if status in ['en_cours', 'envoye', 'accepte', 'refuse'] else 'en_cours',
+                        'cree_par': utilisateur,
+                    }
+                    
+                    if created_at:
+                        soumission_data['cree_a'] = created_at
+                    if updated_at:
+                        soumission_data['date_modification'] = updated_at
+                    if sent_at and status == 'envoye':
+                        soumission_data['date_soumission'] = sent_at
+                    
+                    if not dry_run:
+                        if update:
+                            soumission, created = Soumission.objects.update_or_create(
+                                numero_soumission=numero_soumission,
+                                defaults=soumission_data
                             )
                         else:
-                            created = True
-                            categorie = None
-                        
-                        categories_cache[nom_categorie] = categorie
-                        
-                        if created:
-                            stats['categories_creees'] += 1
-                            self.stdout.write(
-                                self.style.SUCCESS(f'✅ Catégorie: {nom_categorie} ({couleur}, {icone})')
-                            )
+                            try:
+                                soumission = Soumission.objects.create(
+                                    numero_soumission=numero_soumission,
+                                    **soumission_data
+                                )
+                                created = True
+                            except Exception:
+                                created = False
+                                self.stdout.write(
+                                    self.style.WARNING(
+                                        f'⚠️  Ligne {index + 1}: Soumission {numero_soumission} existe déjà'
+                                    )
+                                )
+                                continue
                     else:
-                        categorie = categories_cache[nom_categorie]
-                    
-                    # Créer ou mettre à jour l'objet
-                    if not dry_run:
-                        objet, created = ObjetChecklist.objects.update_or_create(
-                            nom=nom_item.strip(),
-                            categorie=categorie,
-                            defaults={
-                                'quantite': int(quantite),
-                                'unite': 'unité',
-                                'actif': True,
-                                'ordre': index
-                            }
-                        )
-                    else:
-                        # En dry-run, vérifier si l'objet existe
-                        created = not ObjetChecklist.objects.filter(
-                            nom=nom_item.strip()
+                        created = not Soumission.objects.filter(
+                            numero_soumission=numero_soumission
                         ).exists()
                     
                     if created:
-                        stats['objets_crees'] += 1
+                        stats['soumissions_creees'] += 1
                     else:
-                        stats['objets_mis_a_jour'] += 1
+                        stats['soumissions_mises_a_jour'] += 1
                     
-                    if index % 50 == 0:
+                    if (index) % 50 == 0:
                         self.stdout.write(f'📊 Progression: {index} lignes traitées...')
                         
                 except Exception as e:
                     stats['erreurs'] += 1
                     self.stdout.write(
-                        self.style.ERROR(f'❌ Erreur ligne {index}: {str(e)}')
+                        self.style.ERROR(f'❌ Erreur ligne {index + 1}: {str(e)}')
                     )
                     continue
         
@@ -178,16 +225,20 @@ class Command(BaseCommand):
         else:
             traiter_importation()
         
-        # Afficher les statistiques
-        self.stdout.write('\n' + '='*50)
-        self.stdout.write(self.style.SUCCESS('RAPPORT D\'IMPORTATION'))
-        self.stdout.write('='*50)
-        self.stdout.write(f'✅ Catégories créées: {stats["categories_creees"]}')
-        self.stdout.write(f'✅ Objets créés: {stats["objets_crees"]}')
-        self.stdout.write(f'🔄 Objets mis à jour: {stats["objets_mis_a_jour"]}')
+        self.stdout.write('\n' + '='*60)
+        self.stdout.write(self.style.SUCCESS('RAPPORT D\'IMPORTATION DES SOUMISSIONS'))
+        self.stdout.write('='*60)
+        self.stdout.write(f'✅ Soumissions créées: {stats["soumissions_creees"]}')
+        self.stdout.write(f'🔄 Soumissions mises à jour: {stats["soumissions_mises_a_jour"]}')
         self.stdout.write(self.style.ERROR(f'❌ Erreurs: {stats["erreurs"]}'))
-        self.stdout.write(f'📊 Total traité: {stats["objets_crees"] + stats["objets_mis_a_jour"]}')
-        self.stdout.write('='*50)
+        self.stdout.write(f'📊 Total traité: {stats["soumissions_creees"] + stats["soumissions_mises_a_jour"]}')
+        
+        if stats['utilisateurs_non_trouves']:
+            self.stdout.write('\n⚠️  Utilisateurs non trouvés:')
+            for user_id in stats['utilisateurs_non_trouves']:
+                self.stdout.write(f'   - {user_id}')
+        
+        self.stdout.write('='*60)
         
         if dry_run:
             self.stdout.write(self.style.WARNING('\n🔍 Dry-run terminé - Aucune modification effectuée'))

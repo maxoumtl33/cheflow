@@ -299,7 +299,125 @@ class Contrat(models.Model):
             'details': contrats_repares
         }
 
+# ventes/models.py - Ajouter ce modèle
 
+from django.db import models
+from django.conf import settings
+from django.utils import timezone
+import os
+
+
+class DocumentContrat(models.Model):
+    """Documents associés à un contrat (soumission, menu, plan de salle, etc.)"""
+    
+    TYPE_DOCUMENT_CHOICES = [
+        ('soumission', 'Soumission'),
+        ('menu', 'Menu'),
+        ('plan_salle', 'Plan de salle'),
+        ('contrat_signe', 'Contrat signé'),
+        ('facture', 'Facture'),
+        ('autre', 'Autre'),
+    ]
+    
+    contrat = models.ForeignKey(
+        'hotel.Contrat',
+        on_delete=models.CASCADE,
+        related_name='documents'
+    )
+    
+    fichier = models.FileField(
+        upload_to='contrats/documents/%Y/%m/',
+        verbose_name="Fichier"
+    )
+    
+    type_document = models.CharField(
+        max_length=20,
+        choices=TYPE_DOCUMENT_CHOICES,
+        default='autre',
+        verbose_name="Type de document"
+    )
+    
+    titre = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Titre du document"
+    )
+    
+    description = models.TextField(
+        blank=True,
+        verbose_name="Description"
+    )
+    
+    # Métadonnées
+    uploade_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='documents_contrats_uploades'
+    )
+    
+    date_upload = models.DateTimeField(
+        default=timezone.now,
+        verbose_name="Date d'upload"
+    )
+    
+    taille_fichier = models.IntegerField(
+        default=0,
+        help_text="Taille en octets"
+    )
+    
+    class Meta:
+        ordering = ['-date_upload']
+        verbose_name = 'Document de contrat'
+        verbose_name_plural = 'Documents de contrats'
+    
+    def __str__(self):
+        return f"{self.get_type_document_display()} - {self.contrat.numero_contrat}"
+    
+    def save(self, *args, **kwargs):
+        # Calculer la taille du fichier
+        if self.fichier:
+            self.taille_fichier = self.fichier.size
+            
+            # Si pas de titre, utiliser le nom du fichier
+            if not self.titre:
+                self.titre = os.path.basename(self.fichier.name)
+        
+        super().save(*args, **kwargs)
+    
+    def get_extension(self):
+        """Retourne l'extension du fichier"""
+        if self.fichier:
+            return os.path.splitext(self.fichier.name)[1].lower()
+        return ''
+    
+    def get_icone(self):
+        """Retourne l'icône appropriée selon l'extension"""
+        ext = self.get_extension()
+        icones = {
+            '.pdf': '📄',
+            '.doc': '📝',
+            '.docx': '📝',
+            '.xls': '📊',
+            '.xlsx': '📊',
+            '.jpg': '🖼️',
+            '.jpeg': '🖼️',
+            '.png': '🖼️',
+            '.zip': '📦',
+            '.rar': '📦',
+        }
+        return icones.get(ext, '📎')
+    
+    def get_taille_lisible(self):
+        """Retourne la taille du fichier dans un format lisible"""
+        size = self.taille_fichier
+        for unit in ['o', 'Ko', 'Mo', 'Go']:
+            if size < 1024.0:
+                return f"{size:.1f} {unit}"
+            size /= 1024.0
+        return f"{size:.1f} To"
+    
 class PhotoContrat(models.Model):
         """Photos prises pendant l'événement (max 10)"""
         

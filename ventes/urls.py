@@ -59,6 +59,6 @@ urlpatterns = [
     path('soumission/<uuid:pk>/envoyer/', views.soumission_envoyer, name='soumission_envoyer'),
     path('soumission/<uuid:pk>/accepter/', views.soumission_accepter, name='soumission_accepter'),
     path('soumission/<uuid:pk>/refuser/', views.soumission_refuser, name='soumission_refuser'),
-
+    path('contrats/documents/<int:pk>/delete/', views.document_contrat_delete, name='document_contrat_delete'),
     path('item/<int:item_id>/commentaire/', views.item_add_comment, name='item_add_comment'),
 ]

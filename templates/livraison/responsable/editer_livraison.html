@@ -3,6 +3,41 @@
 {% block title %}Éditer Livraison - {{ livraison.numero_livraison }}{% endblock %}
 
 {% block content %}
+<style>
+        /* Style pour le bouton Retour au tableau de bord */
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #ffffff;
+    color: #374151;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    color: #1f2937;
+    transform: translateX(-2px);
+}
+
+.btn-back:active {
+    transform: translateX(-2px) scale(0.98);
+}
+
+.btn-back svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+}
+</style>
 <div class="max-w-4xl mx-auto">
     
     <!-- Header -->
@@ -11,11 +46,25 @@
             <h2 class="text-3xl font-bold text-gray-900">Éditer la livraison</h2>
             <p class="text-gray-600 mt-1">{{ livraison.numero_livraison }}</p>
         </div>
-        <a href="/livraison/responsable/resume/?date={{ livraison.date_livraison|date:'Y-m-d' }}"
-           class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
-            <i class="fas fa-arrow-left mr-2"></i>
-            Retour
-        </a>
+        {% if request.user.role == 'resp_ventes' %}
+                <a href="{% url 'ventes:dashboard_responsable' %}" class="btn-back">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    <span>Retour au tableau de bord</span>
+                </a>
+                {% elif request.user.role == 'vendeur' %}
+                <a href="{% url 'ventes:dashboard_vendeuse' %}" class="btn-back">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    <span>Retour au tableau de bord</span>
+                </a>
+                {% else %}
+            <a href="{/livraison/responsable/resume/?date={{ livraison.date_livraison|date:'Y-m-d' }}}" class="btn btn-secondary">
+                ← Retour
+            </a>
+            {% endif %}
     </div>
     
     <!-- Formulaire -->

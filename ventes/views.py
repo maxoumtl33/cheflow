@@ -13,6 +13,7 @@ from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.conf import settings
 from collections import defaultdict
+from hotel.models import DocumentContrat
 
 User = get_user_model()
 
@@ -146,8 +147,8 @@ def checklist_detail(request, pk):
     
     # Vérifier les permissions
     can_edit = (
-        checklist.creee_par == request.user or 
-        request.user.groups.filter(name__in=['Responsable', 'Checklist']).exists()
+        checklist.creee_par == request.user or  # Créateur
+        request.user.role in ['resp_ventes', 'admin', 'verificateur_checklist']  # Rôles autorisés
     )
     
     context = {
@@ -260,10 +261,9 @@ def checklist_edit(request, pk):
     checklist = get_object_or_404(Checklist, pk=pk)
     
     # Vérifier les permissions
-    if (checklist.creee_par != request.user and 
-        not request.user.groups.filter(name__in=['Responsable', 'Checklist']).exists()):
-        messages.error(request, "Vous n'avez pas la permission de modifier cette checklist")
-        return redirect('ventes:checklist_detail', pk=pk)
+    if request.user.role not in ['resp_ventes', 'vendeur']:
+        messages.error(request, "Vous n'avez pas la permission de modifier cette soumission")
+        return redirect('ventes:soumission_detail', pk=pk)
     
     categories = CategorieObjet.objects.prefetch_related(
         Prefetch('objets', queryset=ObjetChecklist.objects.filter(actif=True))
@@ -564,6 +564,7 @@ def dashboard_responsable(request):
         'total_categories': CategorieObjet.objects.filter(actif=True).count(),
         'total_vendeuses': User.objects.filter(role='vendeur', is_active=True).count(),
         'total_soumissions': Soumission.objects.count(),
+        'total_contrats': Contrat.objects.count(),
     }
     
     context = {
@@ -1157,9 +1158,11 @@ def contrat_create_step2(request):
     
     return render(request, 'ventes/contrats/contrat_create_step2.html', context)
 
+# ventes/views.py - Remplacer la vue contrat_create_step3
+
 @login_required
 def contrat_create_step3(request):
-    """Étape 3: Déroulé de l'événement + Confirmation avec résumé"""
+    """Étape 3: Déroulé de l'événement + Documents + Confirmation avec résumé"""
     
     # Vérifier que les étapes précédentes sont complétées
     if 'contrat_step1' not in request.session or 'contrat_step2' not in request.session:
@@ -1206,6 +1209,31 @@ def contrat_create_step3(request):
                 status='planifie'
             )
             
+            # Gérer les documents uploadés
+            files = request.FILES.getlist('documents')  # ✅ Correspond au name="documents" du template
+            document_types = request.POST.getlist('document_types[]')
+            
+            print(f"🔍 DEBUG - Files uploadés: {len(files)}")
+            print(f"🔍 DEBUG - Types: {document_types}")
+            
+            
+            documents_added = 0
+            for idx, file in enumerate(files):
+                # Déterminer le type de document
+                doc_type = document_types[idx] if idx < len(document_types) else 'autre'
+                
+                print(f"  ✅ Création document: {file.name} ({doc_type})")
+                
+                # Créer le document
+                doc = DocumentContrat.objects.create(
+                    contrat=contrat,
+                    fichier=file,
+                    type_document=doc_type,
+                    uploade_par=request.user
+                )
+                documents_added += 1
+                print(f"  ✅ Document créé: ID={doc.id}, Titre={doc.titre}")
+            
             # Créer l'historique
             HistoriqueContrat.objects.create(
                 contrat=contrat,
@@ -1218,7 +1246,11 @@ def contrat_create_step3(request):
             del request.session['contrat_step1']
             del request.session['contrat_step2']
             
-            messages.success(request, f"✅ Contrat {contrat.numero_contrat} créé avec succès!")
+            success_msg = f"✅ Contrat {contrat.numero_contrat} créé avec succès!"
+            if documents_added > 0:
+                success_msg += f" {documents_added} document(s) ajouté(s)."
+            
+            messages.success(request, success_msg)
             return redirect('ventes:contrat_detail', pk=contrat.pk)
         
         except Exception as e:
@@ -1253,42 +1285,59 @@ def contrat_create_step3(request):
     }
     
     return render(request, 'ventes/contrats/contrat_create_step3.html', context)
+# ventes/views.py - Remplacer la vue contrat_detail
 
 @login_required
 def contrat_detail(request, pk):
-    """Détail d'un contrat"""
+    """Détail d'un contrat avec documents et photos"""
     contrat = get_object_or_404(
         Contrat.objects.select_related(
             'maitre_hotel', 'checklist', 'livraison', 'cree_par'
-        ).prefetch_related('photos', 'historique'),
+        ).prefetch_related('photos', 'historique', 'documents'),
         pk=pk
     )
     
-    photos = contrat.photos.all()
+    # Récupérer les photos
+    photos = contrat.photos.all().order_by('ordre', 'date_ajout')
+    
+    # Récupérer l'historique
     historique = contrat.historique.all()[:10]
+    
+    # Récupérer les documents
+    documents = DocumentContrat.objects.filter(contrat=contrat).order_by('-date_upload')
+    
+    # Debug - Afficher dans la console
+    print(f"🔍 DEBUG - Contrat: {contrat.numero_contrat}")
+    print(f"📄 Documents count: {documents.count()}")
+    print(f"🖼️ Photos count: {photos.count()}")
+    for doc in documents:
+        print(f"  - Document: {doc.titre} ({doc.get_type_document_display()})")
+    for photo in photos:
+        print(f"  - Photo: {photo.legende or 'Sans légende'}")
     
     context = {
         'contrat': contrat,
         'photos': photos,
         'historique': historique,
-        'can_edit': request.user.role in ['resp_ventes', 'maitre_hotel'],
+        'documents': documents,
+        'can_edit': request.user.role in ['resp_ventes', 'vendeur', 'maitre_hotel'],
     }
     
     return render(request, 'ventes/contrats/contrat_detail.html', context)
 
 @login_required
 def contrat_edit(request, pk):
-    """Modifier un contrat (formulaire tout-en-un)"""
+    """Modifier un contrat avec gestion des documents"""
     contrat = get_object_or_404(Contrat, pk=pk)
     
     # Vérifier permissions
-    if request.user.role not in ['resp_ventes', 'maitre_hotel']:
+    if request.user.role not in ['resp_ventes', 'maitre_hotel', 'vendeur']:
         messages.error(request, "Vous n'avez pas la permission de modifier ce contrat")
         return redirect('ventes:contrat_detail', pk=pk)
     
     if request.method == 'POST':
         try:
-            # Mise à jour des champs
+            # Mise à jour des champs du contrat
             contrat.nom_evenement = request.POST.get('nom_evenement')
             contrat.maitre_hotel_id = request.POST.get('maitre_hotel') or None
             contrat.client_nom = request.POST.get('client_nom')
@@ -1308,19 +1357,45 @@ def contrat_edit(request, pk):
             
             contrat.save()
             
+            # ✅ CORRECTION ICI - Utiliser 'documents' au lieu de 'fileInput'
+            new_files = request.FILES.getlist('documents')
+            new_document_types = request.POST.getlist('new_document_types[]')
+            
+            documents_added = 0
+            for idx, file in enumerate(new_files):
+                doc_type = new_document_types[idx] if idx < len(new_document_types) else 'autre'
+                
+                DocumentContrat.objects.create(
+                    contrat=contrat,
+                    fichier=file,
+                    type_document=doc_type,
+                    uploade_par=request.user
+                )
+                documents_added += 1
+            
             # Historique
+            description = f"Contrat modifié par {request.user.get_full_name()}"
+            if documents_added > 0:
+                description += f" - {documents_added} document(s) ajouté(s)"
+            
             HistoriqueContrat.objects.create(
                 contrat=contrat,
                 type_action='modification',
-                description=f"Contrat modifié par {request.user.get_full_name()}",
+                description=description,
                 effectue_par=request.user
             )
             
-            messages.success(request, "✅ Contrat modifié avec succès!")
+            success_msg = "✅ Contrat modifié avec succès!"
+            if documents_added > 0:
+                success_msg += f" {documents_added} document(s) ajouté(s)."
+            messages.success(request, success_msg)
+            
             return redirect('ventes:contrat_detail', pk=pk)
         
         except Exception as e:
             messages.error(request, f"Erreur lors de la modification: {str(e)}")
+            import traceback
+            traceback.print_exc()
     
     # GET
     maitres_hotel = User.objects.filter(role='maitre_hotel', is_active=True)
@@ -1331,6 +1406,7 @@ def contrat_edit(request, pk):
     }
     
     return render(request, 'ventes/contrats/contrat_edit.html', context)
+
 
 @login_required
 def contrat_delete(request, pk):
@@ -1422,6 +1498,13 @@ def soumission_create(request):
         messages.error(request, "Vous n'avez pas la permission de créer une soumission")
         return get_user_dashboard_redirect(request.user)
     
+    # Récupérer tous les vendeurs pour la liste déroulante (uniquement pour resp_ventes)
+    vendeurs = []
+    if request.user.role == 'resp_ventes':
+        vendeurs = User.objects.filter(
+            role__in=['vendeur', 'resp_ventes']
+        ).order_by('first_name', 'last_name', 'username')
+    
     if request.method == 'POST':
         nom_compagnie = request.POST.get('nom_compagnie')
         date_evenement = request.POST.get('date_evenement')
@@ -1435,12 +1518,23 @@ def soumission_create(request):
         telephone = request.POST.get('telephone')
         notes = request.POST.get('notes', '')
         
+        # Déterminer le créateur de la soumission
+        cree_par = request.user
+        if request.user.role == 'resp_ventes':
+            vendeur_id = request.POST.get('cree_par')
+            if vendeur_id:
+                try:
+                    cree_par = User.objects.get(id=vendeur_id)
+                except User.DoesNotExist:
+                    messages.warning(request, "Vendeur non trouvé. La soumission sera créée sous votre nom.")
+        
         # Validation
         if not all([nom_compagnie, date_evenement, nombre_personnes, 
                    adresse, commande_par, email, telephone]):
             messages.error(request, "Veuillez remplir tous les champs obligatoires")
             context = {
                 'form_data': request.POST,
+                'vendeurs': vendeurs,
                 'google_api_key': settings.GOOGLE_MAPS_API_KEY,
             }
             return render(request, 'ventes/soumissions/soumission_form.html', context)
@@ -1458,11 +1552,18 @@ def soumission_create(request):
                 email=email,
                 telephone=telephone,
                 notes=notes,
-                cree_par=request.user,
+                cree_par=cree_par,
                 statut='en_cours'
             )
             
-            messages.success(request, f"✅ Soumission {soumission.numero_soumission} créée avec succès!")
+            if cree_par != request.user:
+                messages.success(
+                    request, 
+                    f"✅ Soumission {soumission.numero_soumission} créée avec succès et assignée à {cree_par.get_full_name() or cree_par.username}!"
+                )
+            else:
+                messages.success(request, f"✅ Soumission {soumission.numero_soumission} créée avec succès!")
+            
             return redirect('ventes:soumission_detail', pk=soumission.pk)
         
         except Exception as e:
@@ -1471,10 +1572,10 @@ def soumission_create(request):
             traceback.print_exc()
     
     context = {
+        'vendeurs': vendeurs,
         'google_api_key': settings.GOOGLE_MAPS_API_KEY,
     }
     return render(request, 'ventes/soumissions/soumission_form.html', context)
-
 @login_required
 def soumission_edit(request, pk):
     """Modifier une soumission"""
@@ -1708,3 +1809,53 @@ def item_add_comment(request, item_id):
         })
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+    
+
+@login_required
+def document_contrat_delete(request, pk):
+    """Supprimer un document d'un contrat (AJAX)"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+    
+    
+    
+    try:
+        document = get_object_or_404(DocumentContrat, pk=pk)
+        contrat = document.contrat
+        
+        # Vérifier permissions
+        if request.user.role not in ['resp_ventes', 'maitre_hotel']:
+            return JsonResponse({'success': False, 'error': 'Permission refusée'}, status=403)
+        
+        # Sauvegarder les infos pour l'historique
+        titre_doc = document.titre
+        type_doc = document.get_type_document_display()
+        
+        # Supprimer le fichier physique
+        if document.fichier:
+            try:
+                document.fichier.delete(save=False)
+            except:
+                pass
+        
+        # Supprimer l'objet
+        document.delete()
+        
+        # Créer l'historique
+        HistoriqueContrat.objects.create(
+            contrat=contrat,
+            type_action='modification',
+            description=f"Document supprimé: {type_doc} - {titre_doc}",
+            effectue_par=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Document "{titre_doc}" supprimé avec succès'
+        })
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

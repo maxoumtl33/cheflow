@@ -235,6 +235,7 @@ def livraisons_json(request):
             'the': liv.besoin_the,
             'glace': liv.besoin_sac_glace,
             'chaud': liv.besoin_part_chaud,
+            'est_recuperation': liv.est_recuperation,
         })
     
     return JsonResponse({'livraisons': data})
@@ -287,16 +288,17 @@ def creer_route(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
     
-
+from django.db import models
 @login_required
 @require_http_methods(["POST"])
 def ajouter_livraison_route(request):
-    """Ajouter une livraison à une route"""
+    """Ajouter une livraison à une route avec position"""
     try:
         data = json.loads(request.body)
         
         route = Route.objects.get(id=data['route_id'])
         livraison = Livraison.objects.get(id=data['livraison_id'])
+        position = data.get('position')  # 🔥 NOUVEAU
         
         # Vérifier si pas déjà assignée
         if livraison.status != 'non_assignee':
@@ -305,24 +307,61 @@ def ajouter_livraison_route(request):
                 'error': 'Livraison déjà assignée'
             }, status=400)
         
+        # 🔥 Si position spécifiée, décaler les autres
+        if position is not None:
+            # Décaler toutes les livraisons après cette position
+            LivraisonRoute.objects.filter(
+                route=route,
+                ordre__gte=position
+            ).update(ordre=models.F('ordre') + 1)
+            
+            ordre = position
+        else:
+            # Ajouter à la fin
+            ordre = LivraisonRoute.objects.filter(route=route).count()
+        
         # Créer l'association
         LivraisonRoute.objects.create(
             livraison=livraison,
             route=route,
-            ordre=data.get('ordre', 0)
+            ordre=ordre
         )
         
         # Mettre à jour le statut
         livraison.status = 'assignee'
         livraison.save()
         
+        # 🔥 Retourner TOUTES les livraisons de la route dans l'ordre
+        livraisons_route = LivraisonRoute.objects.filter(
+            route=route
+        ).select_related('livraison').order_by('ordre')
+        
+        livraisons_data = []
+        for lr in livraisons_route:
+            liv = lr.livraison
+            livraisons_data.append({
+                'id': str(liv.id),
+                'numero': liv.numero_livraison,
+                'nom_evenement': liv.nom_evenement,
+                'client': liv.client_nom,
+                'adresse': liv.adresse_complete,
+                'heure': liv.heure_souhaitee.strftime('%H:%M') if liv.heure_souhaitee else '',
+                'cafe': liv.besoin_cafe,
+                'the': liv.besoin_the,
+                'glace': liv.besoin_sac_glace,
+                'chaud': liv.besoin_part_chaud,
+                'est_recuperation': liv.est_recuperation,
+            })
+        
         return JsonResponse({
             'success': True,
-            'message': 'Livraison ajoutée à la route'
+            'message': 'Livraison ajoutée à la route',
+            'livraisons': livraisons_data  # 🔥 Toutes les livraisons
         })
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
-
 
 @login_required
 @require_http_methods(["POST"])
@@ -350,27 +389,61 @@ def retirer_livraison_route(request):
 
 @login_required
 @require_http_methods(["POST"])
-def reordonner_livraisons_route(request):
+def reordonner_livraisons_route(request, route_id):
     """Réordonner les livraisons dans une route"""
     try:
         data = json.loads(request.body)
+        ordre_livraisons = data.get('ordre', [])  # Liste d'IDs dans l'ordre
         
-        route = Route.objects.get(id=data['route_id'])
-        ordres = data['ordres']  # [{livraison_id: '...', ordre: 0}, ...]
+        route = Route.objects.get(id=route_id)
         
-        for item in ordres:
+        # Mettre à jour l'ordre
+        for index, livraison_id in enumerate(ordre_livraisons):
             LivraisonRoute.objects.filter(
                 route=route,
-                livraison_id=item['livraison_id']
-            ).update(ordre=item['ordre'])
+                livraison_id=livraison_id
+            ).update(ordre=index)
+        
+        # 🔥 NOUVEAU : Retourner les livraisons dans le bon ordre
+        livraisons_route = LivraisonRoute.objects.filter(
+            route=route
+        ).select_related('livraison').order_by('ordre')
+        
+        livraisons_data = []
+        for lr in livraisons_route:
+            liv = lr.livraison
+            livraisons_data.append({
+                'id': str(liv.id),
+                'numero': liv.numero_livraison,
+                'nom_evenement': liv.nom_evenement,
+                'client': liv.client_nom,
+                'adresse': liv.adresse_complete,
+                'heure': liv.heure_souhaitee.strftime('%H:%M') if liv.heure_souhaitee else '',
+                'cafe': liv.besoin_cafe,
+                'the': liv.besoin_the,
+                'glace': liv.besoin_sac_glace,
+                'chaud': liv.besoin_part_chaud,
+                'est_recuperation': liv.est_recuperation,
+            })
         
         return JsonResponse({
             'success': True,
-            'message': 'Ordre mis à jour'
+            'message': 'Ordre mis à jour',
+            'livraisons': livraisons_data  # 🔥 Retourner les livraisons
         })
+        
+    except Route.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Route introuvable'
+        }, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
-
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
 
 @login_required
 def routes_json(request):
@@ -1149,13 +1222,21 @@ def supprimer_livreur(request, livreur_id):
 # GESTION DES LIVREURS
 # ==========================================
 
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.db.models import Count, Q, Prefetch
+from datetime import datetime, timedelta
+from django.utils import timezone
+from users.models import CustomUser
+from .models import DisponibiliteLivreur, Route, LivraisonRoute
+
 @login_required
 def gestion_livreurs(request):
-    """Page de gestion des livreurs et leurs disponibilités"""
+    """Page de gestion des livreurs et leurs disponibilités avec routes organisées"""
     
     # Récupérer tous les livreurs
     livreurs = CustomUser.objects.filter(
-        role__in=['livreur', 'resp_livraison']  # ← CORRECTION ICI
+        role__in=['livreur', 'resp_livraison']
     ).prefetch_related(
         Prefetch(
             'disponibilites',
@@ -1180,14 +1261,65 @@ def gestion_livreurs(request):
         jour = debut_semaine + timedelta(days=i)
         jours_planning.append(jour)
     
+    # Récupérer les routes des 14 prochains jours organisées par date et période
+    routes_par_date = {}
+    for jour in jours_planning:
+        routes_jour = Route.objects.filter(
+            date=jour
+        ).select_related(
+            'vehicule'
+        ).prefetch_related(
+            'livreurs',
+            Prefetch(
+                'livraisonroute_set',
+                queryset=LivraisonRoute.objects.select_related('livraison').order_by('ordre')
+            )
+        ).order_by('periode', 'heure_depart')
+        
+        # Organiser par période
+        routes_par_periode = {
+            'matin': [],
+            'midi': [],
+            'apres_midi': []
+        }
+        
+        for route in routes_jour:
+            # Compter les récupérations
+            nb_recuperations = route.livraisonroute_set.filter(
+                livraison__est_recuperation=True
+            ).count()
+            
+            route_data = {
+                'id': str(route.id),
+                'nom': route.nom,
+                'heure_depart': route.heure_depart.strftime('%H:%M') if route.heure_depart else '',
+                'status': route.status,
+                'status_display': route.get_status_display(),
+                'livreurs': [
+                    {
+                        'id': l.id,
+                        'nom': l.get_full_name() or l.username,
+                        'initiales': f"{l.first_name[0] if l.first_name else ''}{l.last_name[0] if l.last_name else ''}".upper()
+                    }
+                    for l in route.livreurs.all()
+                ],
+                'nb_livraisons': route.livraisonroute_set.count(),
+                'nb_recuperations': nb_recuperations,
+                'vehicule': f"{route.vehicule.marque} {route.vehicule.modele}" if route.vehicule else None
+            }
+            
+            routes_par_periode[route.periode].append(route_data)
+        
+        routes_par_date[jour.strftime('%Y-%m-%d')] = routes_par_periode
+    
     context = {
         'livreurs': livreurs,
         'jours_planning': jours_planning,
         'aujourd_hui': aujourd_hui,
+        'routes_par_date': routes_par_date,
     }
     
     return render(request, 'livraison/responsable/gestion_livreurs.html', context)
-
 
 @login_required
 @require_http_methods(["POST"])
@@ -1941,6 +2073,10 @@ def dashboard_livreur(request):
     }
     
     return render(request, 'livraison/livreur/dashboard.html', context)
+
+
+
+
 # ==========================================
 # DÉMARRAGE DE ROUTE
 # ==========================================
@@ -2718,7 +2854,8 @@ def routes_par_date(request):
         date=date_obj,
         livreurs=request.user
     ).select_related('vehicule').prefetch_related(
-        'livraisonroute_set__livraison__checklist'  # 🔥 AJOUT du prefetch pour checklist
+        'livreurs',  # 🔥 AJOUT pour charger tous les livreurs
+        'livraisonroute_set__livraison__checklist'
     ).order_by('heure_depart')
     
     routes_data = []
@@ -2729,7 +2866,7 @@ def routes_par_date(request):
         for lr in livraisons_route:
             livraison = lr.livraison
             
-            # 🔥 Construire la liste des besoins POUR CETTE LIVRAISON
+            # Construire la liste des besoins POUR CETTE LIVRAISON
             besoins_specifiques = []
             if livraison.besoin_cafe:
                 besoins_specifiques.append('Café')
@@ -2739,7 +2876,7 @@ def routes_par_date(request):
                 besoins_specifiques.append('Sac glace')
             if livraison.besoin_part_chaud:
                 besoins_specifiques.append('Part chaud')
-            if livraison.checklist:  # 🔥 AJOUT checklist
+            if livraison.checklist:
                 besoins_specifiques.append('Checklist')
             
             livraisons_data.append({
@@ -2752,9 +2889,14 @@ def routes_par_date(request):
                 'besoins_specifiques': besoins_specifiques
             })
         
-        # Récupérer le premier livreur
-        livreur_principal = route.livreurs.first()
-        livreur_nom = livreur_principal.get_full_name() if livreur_principal else 'Non assigné'
+        # 🔥 RÉCUPÉRER TOUS LES LIVREURS
+        livreurs_noms = [
+            livreur.get_full_name() or livreur.username
+            for livreur in route.livreurs.all()
+        ]
+        
+        # Jointure avec virgule pour l'affichage
+        livreur_nom = ', '.join(livreurs_noms) if livreurs_noms else 'Non assigné'
         
         # Construire les besoins de la route (agrégés de toutes les livraisons)
         besoins_route = set()
@@ -2768,7 +2910,7 @@ def routes_par_date(request):
                 besoins_route.add('Sac glace')
             if livraison.besoin_part_chaud:
                 besoins_route.add('Part chaud')
-            if livraison.checklist:  # 🔥 AJOUT checklist au niveau route
+            if livraison.checklist:
                 besoins_route.add('Checklist')
         
         # Compter les livraisons par statut
@@ -2783,7 +2925,8 @@ def routes_par_date(request):
             'heure_depart': route.heure_depart.strftime('%H:%M') if route.heure_depart else '',
             'status': route.status,
             'statusDisplay': route.get_status_display(),
-            'livreur_nom': livreur_nom,
+            'livreur_nom': livreur_nom,  # 🔥 Tous les livreurs séparés par virgule
+            'livreurs': livreurs_noms,   # 🔥 Liste des noms pour usage avancé
             'vehicule': f"{route.vehicule.marque} {route.vehicule.modele}" if route.vehicule else None,
             'commentaire': route.commentaire,
             'besoins': list(besoins_route),
@@ -2798,7 +2941,6 @@ def routes_par_date(request):
         'success': True,
         'routes': routes_data
     })
-
 @login_required
 def routes_du_mois(request):
     """API pour récupérer les dates qui ont des routes pour le livreur connecté"""
@@ -2827,3 +2969,150 @@ def routes_du_mois(request):
         'success': True,
         'dates': dates
     })
+
+@login_required
+def detail_livraison_responsable(request, livraison_id):
+    """Vue détaillée d'une livraison pour le responsable"""
+    livraison = get_object_or_404(
+        Livraison.objects.select_related(
+            'mode_envoi',
+            'checklist',
+            'cree_par',
+            'livraison_origine'
+        ).prefetch_related(
+            'photos',
+            'recuperations',
+            'livraisonroute_set__route__livreurs',
+            'livraisonroute_set__route__vehicule'
+        ),
+        id=livraison_id
+    )
+    
+    # Récupérer la route et les livreurs
+    livraison_route = livraison.livraisonroute_set.first()
+    route = livraison_route.route if livraison_route else None
+    
+    # Récupérer les véhicules disponibles
+    vehicules = Vehicule.objects.filter(statut='disponible').order_by('marque', 'modele')
+    
+    # Récupérer tous les modes d'envoi
+    modes_envoi = ModeEnvoi.objects.filter(actif=True).order_by('nom')
+    
+    # Historique des statuts (si vous avez un système de logs)
+    # historique_statuts = ... (à implémenter si nécessaire)
+    
+    context = {
+        'livraison': livraison,
+        'route': route,
+        'vehicules': vehicules,
+        'modes_envoi': modes_envoi,
+        'GOOGLE_MAPS_API_KEY': settings.GOOGLE_MAPS_API_KEY,
+    }
+    
+    return render(request, 'livraison/responsable/livraison_detail.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def modifier_livraison_responsable(request, livraison_id):
+    """Modification rapide d'une livraison (AJAX)"""
+    try:
+        data = json.loads(request.body)
+        livraison = Livraison.objects.get(id=livraison_id)
+        
+        # Mettre à jour les champs autorisés
+        if 'nom_evenement' in data:
+            livraison.nom_evenement = data['nom_evenement']
+        
+        if 'client_nom' in data:
+            livraison.client_nom = data['client_nom']
+        
+        if 'client_telephone' in data:
+            livraison.client_telephone = data['client_telephone']
+        
+        if 'adresse_complete' in data:
+            livraison.adresse_complete = data['adresse_complete']
+        
+        if 'heure_souhaitee' in data:
+            from datetime import datetime
+            livraison.heure_souhaitee = datetime.strptime(data['heure_souhaitee'], '%H:%M').time()
+            
+            # Recalculer la période
+            heure = livraison.heure_souhaitee
+            if heure < datetime.strptime('09:30', '%H:%M').time():
+                livraison.periode = 'matin'
+            elif heure < datetime.strptime('13:00', '%H:%M').time():
+                livraison.periode = 'midi'
+            else:
+                livraison.periode = 'apres_midi'
+        
+        if 'mode_envoi_id' in data:
+            livraison.mode_envoi = ModeEnvoi.objects.get(id=data['mode_envoi_id'])
+        
+        if 'nb_convives' in data:
+            livraison.nb_convives = int(data['nb_convives'])
+        
+        if 'informations_supplementaires' in data:
+            livraison.informations_supplementaires = data['informations_supplementaires']
+        
+        if 'notes_internes' in data:
+            livraison.notes_internes = data['notes_internes']
+        
+        # Besoins spéciaux
+        if 'besoin_cafe' in data:
+            livraison.besoin_cafe = data['besoin_cafe']
+        if 'besoin_the' in data:
+            livraison.besoin_the = data['besoin_the']
+        if 'besoin_sac_glace' in data:
+            livraison.besoin_sac_glace = data['besoin_sac_glace']
+        if 'besoin_part_chaud' in data:
+            livraison.besoin_part_chaud = data['besoin_part_chaud']
+        
+        livraison.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Livraison mise à jour',
+            'livraison': {
+                'nom_evenement': livraison.nom_evenement,
+                'client_nom': livraison.client_nom,
+                'heure_souhaitee': livraison.heure_souhaitee.strftime('%H:%M') if livraison.heure_souhaitee else '',
+                'periode_display': livraison.get_periode_display(),
+            }
+        })
+        
+    except Livraison.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Livraison introuvable'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def supprimer_livraison(request, livraison_id):
+    """Supprimer une livraison"""
+    try:
+        livraison = Livraison.objects.get(id=livraison_id)
+        
+        # Vérifier qu'elle n'est pas dans une route en cours
+        if livraison.status in ['en_cours', 'livree']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Impossible de supprimer une livraison en cours ou livrée'
+            }, status=400)
+        
+        # Supprimer les associations de route
+        LivraisonRoute.objects.filter(livraison=livraison).delete()
+        
+        # Supprimer la livraison
+        livraison.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Livraison supprimée'
+        })
+        
+    except Livraison.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Livraison introuvable'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
