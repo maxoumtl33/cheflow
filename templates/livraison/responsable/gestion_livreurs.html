@@ -276,6 +276,8 @@
     .dispo-badge.disponible {
         background: #d1fae5;
         color: #065f46;
+        min-width: 48px;
+        padding: 0 0.75rem;
     }
 
     .dispo-badge.indisponible {
@@ -539,7 +541,6 @@
         flex: 1;
     }
 
-    /* Actions dans la modale de détail */
     .dispo-actions {
         display: flex;
         gap: 0.5rem;
@@ -547,6 +548,27 @@
         margin-top: 1rem;
         padding-top: 1rem;
         border-top: 1px solid var(--border-color);
+    }
+
+    /* Style pour les inputs dans le tableau */
+    .planning-table input[type="time"],
+    .planning-table input[type="text"] {
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+
+    .planning-table input[type="time"]:focus,
+    .planning-table input[type="text"]:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+        outline: none;
+    }
+
+    @media (max-width: 960px) {
+        .modal-content[style*="max-width: 900px"] {
+            max-width: 95vw !important;
+        }
     }
 
     @media (max-width: 768px) {
@@ -714,48 +736,63 @@
                             </div>
                         </td>
                         {% for jour in jours_planning %}
-                        <td :class="'{{ jour|date:'Y-m-d' }}' === '{{ aujourd_hui|date:'Y-m-d' }}' ? 'today' : ''">
-                            {% with livreur_id=livreur.id jour_str=jour|date:'Y-m-d' %}
-                            <div x-data="{ dispo: disponibilitesMap['{{ livreur_id }}-{{ jour_str }}'] || null }">
-                                <template x-if="dispo">
-                                    <div>
-                                        <span x-show="dispo.type_dispo === 'disponible'"
-                                              class="dispo-badge disponible"
-                                              @click="ouvrirDetailDispo(dispo)"
-                                              title="Disponible - Cliquer pour détails">
-                                            <i class="fas fa-check"></i>
-                                            <span x-show="dispo.heure_debut_shift" x-text="dispo.heure_debut_shift" style="margin-left: 0.25rem;"></span>
-                                        </span>
-                                        <span x-show="dispo.type_dispo === 'indisponible'"
-                                              class="dispo-badge indisponible"
-                                              @click="ouvrirDetailDispo(dispo)"
-                                              title="Indisponible">
-                                            <i class="fas fa-times"></i>
-                                        </span>
-                                        <span x-show="dispo.type_dispo === 'conge'"
-                                              class="dispo-badge conge"
-                                              @click="ouvrirDetailDispo(dispo)"
-                                              title="Congé">
-                                            <i class="fas fa-umbrella-beach"></i>
-                                        </span>
-                                        <span x-show="dispo.type_dispo === 'maladie'"
-                                              class="dispo-badge maladie"
-                                              @click="ouvrirDetailDispo(dispo)"
-                                              title="Maladie">
-                                            <i class="fas fa-notes-medical"></i>
-                                        </span>
-                                    </div>
-                                </template>
-                                <template x-if="!dispo">
-                                    <div class="dispo-badge empty" 
-                                         @click="ajouterDispoRapide({{ livreur.id }}, '{{ livreur.get_full_name|escapejs }}', '{{ jour_str }}')">
-                                        <i class="fas fa-plus" style="font-size: 0.625rem;"></i>
-                                    </div>
-                                </template>
-                            </div>
-                            {% endwith %}
-                        </td>
-                        {% endfor %}
+<td :class="'{{ jour|date:'Y-m-d' }}' === '{{ aujourd_hui|date:'Y-m-d' }}' ? 'today' : ''">
+    {% with livreur_id=livreur.id jour_str=jour|date:'Y-m-d' %}
+    <div x-data="{ 
+        get dispo() { 
+            return disponibilitesMap['{{ livreur_id }}-{{ jour_str }}'] || null; 
+        },
+        get hasHeure() {
+            const d = this.dispo;
+            return d && d.heure_debut_shift && d.heure_debut_shift !== null && d.heure_debut_shift !== '';
+        }
+    }">
+        
+        <!-- DISPONIBLE avec heure -->
+        <div x-show="dispo && dispo.type_dispo === 'disponible'"
+             class="dispo-badge disponible"
+             @click="ouvrirDetailDispo(dispo)"
+             :title="hasHeure ? `Shift: ${dispo.heure_debut_shift}` : 'Disponible'">
+            <span x-show="hasHeure" x-text="dispo.heure_debut_shift" style="font-weight: 700; font-size: 0.7rem;"></span>
+            <i x-show="!hasHeure" class="fas fa-check"></i>
+        </div>
+        
+        <!-- INDISPONIBLE -->
+        <span x-show="dispo && dispo.type_dispo === 'indisponible'"
+              class="dispo-badge indisponible"
+              @click="ouvrirDetailDispo(dispo)"
+              title="Indisponible">
+            <i class="fas fa-times"></i>
+        </span>
+        
+        <!-- CONGÉ -->
+        <span x-show="dispo && dispo.type_dispo === 'conge'"
+              class="dispo-badge conge"
+              @click="ouvrirDetailDispo(dispo)"
+              title="Congé">
+            <i class="fas fa-umbrella-beach"></i>
+        </span>
+        
+        <!-- MALADIE -->
+        <span x-show="dispo && dispo.type_dispo === 'maladie'"
+              class="dispo-badge maladie"
+              @click="ouvrirDetailDispo(dispo)"
+              title="Maladie">
+            <i class="fas fa-notes-medical"></i>
+        </span>
+        
+        <!-- Pas de dispo -->
+        <div x-show="!dispo" 
+             class="dispo-badge empty" 
+             @click="ajouterDispoRapide({{ livreur.id }}, '{{ livreur.get_full_name|escapejs }}', '{{ jour_str }}')"
+             title="Ajouter une disponibilité">
+            <i class="fas fa-plus" style="font-size: 0.625rem;"></i>
+        </div>
+        
+    </div>
+    {% endwith %}
+</td>
+{% endfor %}
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -800,10 +837,10 @@
             </div>
             
             <div class="livreur-card-actions">
-                <button @click="ajouterDispoLivreur({{ livreur.id }}, '{{ livreur.get_full_name|escapejs }}')"
+                <button @click="ouvrirToutesDispos({{ livreur.id }}, '{{ livreur.get_full_name|escapejs }}')"
                         class="btn btn-primary btn-sm" style="flex: 1;">
-                    <i class="fas fa-calendar-plus"></i>
-                    Disponibilités
+                    <i class="fas fa-calendar-check"></i>
+                    Voir disponibilités
                 </button>
                 <button @click="editerLivreur({{ livreur.id }})"
                         class="btn btn-edit btn-sm">
@@ -918,10 +955,10 @@
                         <div style="font-size: 1.125rem; font-weight: 700; color: var(--text-dark); margin-bottom: 0.5rem;" x-text="dispoSelectionnee.livreur_nom"></div>
                         <span style="display: inline-block; padding: 0.375rem 0.875rem; border-radius: 12px; font-size: 0.875rem; font-weight: 600;"
                               :class="{
-                                  'bg-green-100 text-green-800': dispoSelectionnee.type_dispo === 'disponible',
-                                  'bg-red-100 text-red-800': dispoSelectionnee.type_dispo === 'indisponible',
-                                  'bg-orange-100 text-orange-800': dispoSelectionnee.type_dispo === 'conge',
-                                  'bg-purple-100 text-purple-800': dispoSelectionnee.type_dispo === 'maladie'
+                                  'dispo-badge disponible': dispoSelectionnee.type_dispo === 'disponible',
+                                  'dispo-badge indisponible': dispoSelectionnee.type_dispo === 'indisponible',
+                                  'dispo-badge conge': dispoSelectionnee.type_dispo === 'conge',
+                                  'dispo-badge maladie': dispoSelectionnee.type_dispo === 'maladie'
                               }"
                               x-text="dispoSelectionnee.type_display"></span>
                     </div>
@@ -969,6 +1006,128 @@
                     </div>
                 </div>
             </template>
+        </div>
+    </div>
+    
+    <!-- Modal Toutes les Disponibilités d'un Livreur -->
+    <div x-show="modalToutesDispos" x-cloak class="modal-overlay" @click.self="modalToutesDispos = false">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh;" @click.stop>
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-calendar-alt" style="color: #3b82f6;"></i>
+                    Disponibilités de <span x-text="livreurSelectionneNom"></span>
+                </h3>
+                <button @click="modalToutesDispos = false" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+                <button @click="ajouterDispoLivreur(livreurSelectionneId, livreurSelectionneNom)" 
+                        class="btn btn-success btn-sm">
+                    <i class="fas fa-plus"></i>
+                    Ajouter une période
+                </button>
+            </div>
+            
+            <div style="overflow-x: auto; max-height: 500px;">
+                <table class="planning-table" style="font-size: 0.875rem;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left;">Période</th>
+                            <th>Type</th>
+                            <th>Heure début</th>
+                            <th>Heure fin</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="dispo in disposDuLivreur" :key="dispo.id">
+                            <tr>
+                                <td style="text-align: left;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fas fa-calendar" style="color: #3b82f6;"></i>
+                                        <span x-text="`${dispo.date_debut} → ${dispo.date_fin}`"></span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="dispo-badge" 
+                                          :class="{
+                                              'disponible': dispo.type_dispo === 'disponible',
+                                              'indisponible': dispo.type_dispo === 'indisponible',
+                                              'conge': dispo.type_dispo === 'conge',
+                                              'maladie': dispo.type_dispo === 'maladie'
+                                          }"
+                                          x-text="dispo.type_display">
+                                    </span>
+                                </td>
+                                <td>
+                                    <template x-if="dispo.type_dispo === 'disponible'">
+                                        <input type="time" 
+                                               :value="dispo.heure_debut_shift"
+                                               @change="modifierHeureShift(dispo.id, $event.target.value, 'debut')"
+                                               class="form-input"
+                                               style="padding: 0.375rem 0.5rem; font-size: 0.8rem; width: 100px;">
+                                    </template>
+                                    <template x-if="dispo.type_dispo !== 'disponible'">
+                                        <span style="color: var(--text-light);">—</span>
+                                    </template>
+                                </td>
+                                <td>
+                                    <template x-if="dispo.type_dispo === 'disponible'">
+                                        <input type="time" 
+                                               :value="dispo.heure_fin_shift"
+                                               @change="modifierHeureShift(dispo.id, $event.target.value, 'fin')"
+                                               class="form-input"
+                                               style="padding: 0.375rem 0.5rem; font-size: 0.8rem; width: 100px;">
+                                    </template>
+                                    <template x-if="dispo.type_dispo !== 'disponible'">
+                                        <span style="color: var(--text-light);">—</span>
+                                    </template>
+                                </td>
+                                <td>
+                                    <input type="text" 
+                                           :value="dispo.notes"
+                                           @change="modifierNotesDispo(dispo.id, $event.target.value)"
+                                           class="form-input"
+                                           placeholder="Notes..."
+                                           style="padding: 0.375rem 0.5rem; font-size: 0.8rem; min-width: 150px;">
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 0.25rem; justify-content: center;">
+                                        <button @click="modifierDispo(dispo)" 
+                                                class="btn btn-edit btn-sm"
+                                                style="padding: 0.375rem 0.5rem; font-size: 0.75rem;">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button @click="supprimerDispo(dispo.id)" 
+                                                class="btn btn-delete btn-sm"
+                                                style="padding: 0.375rem 0.5rem; font-size: 0.75rem;">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-if="disposDuLivreur.length === 0">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-light);">
+                                    <i class="fas fa-calendar-times" style="font-size: 2rem; opacity: 0.3; margin-bottom: 0.5rem;"></i>
+                                    <p>Aucune disponibilité enregistrée</p>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div style="margin-top: 1.5rem; text-align: right;">
+                <button @click="modalToutesDispos = false" class="btn btn-secondary">
+                    <i class="fas fa-times"></i>
+                    Fermer
+                </button>
+            </div>
         </div>
     </div>
     
@@ -1131,6 +1290,7 @@ function livreurManagement() {
         modalDetailDispo: false,
         modalNouveauLivreur: false,
         modalEditerLivreur: false,
+        modalToutesDispos: false,
         
         dispoEnEdition: {
             id: '',
@@ -1144,6 +1304,10 @@ function livreurManagement() {
         },
         
         dispoSelectionnee: null,
+        
+        livreurSelectionneId: null,
+        livreurSelectionneNom: '',
+        disposDuLivreur: [],
         
         nouveauLivreur: {
             first_name: '',
@@ -1183,7 +1347,9 @@ function livreurManagement() {
                 const response = await fetch('/livraison/api/disponibilites/');
                 const data = await response.json();
                 this.disponibilites = data.disponibilites;
-                
+                // ✨ DEBUG
+        console.log('📦 Disponibilités chargées:', this.disponibilites);
+        console.log('🔍 Première dispo:', this.disponibilites[0]);
                 this.disponibilitesMap = {};
                 this.disponibilites.forEach(dispo => {
                     const debut = new Date(dispo.date_debut);
@@ -1193,6 +1359,10 @@ function livreurManagement() {
                         const jourStr = d.toISOString().split('T')[0];
                         const key = `${dispo.livreur_id}-${jourStr}`;
                         this.disponibilitesMap[key] = dispo;
+
+                        if (dispo.heure_debut_shift) {
+                    console.log(`✅ ${key} => heure: ${dispo.heure_debut_shift}`);
+                }
                     }
                 });
                 
@@ -1217,6 +1387,86 @@ function livreurManagement() {
                     }
                 }
             });
+        },
+        
+        async ouvrirToutesDispos(livreurId, livreurNom) {
+            this.livreurSelectionneId = livreurId;
+            this.livreurSelectionneNom = livreurNom;
+            
+            this.disposDuLivreur = this.disponibilites
+                .filter(d => d.livreur_id === livreurId)
+                .sort((a, b) => new Date(b.date_debut) - new Date(a.date_debut));
+            
+            this.modalToutesDispos = true;
+        },
+        
+        async modifierHeureShift(dispoId, nouvelleHeure, type) {
+            try {
+                const dispo = this.disponibilites.find(d => d.id === dispoId);
+                if (!dispo) return;
+                
+                const champAModifier = type === 'debut' ? 'heure_debut_shift' : 'heure_fin_shift';
+                
+                const response = await fetch(`/livraison/api/disponibilites/${dispoId}/modifier/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        ...dispo,
+                        [champAModifier]: nouvelleHeure
+                    })
+                });
+                
+                if (response.ok) {
+                    dispo[champAModifier] = nouvelleHeure;
+                    await this.chargerDisponibilites();
+                    
+                    const index = this.disposDuLivreur.findIndex(d => d.id === dispoId);
+                    if (index !== -1) {
+                        this.disposDuLivreur[index][champAModifier] = nouvelleHeure;
+                    }
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + (error.error || 'Erreur lors de la modification'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        },
+        
+        async modifierNotesDispo(dispoId, nouvellesNotes) {
+            try {
+                const dispo = this.disponibilites.find(d => d.id === dispoId);
+                if (!dispo) return;
+                
+                const response = await fetch(`/livraison/api/disponibilites/${dispoId}/modifier/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        ...dispo,
+                        notes: nouvellesNotes
+                    })
+                });
+                
+                if (response.ok) {
+                    dispo.notes = nouvellesNotes;
+                    
+                    const index = this.disposDuLivreur.findIndex(d => d.id === dispoId);
+                    if (index !== -1) {
+                        this.disposDuLivreur[index].notes = nouvellesNotes;
+                    }
+                } else {
+                    const error = await response.json();
+                    alert('Erreur: ' + (error.error || 'Erreur lors de la modification'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
         },
         
         ajouterDispoLivreur(livreurId, livreurNom) {
@@ -1264,6 +1514,7 @@ function livreurManagement() {
                 notes: dispo.notes || ''
             };
             this.modalDetailDispo = false;
+            this.modalToutesDispos = false;
             this.modalDispo = true;
         },
         
@@ -1299,6 +1550,12 @@ function livreurManagement() {
                     };
                     await this.chargerDisponibilites();
                     this.calculerStats();
+                    
+                    if (this.modalToutesDispos && this.livreurSelectionneId) {
+                        this.disposDuLivreur = this.disponibilites
+                            .filter(d => d.livreur_id === this.livreurSelectionneId)
+                            .sort((a, b) => new Date(b.date_debut) - new Date(a.date_debut));
+                    }
                 } else {
                     const error = await response.json();
                     alert('Erreur: ' + (error.error || 'Erreur lors de la sauvegarde'));
@@ -1327,6 +1584,12 @@ function livreurManagement() {
                     this.modalDetailDispo = false;
                     await this.chargerDisponibilites();
                     this.calculerStats();
+                    
+                    if (this.modalToutesDispos && this.livreurSelectionneId) {
+                        this.disposDuLivreur = this.disponibilites
+                            .filter(d => d.livreur_id === this.livreurSelectionneId)
+                            .sort((a, b) => new Date(b.date_debut) - new Date(a.date_debut));
+                    }
                 } else {
                     const error = await response.json();
                     alert('Erreur: ' + (error.error || 'Erreur lors de la suppression'));

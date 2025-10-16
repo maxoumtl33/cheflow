@@ -1,206 +1,253 @@
 """
-Script d'importation des données de Submission (ancien modèle) vers Soumission (nouveau modèle)
+Commande Django management pour importer les soumissions
 
-Instructions:
-1. Placer le fichier Soumissions.xlsx dans le même répertoire que ce script
-2. Exécuter: python import_soumissions.py
+Placer ce fichier dans: votre_app/management/commands/import_soumissions.py
+
+Usage:
+    python manage.py import_soumissions soumissions_nom.xlsx
+    python manage.py import_soumissions soumissions_nom.xlsx --update  # Met à jour les existantes
 """
 
-import os
-import django
-import pandas as pd
-from datetime import datetime
-from decimal import Decimal
-
-# Configuration Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'restaurant_manager.settings')
-django.setup()
-
-from ventes.models import Soumission
+import openpyxl
+from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.contrib.auth import get_user_model
+from ventes.models import Soumission
+from datetime import datetime
 
 User = get_user_model()
 
-def convert_boolean(value):
-    """Convertit les valeurs booléennes de l'Excel"""
-    if pd.isna(value) or value is None:
-        return False
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.lower() in ['true', '1', 'oui', 'yes']
-    return bool(int(value))
 
-def convert_date(date_str):
-    """Convertit une date string en objet date"""
-    if pd.isna(date_str) or date_str is None or date_str == '':
-        return None
-    try:
-        if isinstance(date_str, str):
-            return datetime.strptime(date_str, '%Y-%m-%d').date()
-        return date_str
-    except Exception as e:
-        print(f"Erreur conversion date: {date_str} - {e}")
-        return None
+class Command(BaseCommand):
+    help = 'Importe les soumissions depuis un fichier Excel et les lie aux vendeurs'
 
-def convert_datetime(datetime_str):
-    """Convertit une datetime string en objet datetime"""
-    if pd.isna(datetime_str) or datetime_str is None or datetime_str == '':
-        return None
-    try:
-        if isinstance(datetime_str, str):
-            return datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
-        return datetime_str
-    except Exception as e:
-        print(f"Erreur conversion datetime: {datetime_str} - {e}")
-        return None
+    def add_arguments(self, parser):
+        parser.add_argument(
+            'fichier',
+            type=str,
+            help='Chemin vers le fichier Excel à importer'
+        )
+        parser.add_argument(
+            '--update',
+            action='store_true',
+            help='Met à jour les soumissions existantes si elles existent déjà'
+        )
+        parser.add_argument(
+            '--dry-run',
+            action='store_true',
+            help='Simule l\'importation sans modifier la base de données'
+        )
 
-def map_status(old_status):
-    """Mappe l'ancien statut vers le nouveau"""
-    status_mapping = {
-        'en_cours': 'en_cours',
-        'envoyé': 'envoye',
-        'validé': 'accepte',
-        'valide': 'accepte',
-        'refusé': 'refuse',
-        'refuse': 'refuse'
-    }
-    return status_mapping.get(old_status, 'en_cours')
-
-def import_soumissions_from_excel(filepath):
-    """Importe les soumissions depuis le fichier Excel"""
-    
-    # Lire le fichier Excel
-    print(f"Lecture du fichier: {filepath}")
-    df = pd.read_excel(filepath)
-    
-    print(f"Nombre total de lignes: {len(df)}")
-    
-    # Compteurs
-    created_count = 0
-    skipped_count = 0
-    error_count = 0
-    
-    # Obtenir l'utilisateur par défaut (premier admin ou créer un utilisateur générique)
-    try:
-        default_user = User.objects.filter(is_staff=True).first()
-        if not default_user:
-            default_user = User.objects.create_user(
-                username='importation',
-                email='importation@example.com',
-                is_staff=False
-            )
-            print(f"Utilisateur par défaut créé: {default_user.username}")
-    except Exception as e:
-        print(f"Erreur création utilisateur: {e}")
-        return
-    
-    # Parcourir chaque ligne
-    for index, row in df.iterrows():
-        try:
-            # Vérifier si la ligne a des données minimales requises
-            if pd.isna(row.get('company_name')) or row.get('company_name') is None:
-                skipped_count += 1
-                continue
-            
-            # Extraire et nettoyer les données
-            company_name = str(row.get('company_name', '')).strip()
-            event_location = str(row.get('event_location', '')).strip() if not pd.isna(row.get('event_location')) else ''
-            ordered_by = str(row.get('ordered_by', '')).strip() if not pd.isna(row.get('ordered_by')) else ''
-            phone = str(row.get('phone', '')).strip() if not pd.isna(row.get('phone')) else ''
-            email = str(row.get('email', '')).strip() if not pd.isna(row.get('email')) else ''
-            
-            # Date de l'événement
-            event_date = convert_date(row.get('date'))
-            if not event_date:
-                print(f"Ligne {index + 2}: Date manquante pour {company_name}, ligne ignorée")
-                skipped_count += 1
-                continue
-            
-            # Nombre de personnes
-            guest_count = row.get('guest_count')
-            if pd.isna(guest_count) or guest_count is None:
-                guest_count = 0
-            else:
-                guest_count = int(guest_count)
-            
-            # Options booléennes
-            avec_service = convert_boolean(row.get('avec_service', False))
-            avec_alcool = convert_boolean(row.get('avec_alcool', False))
-            location_materiel = convert_boolean(row.get('location_materiel', False))
-            
-            # Commentaire/Notes
-            notes = str(row.get('commentaire', '')).strip() if not pd.isna(row.get('commentaire')) else ''
-            
-            # Statut
-            old_status = str(row.get('status', 'en_cours')).strip()
-            new_status = map_status(old_status)
-            
-            # Dates de création et modification
-            created_at = convert_datetime(row.get('created_at'))
-            date_soumission = convert_datetime(row.get('sent_at'))
-            
-            # Créer la nouvelle soumission
-            soumission = Soumission(
-                date_evenement=event_date,
-                nom_compagnie=company_name,
-                nombre_personnes=guest_count if guest_count > 0 else 1,
-                adresse=event_location,
-                avec_service=avec_service,
-                location_materiel=location_materiel,
-                avec_alcool=avec_alcool,
-                commande_par=ordered_by if ordered_by else company_name,
-                email=email if email else f"contact@{company_name.lower().replace(' ', '')}.com",
-                telephone=phone if phone else '',
-                statut=new_status,
-                cree_par=default_user,
-                notes=notes,
-                date_soumission=date_soumission
-            )
-            
-            # Définir manuellement la date de création si disponible
-            if created_at:
-                soumission.cree_a = created_at
-            
-            # Sauvegarder
-            soumission.save()
-            
-            created_count += 1
-            
-            if created_count % 10 == 0:
-                print(f"Progression: {created_count} soumissions créées...")
-            
-        except Exception as e:
-            error_count += 1
-            print(f"Erreur ligne {index + 2} ({company_name}): {str(e)}")
-            continue
-    
-    # Rapport final
-    print("\n" + "="*60)
-    print("RAPPORT D'IMPORTATION")
-    print("="*60)
-    print(f"Total de lignes traitées: {len(df)}")
-    print(f"Soumissions créées: {created_count}")
-    print(f"Lignes ignorées (données insuffisantes): {skipped_count}")
-    print(f"Erreurs: {error_count}")
-    print("="*60)
-    
-    return created_count
-
-if __name__ == '__main__':
-    # Chemin du fichier Excel
-    excel_file = 'Soumissions.xlsx'
-    
-    if not os.path.exists(excel_file):
-        print(f"Erreur: Le fichier '{excel_file}' n'existe pas.")
-        print("Veuillez placer le fichier Soumissions.xlsx dans le même répertoire que ce script.")
-    else:
-        # Confirmation avant import
-        response = input(f"Êtes-vous sûr de vouloir importer les données de '{excel_file}'? (oui/non): ")
+    def parse_date(self, date_value):
+        """Parse une date depuis différents formats"""
+        if not date_value:
+            return None
         
-        if response.lower() in ['oui', 'yes', 'o', 'y']:
-            print("\nDébut de l'importation...")
-            count = import_soumissions_from_excel(excel_file)
-            print(f"\nImportation terminée! {count} soumissions créées.")
+        if isinstance(date_value, datetime):
+            return date_value.date()
+        
+        try:
+            return datetime.strptime(str(date_value), '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return None
+
+    def parse_datetime(self, datetime_value):
+        """Parse un datetime depuis différents formats"""
+        if not datetime_value:
+            return None
+        
+        if isinstance(datetime_value, datetime):
+            return datetime_value
+        
+        try:
+            return datetime.strptime(str(datetime_value), '%Y-%m-%d %H:%M:%S')
+        except (ValueError, TypeError):
+            return None
+
+    def bool_from_string(self, value):
+        """Convertit une valeur en booléen"""
+        if value in [True, 1, '1', 'True', 'true', 'TRUE']:
+            return True
+        return False
+
+    def get_user_by_identifier(self, user_identifier):
+        """Trouve un utilisateur par nom d'utilisateur uniquement"""
+        if not user_identifier:
+            return None
+        
+        try:
+            # Convertir en string et chercher uniquement par username
+            user_str = str(user_identifier).strip()
+            
+            # Ignorer les IDs numériques purs (comme 1, 2, 3)
+            if user_str.isdigit():
+                self.stdout.write(
+                    self.style.WARNING(f'⚠️  Valeur numérique "{user_str}" ignorée - username attendu')
+                )
+                return None
+            
+            # Chercher par username (insensible à la casse)
+            return User.objects.filter(username__iexact=user_str).first()
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f'⚠️  Erreur recherche utilisateur: {e}'))
+            return None
+
+    def get_or_create_numero_soumission(self, index):
+        """Génère un numéro de soumission unique"""
+        return f"SOU-{index:05d}"
+
+    def handle(self, *args, **options):
+        fichier = options['fichier']
+        update = options['update']
+        dry_run = options['dry_run']
+        
+        if dry_run:
+            self.stdout.write(self.style.WARNING('🔍 MODE DRY-RUN - Aucune modification ne sera effectuée'))
+        
+        try:
+            workbook = openpyxl.load_workbook(fichier)
+        except FileNotFoundError:
+            self.stdout.write(self.style.ERROR(f'❌ Fichier non trouvé: {fichier}'))
+            return
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'❌ Erreur lors de la lecture du fichier: {str(e)}'))
+            return
+        
+        sheet = workbook.active
+        
+        stats = {
+            'soumissions_creees': 0,
+            'soumissions_mises_a_jour': 0,
+            'erreurs': 0,
+            'utilisateurs_non_trouves': set(),
+        }
+        
+        def traiter_importation():
+            for index, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=1):
+                try:
+                    user_identifier = row[0]  # user (colonne A)
+                    nom_compagnie = row[1] if len(row) > 1 else None  # company_name (colonne B)
+                    adresse = row[2] if len(row) > 2 else None  # event_location (colonne C)
+                    commande_par = row[3] if len(row) > 3 else None  # ordered_by (colonne D)
+                    telephone = row[4] if len(row) > 4 else None  # phone (colonne E)
+                    email = row[5] if len(row) > 5 else None  # email (colonne F)
+                    avec_service = self.bool_from_string(row[6] if len(row) > 6 else False)  # avec_service (G)
+                    avec_alcool = self.bool_from_string(row[8] if len(row) > 8 else False)  # avec_alcool (I)
+                    location_materiel = self.bool_from_string(row[9] if len(row) > 9 else False)  # location_materiel (J)
+                    date_evenement = self.parse_date(row[10] if len(row) > 10 else None)  # date (K)
+                    nombre_personnes = row[11] if len(row) > 11 else 0  # guest_count (L)
+                    created_at = self.parse_datetime(row[12] if len(row) > 12 else None)  # created_at (M)
+                    updated_at = self.parse_datetime(row[13] if len(row) > 13 else None)  # updated_at (N)
+                    sent_at = self.parse_datetime(row[14] if len(row) > 14 else None)  # sent_at (O)
+                    status = row[17] if len(row) > 17 else 'en_cours'  # status (R)
+                    
+                    if not user_identifier:
+                        self.stdout.write(
+                            self.style.WARNING(f'⚠️  Ligne {index + 1}: utilisateur manquant, ignorée')
+                        )
+                        continue
+                    
+                    utilisateur = self.get_user_by_identifier(user_identifier)
+                    if not utilisateur:
+                        stats['utilisateurs_non_trouves'].add(str(user_identifier))
+                        self.stdout.write(
+                            self.style.WARNING(
+                                f'⚠️  Ligne {index + 1}: Utilisateur "{user_identifier}" non trouvé - soumission ignorée'
+                            )
+                        )
+                        continue  # ✅ Ignore complètement cette ligne
+                    
+                    if not date_evenement:
+                        self.stdout.write(
+                            self.style.WARNING(f'⚠️  Ligne {index + 1}: date manquante, ignorée')
+                        )
+                        continue
+                    
+                    numero_soumission = self.get_or_create_numero_soumission(index)
+                    
+                    soumission_data = {
+                        'nom_compagnie': nom_compagnie or '',
+                        'adresse': adresse or '',
+                        'commande_par': commande_par or '',
+                        'telephone': telephone or '',
+                        'email': email or '',
+                        'avec_service': avec_service,
+                        'avec_alcool': avec_alcool,
+                        'location_materiel': location_materiel,
+                        'date_evenement': date_evenement,
+                        'nombre_personnes': int(nombre_personnes) if nombre_personnes else 0,
+                        'statut': status if status in ['en_cours', 'envoye', 'accepte', 'refuse'] else 'en_cours',
+                        'cree_par': utilisateur,
+                    }
+                    
+                    if created_at:
+                        soumission_data['cree_a'] = created_at
+                    if updated_at:
+                        soumission_data['date_modification'] = updated_at
+                    if sent_at and status == 'envoye':
+                        soumission_data['date_soumission'] = sent_at
+                    
+                    if not dry_run:
+                        if update:
+                            soumission, created = Soumission.objects.update_or_create(
+                                numero_soumission=numero_soumission,
+                                defaults=soumission_data
+                            )
+                        else:
+                            try:
+                                soumission = Soumission.objects.create(
+                                    numero_soumission=numero_soumission,
+                                    **soumission_data
+                                )
+                                created = True
+                            except Exception:
+                                created = False
+                                self.stdout.write(
+                                    self.style.WARNING(
+                                        f'⚠️  Ligne {index + 1}: Soumission {numero_soumission} existe déjà'
+                                    )
+                                )
+                                continue
+                    else:
+                        created = not Soumission.objects.filter(
+                            numero_soumission=numero_soumission
+                        ).exists()
+                    
+                    if created:
+                        stats['soumissions_creees'] += 1
+                    else:
+                        stats['soumissions_mises_a_jour'] += 1
+                    
+                    if (index) % 50 == 0:
+                        self.stdout.write(f'📊 Progression: {index} lignes traitées...')
+                        
+                except Exception as e:
+                    stats['erreurs'] += 1
+                    self.stdout.write(
+                        self.style.ERROR(f'❌ Erreur ligne {index + 1}: {str(e)}')
+                    )
+                    continue
+        
+        if not dry_run:
+            with transaction.atomic():
+                traiter_importation()
         else:
-            print("Importation annulée.")
+            traiter_importation()
+        
+        self.stdout.write('\n' + '='*60)
+        self.stdout.write(self.style.SUCCESS('RAPPORT D\'IMPORTATION DES SOUMISSIONS'))
+        self.stdout.write('='*60)
+        self.stdout.write(f'✅ Soumissions créées: {stats["soumissions_creees"]}')
+        self.stdout.write(f'🔄 Soumissions mises à jour: {stats["soumissions_mises_a_jour"]}')
+        self.stdout.write(self.style.ERROR(f'❌ Erreurs: {stats["erreurs"]}'))
+        self.stdout.write(f'📊 Total traité: {stats["soumissions_creees"] + stats["soumissions_mises_a_jour"]}')
+        
+        if stats['utilisateurs_non_trouves']:
+            self.stdout.write('\n⚠️  Utilisateurs non trouvés:')
+            for user_id in stats['utilisateurs_non_trouves']:
+                self.stdout.write(f'   - {user_id}')
+        
+        self.stdout.write('='*60)
+        
+        if dry_run:
+            self.stdout.write(self.style.WARNING('\n🔍 Dry-run terminé - Aucune modification effectuée'))

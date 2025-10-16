@@ -1,0 +1,789 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Routes du {{ date_selectionnee|date:"d/m/Y" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Mobile First Design */
+    body {
+        font-size: 14px;
+    }
+    
+    .route-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 16px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .route-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    
+    .route-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    @media (min-width: 768px) {
+        .route-header {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+        }
+    }
+    
+    .route-header.planifiee {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .route-header.en_cours {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .route-header.terminee {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .route-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    @media (min-width: 768px) {
+        .route-title {
+            font-size: 1.5rem;
+        }
+    }
+    
+    .route-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-top: 8px;
+        font-size: 0.8rem;
+        opacity: 0.95;
+    }
+    
+    @media (min-width: 768px) {
+        .route-meta {
+            gap: 12px;
+            font-size: 0.9rem;
+        }
+    }
+    
+    .route-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .stat-badge {
+        background: rgba(255,255,255,0.2);
+        padding: 4px 10px;
+        border-radius: 16px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    @media (min-width: 768px) {
+        .stat-badge {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+    }
+    
+    .route-body {
+        padding: 12px;
+    }
+    
+    @media (min-width: 768px) {
+        .route-body {
+            padding: 20px;
+        }
+    }
+    
+    .livraison-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .livraison-item {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition: all 0.2s ease;
+        border-left: 4px solid #6c757d;
+    }
+    
+    @media (min-width: 768px) {
+        .livraison-item {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+        }
+    }
+    
+    .livraison-item:hover {
+        background: #e9ecef;
+    }
+    
+    @media (min-width: 768px) {
+        .livraison-item:hover {
+            transform: translateX(4px);
+        }
+    }
+    
+    .livraison-item.livree {
+        border-left-color: #28a745;
+        background: #d4edda;
+    }
+    
+    .livraison-item.en_cours {
+        border-left-color: #ffc107;
+        background: #fff3cd;
+    }
+    
+    .livraison-item.recuperation {
+        background: #ec74c6 !important;
+        border-color: #ed78b2 !important;
+        border-left-color: #ed78b2 !important;
+    }
+    
+    .livraison-main {
+        flex: 1;
+    }
+    
+    .livraison-numero {
+        font-weight: 700;
+        color: #495057;
+        margin-bottom: 4px;
+    }
+    
+    .livraison-evenement {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #212529;
+        margin-bottom: 4px;
+    }
+    
+    @media (min-width: 768px) {
+        .livraison-evenement {
+            font-size: 1.1rem;
+        }
+    }
+    
+    .livraison-client {
+        color: #6c757d;
+        font-size: 0.85rem;
+        margin-bottom: 4px;
+    }
+    
+    .livraison-adresse {
+        color: #868e96;
+        font-size: 0.8rem;
+    }
+    
+    .livraison-badges {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .badge-besoin {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+    }
+    
+    .badge-besoin:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .badge-besoin.cafe {
+        background: linear-gradient(135deg, #ff9a56 0%, #ff6a00 100%);
+    }
+    
+    .badge-besoin.the {
+        background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+    }
+    
+    .badge-besoin.glace {
+        background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+    }
+    
+    .badge-besoin.chaud {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+    
+    .badge-besoin.checklist {
+        background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+        color: #2d3436;
+    }
+    
+    .badge-status {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+    }
+    
+    .badge-status:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .badge-status.livree {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+    }
+    
+    .badge-status.en_cours {
+        background: linear-gradient(135deg, #ffa751 0%, #ffe259 100%);
+        color: #212529;
+    }
+    
+    .badge-status.assignee {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+    }
+    
+    .badge-status.non_assignee {
+        background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+        color: white;
+    }
+    
+    .badge-recuperation {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        letter-spacing: 0.5px;
+    }
+    
+    .info-supplementaire {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 12px;
+        border-radius: 4px;
+        margin-top: 8px;
+        font-size: 0.85rem;
+        color: #856404;
+    }
+    
+    .info-supplementaire strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #533f03;
+    }
+    
+    .route-empty {
+        text-align: center;
+        padding: 40px;
+        color: #6c757d;
+    }
+    
+    .date-selector {
+        background: white;
+        padding: 12px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    @media (min-width: 768px) {
+        .date-selector {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+    }
+    
+    .date-selector h2 {
+        font-size: 1.2rem;
+        margin: 0;
+    }
+    
+    @media (min-width: 768px) {
+        .date-selector h2 {
+            font-size: 1.5rem;
+        }
+    }
+    
+    .date-selector input {
+        padding: 8px 12px;
+        border: 2px solid #dee2e6;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        width: 100%;
+    }
+    
+    @media (min-width: 768px) {
+        .date-selector input {
+            width: auto;
+            font-size: 1rem;
+        }
+    }
+    
+    /* 🔍 Barre de recherche */
+    .search-bar {
+        background: white;
+        padding: 12px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 16px;
+    }
+    
+    .search-bar input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .search-bar input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .search-info {
+        margin-top: 8px;
+        font-size: 0.85rem;
+        color: #6c757d;
+        text-align: center;
+    }
+    
+    .search-info.active {
+        color: #667eea;
+        font-weight: 600;
+    }
+    
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    
+    @media (min-width: 768px) {
+        .summary-cards {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+    }
+    
+    .summary-card {
+        background: white;
+        padding: 16px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    
+    .summary-card h3 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0 0 4px 0;
+        color: #667eea;
+    }
+    
+    @media (min-width: 768px) {
+        .summary-card h3 {
+            font-size: 2rem;
+        }
+    }
+    
+    .summary-card p {
+        margin: 0;
+        color: #6c757d;
+        font-size: 0.8rem;
+    }
+    
+    @media (min-width: 768px) {
+        .summary-card p {
+            font-size: 0.9rem;
+        }
+    }
+    
+    .no-routes {
+        background: white;
+        padding: 60px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .no-routes i {
+        font-size: 4rem;
+        color: #dee2e6;
+        margin-bottom: 20px;
+    }
+    
+    .livraison-heure {
+        background: #667eea;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        min-width: 60px;
+        text-align: center;
+    }
+    
+    @media (min-width: 768px) {
+        .livraison-heure {
+            font-size: 0.9rem;
+            min-width: 70px;
+        }
+    }
+    
+    .livraison-actions {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+    }
+    
+    @media (min-width: 768px) {
+        .livraison-actions {
+            flex-direction: column;
+            width: auto;
+        }
+    }
+    
+    .route-hidden {
+        display: none;
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3 px-2">
+    <!-- Sélecteur de date -->
+    <div class="date-selector">
+        <div>
+            <h2 class="mb-1"><i class="fas fa-calendar-day"></i> Routes du {{ date_selectionnee|date:"d/m/Y" }}</h2>
+            <p class="text-muted mb-0 small">Visualisation des routes planifiées</p>
+        </div>
+        <form method="get" class="d-flex gap-2 w-100" style="max-width: 300px;">
+            <input type="date" name="date" value="{{ date_selectionnee|date:'Y-m-d' }}" class="form-control" id="dateInput">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+    </div>
+    
+    <!-- 🔍 Barre de recherche -->
+    <div class="search-bar">
+        <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="🔍 Rechercher une livraison, un client, un livreur..." 
+            autocomplete="off"
+        >
+        <div id="searchInfo" class="search-info"></div>
+    </div>
+    
+    <!-- Résumé -->
+    <div class="summary-cards">
+        <div class="summary-card">
+            <h3><i class="fas fa-route text-primary"></i> {{ stats.total_routes }}</h3>
+            <p>Route(s) planifiée(s)</p>
+        </div>
+        <div class="summary-card">
+            <h3><i class="fas fa-box text-info"></i> {{ stats.total_livraisons }}</h3>
+            <p>Livraison(s) au total</p>
+        </div>
+        <div class="summary-card">
+            <h3><i class="fas fa-check-circle text-success"></i> {{ stats.livraisons_livrees }}</h3>
+            <p>Livraison(s) livrée(s)</p>
+        </div>
+        <div class="summary-card">
+            <h3><i class="fas fa-chart-pie text-warning"></i> {{ stats.taux_completion }}%</h3>
+            <p>Taux de complétion</p>
+        </div>
+    </div>
+    
+    <!-- Liste des routes -->
+    {% if routes %}
+        {% for route in routes %}
+        <div class="route-card">
+            <div class="route-header {{ route.status }}">
+                <div>
+                    <h2 class="route-title"><i class="fas fa-route"></i> {{ route.nom }}</h2>
+                    <div class="route-meta">
+                        <span><i class="fas fa-clock"></i> {{ route.heure_depart|time:"H:i" }}</span>
+                        <span><i class="fas fa-sun"></i> {{ route.get_periode_display }}</span>
+                        {% if route.vehicule %}
+                        <span><i class="fas fa-car-side"></i> {{ route.vehicule.marque }} {{ route.vehicule.modele }}</span>
+                        {% endif %}
+                        <span><i class="fas fa-user-tie"></i> 
+                            {% for livreur in route.livreurs.all %}
+                                {{ livreur.get_full_name }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </span>
+                    </div>
+                </div>
+                <div class="route-stats">
+                    <div class="stat-badge">
+                        {{ route.livraisonroute_set.count }} livraison(s)
+                    </div>
+                    <div class="stat-badge">
+                        {{ route.get_status_display }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="route-body">
+                {% if route.commentaire %}
+                <div class="alert alert-info mb-3">
+                    <strong><i class="fas fa-comment-dots"></i> Commentaire:</strong> {{ route.commentaire }}
+                </div>
+                {% endif %}
+                
+                <div class="livraison-list">
+                    {% for lr in route.livraisonroute_set.all %}
+                    {% with livraison=lr.livraison %}
+                    <div class="livraison-item {{ livraison.status }} {% if livraison.est_recuperation %}recuperation{% endif %}">
+                        <div class="livraison-main">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="livraison-numero">#{{ livraison.numero_livraison }}</span>
+                                {% if livraison.est_recuperation %}
+                                <span class="badge-recuperation">
+                                    <i class="fas fa-undo-alt"></i> RÉCUPÉRATION
+                                </span>
+                                {% endif %}
+                                {% if livraison.checklist %}
+                                <span class="badge-besoin checklist">
+                                    <i class="fas fa-clipboard-check"></i> Checklist
+                                </span>
+                                {% endif %}
+                                <span class="badge-status {{ livraison.status }}">
+                                    {% if livraison.status == 'livree' %}
+                                        <i class="fas fa-check-circle"></i>
+                                    {% elif livraison.status == 'en_cours' %}
+                                        <i class="fas fa-truck"></i>
+                                    {% elif livraison.status == 'assignee' %}
+                                        <i class="fas fa-user-check"></i>
+                                    {% else %}
+                                        <i class="fas fa-clock"></i>
+                                    {% endif %}
+                                    {{ livraison.get_status_display }}
+                                </span>
+                            </div>
+                            
+                            {% if livraison.nom_evenement %}
+                            <div class="livraison-evenement">{{ livraison.nom_evenement }}</div>
+                            {% endif %}
+                            
+                            <div class="livraison-client">
+                                <i class="fas fa-user"></i> {{ livraison.client_nom }}
+                            </div>
+                            
+                            <div class="livraison-adresse">
+                                <i class="fas fa-map-marker-alt"></i> {{ livraison.adresse_complete }}
+                            </div>
+                            
+                            <!-- Badges des besoins -->
+                            <div class="livraison-badges">
+                                {% if livraison.besoin_cafe %}
+                                <span class="badge-besoin cafe">
+                                    <i class="fas fa-coffee"></i> Café
+                                </span>
+                                {% endif %}
+                                {% if livraison.besoin_the %}
+                                <span class="badge-besoin the">
+                                    <i class="fas fa-mug-hot"></i> Thé
+                                </span>
+                                {% endif %}
+                                {% if livraison.besoin_sac_glace %}
+                                <span class="badge-besoin glace">
+                                    <i class="fas fa-snowflake"></i> Sac glace
+                                </span>
+                                {% endif %}
+                                {% if livraison.besoin_part_chaud %}
+                                <span class="badge-besoin chaud">
+                                    <i class="fas fa-fire"></i> Part chaud
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Informations supplémentaires -->
+                            {% if livraison.informations_supplementaires %}
+                            <div class="info-supplementaire">
+                                <strong><i class="fas fa-info-circle"></i> Informations supplémentaires:</strong>
+                                {{ livraison.informations_supplementaires }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="livraison-actions">
+                            {% if livraison.heure_souhaitee %}
+                            <div class="livraison-heure">
+                                {{ livraison.heure_souhaitee|time:"H:i" }}
+                            </div>
+                            {% endif %}
+                            <a href="{% url 'livraison:detail_livraison_responsable' livraison.id %}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                                <span class="d-none d-md-inline"> Détails</span>
+                            </a>
+                        </div>
+                    </div>
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+                
+                {% if not route.livraisonroute_set.exists %}
+                <div class="route-empty">
+                    <i class="fas fa-inbox"></i>
+                    <p class="mb-0">Aucune livraison assignée à cette route</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="no-routes">
+            <i class="fas fa-calendar-times"></i>
+            <h3>Aucune route planifiée</h3>
+            <p class="text-muted">Aucune route n'a été créée pour le {{ date_selectionnee|date:"d/m/Y" }}</p>
+            <a href="{% url 'livraison:dashboard_responsable' %}?date={{ date_selectionnee|date:'Y-m-d' }}" 
+               class="btn btn-primary mt-3">
+                <i class="fas fa-plus-circle"></i> Créer une route
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+// 🔍 Système de recherche en temps réel
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const searchInfo = document.getElementById('searchInfo');
+    const routes = document.querySelectorAll('.route-card');
+    
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        
+        let visibleRoutes = 0;
+        let visibleLivraisons = 0;
+        
+        if (searchTerm === '') {
+            // Afficher tout
+            routes.forEach(route => {
+                route.classList.remove('route-hidden');
+                const livraisons = route.querySelectorAll('.livraison-item');
+                livraisons.forEach(liv => liv.style.display = '');
+            });
+            searchInfo.textContent = '';
+            searchInfo.classList.remove('active');
+            return;
+        }
+        
+        routes.forEach(route => {
+            const routeNom = route.querySelector('.route-title').textContent.toLowerCase();
+            const livreurs = Array.from(route.querySelectorAll('.route-meta span'))
+                .map(span => span.textContent.toLowerCase())
+                .join(' ');
+            
+            const livraisons = route.querySelectorAll('.livraison-item');
+            let hasVisibleLivraison = false;
+            
+            livraisons.forEach(livraison => {
+                const numero = livraison.querySelector('.livraison-numero')?.textContent.toLowerCase() || '';
+                const evenement = livraison.querySelector('.livraison-evenement')?.textContent.toLowerCase() || '';
+                const client = livraison.querySelector('.livraison-client')?.textContent.toLowerCase() || '';
+                const adresse = livraison.querySelector('.livraison-adresse')?.textContent.toLowerCase() || '';
+                
+                const matchLivraison = 
+                    numero.includes(searchTerm) ||
+                    evenement.includes(searchTerm) ||
+                    client.includes(searchTerm) ||
+                    adresse.includes(searchTerm);
+                
+                if (matchLivraison) {
+                    livraison.style.display = '';
+                    hasVisibleLivraison = true;
+                    visibleLivraisons++;
+                } else {
+                    livraison.style.display = 'none';
+                }
+            });
+            
+            // Afficher la route si son nom/livreur match OU si elle contient des livraisons qui matchent
+            const matchRoute = routeNom.includes(searchTerm) || livreurs.includes(searchTerm);
+            
+            if (matchRoute || hasVisibleLivraison) {
+                route.classList.remove('route-hidden');
+                visibleRoutes++;
+                
+                // Si la route match mais pas les livraisons, afficher toutes les livraisons
+                if (matchRoute && !hasVisibleLivraison) {
+                    livraisons.forEach(liv => {
+                        liv.style.display = '';
+                        visibleLivraisons++;
+                    });
+                }
+            } else {
+                route.classList.add('route-hidden');
+            }
+        });
+        
+        // Afficher les résultats
+        if (visibleRoutes === 0) {
+            searchInfo.textContent = `❌ Aucun résultat pour "${searchTerm}"`;
+            searchInfo.classList.add('active');
+        } else {
+            searchInfo.textContent = `✅ ${visibleRoutes} route(s) et ${visibleLivraisons} livraison(s) trouvée(s)`;
+            searchInfo.classList.add('active');
+        }
+    });
+});
+</script>
+{% endblock %}

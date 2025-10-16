@@ -387,13 +387,13 @@
     }
 
     .livraison-card.recuperation {
-        background: #fce7f3;
-        border-color: #ec4899;
+        background: #fce7f3 !important;
+        border-color: #ec4899 !important;
     }
 
     .route-delivery-item.recuperation {
-        background: #fce7f3;
-        border-color: #ec4899;
+        background: #fce7f3 !important;
+        border-color: #ec4899 !important;
     }
 
     .livraison-header {
@@ -879,6 +879,10 @@
                         <i class="fas fa-redo"></i>
                         Récupérations
                     </a>
+                    <a href="{% url 'livraison:routes_jour' %}" class="btn btn-purple">
+                        <i class="fas fa-redo"></i>
+                        Routes
+                    </a>
                 </div>
             </div>
         </div>
@@ -1103,11 +1107,11 @@
                 <!-- Colonne droite : Routes -->
                 <div style="display: flex; flex-direction: column; gap: 2rem;">
                     <button 
-                        @click="ouvrirModalRoute()"
+                        @click="creerRouteAuto()"
                         class="btn btn-success"
                         style="padding: 1.25rem; font-size: 1rem; justify-content: center;">
                         <i class="fas fa-plus-circle"></i>
-                        Créer une nouvelle route
+                        Créer une route
                     </button>
                     
                     <div class="routes-list">
@@ -2291,16 +2295,7 @@ function dashboardData() {
             }
         },
         
-        ouvrirModalRoute() {
-            this.nouvelleRoute = {
-                nom: `Route ${this.routes.length + 1}`,
-                heure_depart: '',
-                livreurs: [],
-                commentaire: ''
-            };
-            this.modalRoute = true;
-        },
-        
+
         modifierRoute(route) {
             this.routeEnEdition = {
                 id: route.id,
@@ -2389,41 +2384,58 @@ function dashboardData() {
                 console.error('Erreur sauvegarde:', error);
             }
         },
+        // Fonction pour générer automatiquement le nom de route
+        genererNomRoute() {
+            const nombreRoutes = this.routes.length;
+            return `Route ${nombreRoutes + 1}`;
+        },
+
+        // Modifier la fonction ouvrirModalRoute
+        ouvrirModalRoute() {
+            // Ne plus ouvrir le modal, créer directement la route
+            this.creerRouteAuto();
+        },
+        // Nouvelle fonction pour créer directement
+async creerRouteAuto() {
+    try {
+        const nomRoute = this.genererNomRoute();
         
-        async creerRoute() {
-            try {
-                const response = await fetch('/livraison/api/routes/creer/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': this.getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({
-                        nom: this.nouvelleRoute.nom,
-                        date: this.dateSelectionnee,
-                        periode: this.periodeActive,
-                        heure_depart: this.nouvelleRoute.heure_depart,
-                        livreurs: this.nouvelleRoute.livreurs,
-                        commentaire: this.nouvelleRoute.commentaire
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    alert('Route créée!');
-                    this.modalRoute = false;
-                    await this.chargerRoutes();
-                } else {
-                    alert('Erreur: ' + (data.error || 'Inconnue'));
-                }
-            } catch (error) {
-                console.error('Erreur création:', error);
-                alert('Erreur: ' + error.message);
-            }
+        const response = await fetch('/livraison/api/routes/creer/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                nom: nomRoute,
+                date: this.dateSelectionnee,
+                periode: this.periodeActive,
+                heure_depart: null,  // 🔥 Pas d'heure par défaut
+                livreurs: [],
+                commentaire: ''
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            // Ajouter la route en haut de la liste
+            this.routes.unshift(data.route);
+            
+            // Réinitialiser les instances de drag & drop
+            await this.$nextTick();
+            this.initDragAndDrop();
+            
+            alert(`✅ ${nomRoute} créée !`);
+        } else {
+            alert('❌ Erreur: ' + (data.error || 'Inconnue'));
         }
+    } catch (error) {
+        console.error('Erreur création auto:', error);
+        alert('❌ Erreur: ' + error.message);
     }
-}
+},
+}}
 </script>
 
 

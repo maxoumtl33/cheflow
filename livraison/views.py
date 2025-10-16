@@ -213,8 +213,15 @@ def livraisons_json(request):
     if date:
         livraisons = livraisons.filter(date_livraison=date)
     
+    # ✨ MODIFICATION : Si on affiche les récupérations, ne pas filtrer par période
+    # Sinon, filtrer normalement par période
     if periode:
-        livraisons = livraisons.filter(periode=periode)
+        # Récupérer toutes les récupérations peu importe la période
+        recups = livraisons.filter(est_recuperation=True)
+        # Récupérer les livraisons normales de la période
+        normales = livraisons.filter(periode=periode, est_recuperation=False)
+        # Combiner les deux
+        livraisons = (recups | normales).distinct()
     
     data = []
     for liv in livraisons:
@@ -230,16 +237,15 @@ def livraisons_json(request):
             'periode': liv.get_periode_display(),
             'mode_envoi': liv.mode_envoi.nom if liv.mode_envoi else '',
             'nb_convives': liv.nb_convives,
-            'informations_supplementaires': liv.informations_supplementaires,  # NOUVEAU
+            'informations_supplementaires': liv.informations_supplementaires,
             'cafe': liv.besoin_cafe,
             'the': liv.besoin_the,
             'glace': liv.besoin_sac_glace,
             'chaud': liv.besoin_part_chaud,
-            'est_recuperation': liv.est_recuperation,
+            'est_recuperation': liv.est_recuperation,  # 🔥 IMPORTANT
         })
     
     return JsonResponse({'livraisons': data})
-
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
@@ -251,15 +257,20 @@ from users.models import CustomUser
 @login_required
 @require_http_methods(["POST"])
 def creer_route(request):
-    """Version simplifiée avec auto-parsing"""
+    """Version simplifiée avec auto-parsing et heure optionnelle"""
     try:
         data = json.loads(request.body)
+        
+        # 🔥 Heure de départ optionnelle
+        heure_depart = data.get('heure_depart')
+        if heure_depart == '' or heure_depart is None:
+            heure_depart = None
         
         route = Route.objects.create(
             nom=data['nom'],
             date=data['date'],
             periode=data['periode'],
-            heure_depart=data['heure_depart'],
+            heure_depart=heure_depart,  # 🔥 Peut être None
             commentaire=data.get('commentaire', ''),
             cree_par=request.user
         )
@@ -267,7 +278,7 @@ def creer_route(request):
         if data.get('livreurs'):
             livreurs = CustomUser.objects.filter(
                 id__in=data['livreurs'],
-                role__in=['livreur', 'resp_livraison']  # ← CORRECTION ICI
+                role__in=['livreur', 'resp_livraison']
             )
             route.livreurs.set(livreurs)
         
@@ -276,18 +287,22 @@ def creer_route(request):
             'route': {
                 'id': str(route.id),
                 'nom': route.nom,
-                'heure_depart': route.heure_depart.strftime('%H:%M'),
+                'heure_depart': route.heure_depart.strftime('%H:%M') if route.heure_depart else '',
                 'livreurs': [
                     {'id': l.id, 'nom': l.get_full_name() or l.username} 
                     for l in route.livreurs.all()
                 ],
+                'livreurs_ids': [l.id for l in route.livreurs.all()],
                 'commentaire': route.commentaire,
+                'status': route.status,
                 'livraisons': []
             }
         })
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
-    
+     
 from django.db import models
 @login_required
 @require_http_methods(["POST"])
@@ -459,6 +474,9 @@ def routes_json(request):
     if periode:
         routes = routes.filter(periode=periode)
     
+    # 🔥 Trier par date de création DESC (plus récent en premier)
+    routes = routes.order_by('-date_creation')
+    
     data = []
     for route in routes:
         livraisons_route = LivraisonRoute.objects.filter(
@@ -471,23 +489,24 @@ def routes_json(request):
             livraisons_data.append({
                 'id': str(liv.id),
                 'numero': liv.numero_livraison,
-                'nom_evenement': liv.nom_evenement,  # ← NOUVEAU
+                'nom_evenement': liv.nom_evenement,
                 'client': liv.client_nom,
                 'adresse': liv.adresse_complete,
                 'heure': liv.heure_souhaitee.strftime('%H:%M') if liv.heure_souhaitee else '',
                 'mode_envoi': liv.mode_envoi.nom if liv.mode_envoi else '',
-                'nb_convives': liv.nb_convives,  # ← NOUVEAU
+                'nb_convives': liv.nb_convives,
                 'informations_supplementaires': liv.informations_supplementaires,
                 'cafe': liv.besoin_cafe,
                 'the': liv.besoin_the,
                 'glace': liv.besoin_sac_glace,
                 'chaud': liv.besoin_part_chaud,
+                'est_recuperation': liv.est_recuperation,
             })
         
         data.append({
             'id': str(route.id),
             'nom': route.nom,
-            'heure_depart': route.heure_depart.strftime('%H:%M'),
+            'heure_depart': route.heure_depart.strftime('%H:%M') if route.heure_depart else '',
             'livreurs': [l.get_full_name() for l in route.livreurs.all()],
             'livreurs_ids': [l.id for l in route.livreurs.all()],
             'commentaire': route.commentaire,
@@ -496,7 +515,6 @@ def routes_json(request):
         })
     
     return JsonResponse({'routes': data})
-
 @login_required
 def livreurs_json(request):
     """Liste des livreurs disponibles"""
@@ -1404,19 +1422,19 @@ def disponibilites_json(request):
     data = []
     for dispo in dispos:
         data.append({
-            'id': str(dispo.id),
+            'id': str(dispo.id),  # ✨ Convertir en string pour UUID
             'livreur_id': dispo.livreur.id,
             'livreur_nom': dispo.livreur.get_full_name(),
             'date_debut': dispo.date_debut.strftime('%Y-%m-%d'),
             'date_fin': dispo.date_fin.strftime('%Y-%m-%d'),
             'type_dispo': dispo.type_dispo,
             'type_display': dispo.get_type_dispo_display(),
-            'heure_debut_shift': dispo.heure_debut_shift.strftime('%H:%M') if dispo.heure_debut_shift else None,
+            'heure_debut_shift': dispo.heure_debut_shift.strftime('%H:%M') if dispo.heure_debut_shift else None,  # ✨ AJOUTÉ
+            'heure_fin_shift': dispo.heure_fin_shift.strftime('%H:%M') if hasattr(dispo, 'heure_fin_shift') and dispo.heure_fin_shift else None,  # ✨ AJOUTÉ
             'notes': dispo.notes
         })
     
     return JsonResponse({'disponibilites': data})
-
 # ==========================================
 # RÉSUMÉ JOURNALIER
 # ==========================================
@@ -3116,3 +3134,121 @@ def supprimer_livraison(request, livraison_id):
         return JsonResponse({'success': False, 'error': 'Livraison introuvable'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    
+
+@login_required
+def routes_jour(request):
+    """Page de visualisation de toutes les routes d'une date donnée"""
+    
+    # Date sélectionnée (par défaut aujourd'hui)
+    date_str = request.GET.get('date', timezone.now().strftime('%Y-%m-%d'))
+    
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        date_obj = timezone.now().date()
+        date_str = date_obj.strftime('%Y-%m-%d')
+    
+    # Récupérer toutes les routes de cette date
+    routes = Route.objects.filter(
+        date=date_obj
+    ).select_related(
+        'vehicule',
+        'cree_par'
+    ).prefetch_related(
+        'livreurs',
+        Prefetch(
+            'livraisonroute_set',
+            queryset=LivraisonRoute.objects.select_related(
+                'livraison__mode_envoi',
+                'livraison__checklist'
+            ).order_by('ordre')
+        )
+    ).order_by('nom')  # 🔥 TRI PAR NOM: Route 1, Route 2, etc.
+    
+    # Calculer les statistiques
+    total_routes = routes.count()
+    total_livraisons = 0
+    livraisons_livrees = 0
+    
+    for route in routes:
+        livraisons_route = route.livraisonroute_set.all()
+        total_livraisons += livraisons_route.count()
+        livraisons_livrees += sum(1 for lr in livraisons_route if lr.livraison.status == 'livree')
+    
+    taux_completion = round((livraisons_livrees / total_livraisons * 100) if total_livraisons > 0 else 0)
+    
+    stats = {
+        'total_routes': total_routes,
+        'total_livraisons': total_livraisons,
+        'livraisons_livrees': livraisons_livrees,
+        'taux_completion': taux_completion,
+    }
+    
+    context = {
+        'date_selectionnee': date_obj,
+        'routes': routes,
+        'stats': stats,
+    }
+    
+    return render(request, 'livraison/responsable/routes_jour.html', context)
+
+@login_required
+def route_livraisons_coords(request, route_id):
+    """API pour récupérer les coordonnées GPS de toutes les livraisons d'une route"""
+    try:
+        # Vérifier que la route existe et appartient au livreur
+        route = Route.objects.get(id=route_id, livreurs=request.user)
+        
+        # Récupérer toutes les livraisons de la route avec leurs coordonnées
+        livraisons_route = LivraisonRoute.objects.filter(
+            route=route
+        ).select_related('livraison__checklist').order_by('ordre')
+        
+        livraisons_data = []
+        for lr in livraisons_route:
+            liv = lr.livraison
+            
+            # Construire les besoins spécifiques
+            besoins_specifiques = []
+            if liv.besoin_cafe:
+                besoins_specifiques.append('Café')
+            if liv.besoin_the:
+                besoins_specifiques.append('Thé')
+            if liv.besoin_sac_glace:
+                besoins_specifiques.append('Sac glace')
+            if liv.besoin_part_chaud:
+                besoins_specifiques.append('Part chaud')
+            if liv.checklist:
+                besoins_specifiques.append('Checklist')
+            
+            livraisons_data.append({
+                'id': str(liv.id),
+                'nom': liv.nom_evenement or liv.numero_livraison,
+                'adresse': liv.adresse_complete,
+                'latitude': float(liv.latitude) if liv.latitude else None,
+                'longitude': float(liv.longitude) if liv.longitude else None,
+                'heure': liv.heure_souhaitee.strftime('%H:%M') if liv.heure_souhaitee else '',
+                'status': liv.status,
+                'est_recuperation': liv.est_recuperation,
+                'informations_supplementaires': liv.informations_supplementaires or '',
+                'besoins_specifiques': besoins_specifiques
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'livraisons': livraisons_data
+        })
+        
+    except Route.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Route introuvable ou vous n\'êtes pas assigné à cette route'
+        }, status=404)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)

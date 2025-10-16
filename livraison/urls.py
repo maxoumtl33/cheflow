@@ -55,6 +55,7 @@ urlpatterns = [
     path('api/routes/<uuid:route_id>/reordonner/', views.reordonner_livraisons_route, name='reordonner_route'),
     path('api/routes/<uuid:route_id>/modifier/', views.modifier_route, name='modifier_route'),
     path('api/routes/supprimer/<uuid:route_id>/', views.supprimer_route, name='supprimer_route'),
+    path('api/route/<uuid:route_id>/livraisons/coords/', views.route_livraisons_coords, name='route_livraisons_coords'),
     
     # ==========================================
     # API - LIVREURS & DISPONIBILITÉS
@@ -68,12 +69,12 @@ urlpatterns = [
     path('api/disponibilites/', views.disponibilites_json, name='disponibilites_json'),
     path('api/disponibilites/ajouter/', views.ajouter_disponibilite, name='ajouter_disponibilite'),
     path('api/disponibilites/creer/', views.creer_disponibilite, name='creer_disponibilite'),
-    path('api/disponibilites/<uuid:dispo_id>/modifier/', views.modifier_disponibilite, name='modifier_disponibilite'),
-    path('api/disponibilites/<uuid:dispo_id>/supprimer/', views.supprimer_disponibilite, name='supprimer_disponibilite'),
-    path('api/livreurs/<uuid:livreur_id>/disponibilites/', views.disponibilites_livreur, name='disponibilites_livreur'),
+    path('api/disponibilites/<int:dispo_id>/modifier/', views.modifier_disponibilite, name='modifier_disponibilite'),
+    path('api/disponibilites/<int:dispo_id>/supprimer/', views.supprimer_disponibilite, name='supprimer_disponibilite'),    path('api/livreurs/<uuid:livreur_id>/disponibilites/', views.disponibilites_livreur, name='disponibilites_livreur'),
     path('api/disponibilites/date/', views.disponibilites_par_date, name='disponibilites_par_date'),
     path('api/routes/date/', views.routes_par_date, name='routes_par_date'),
     path('api/routes/month/', views.routes_du_mois, name='routes_du_mois'),
+    path('responsable/routes-jour/', views.routes_jour, name='routes_jour'),
     # ==========================================
 # LIVREUR - INTERFACE
 # ==========================================

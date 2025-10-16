@@ -300,14 +300,15 @@
             </p>
         </div>
         
-        <div class="action-buttons">
-            <a href="{% url 'livraison:editer_livraison' livraison.id %}" class="btn btn-primary">
-                ✏️ Éditer
-            </a>
+        
         {% if request.user.role == 'resp_livraison' %}
             <button onclick="supprimerLivraison()" class="btn btn-danger">
                 🗑️ Supprimer
             </button>
+            <div class="action-buttons">
+            <a href="{% url 'livraison:editer_livraison' livraison.id %}" class="btn btn-primary">
+                ✏️ Éditer
+            </a>
             {% endif %}
             {% if request.user.role == 'resp_ventes' %}
                 <a href="{% url 'ventes:dashboard_responsable' %}" class="btn-back">
@@ -316,6 +317,9 @@
                     </svg>
                     <span>Retour au tableau de bord</span>
                 </a>
+                <a href="{/livraison/responsable/resume/?date={{ livraison.date_livraison|date:'Y-m-d' }}}" class="btn btn-secondary">
+                ← Retour
+                </a>
                 {% elif request.user.role == 'vendeur' %}
                 <a href="{% url 'ventes:dashboard_vendeuse' %}" class="btn-back">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,11 +327,16 @@
                     </svg>
                     <span>Retour au tableau de bord</span>
                 </a>
-                {% else %}
-            <a href="{/livraison/responsable/resume/?date={{ livraison.date_livraison|date:'Y-m-d' }}}" class="btn btn-secondary">
-                ← Retour
-            </a>
-            {% endif %}
+                {% elif request.user.role == 'livreur' %}
+                <a href="{% url 'livraison:dashboard_livreur' %}" class="btn-back">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    <span>Retour au tableau de bord</span>
+                </a>
+                {% endif%}
+            
+           
         </div>
     </div>
     

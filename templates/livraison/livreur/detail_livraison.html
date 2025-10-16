@@ -530,7 +530,7 @@
         </div>
 
         <!-- Signature (seulement si ce n'est PAS une récupération) -->
-        {% if livraison.status != 'livree' and not livraison.est_recup %}
+        {% if livraison.status != 'livree' and livraison.est_recup == False %}
         <div class="bg-white rounded-2xl shadow-lg p-5 mb-4">
             <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                 <i class="fas fa-signature text-blue-600"></i>

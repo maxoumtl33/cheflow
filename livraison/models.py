@@ -346,7 +346,7 @@ class Route(models.Model):
     date = models.DateField()
     periode = models.CharField(max_length=20, choices=Livraison.PERIODE_CHOICES)
     
-    heure_depart = models.TimeField()
+    heure_depart = models.TimeField(null=True, blank=True)
     @staticmethod
     def parse_heure(heure_value):
         """Convertit une string ou objet time en objet time"""
@@ -466,7 +466,6 @@ class PhotoLivraison(models.Model):
 
 class DisponibiliteLivreur(models.Model):
     """Disponibilités des livreurs"""
-    
     TYPE_CHOICES = [
         ('disponible', 'Disponible'),
         ('indisponible', 'Indisponible'),
@@ -485,11 +484,17 @@ class DisponibiliteLivreur(models.Model):
     date_fin = models.DateField()
     type_dispo = models.CharField(max_length=20, choices=TYPE_CHOICES)
     heure_debut_shift = models.TimeField(
-    null=True, 
-    blank=True,
-    verbose_name="Heure de début de shift",
-    help_text="Heure à laquelle le livreur commence sa journée"
-)
+        null=True, 
+        blank=True,
+        verbose_name="Heure de début de shift",
+        help_text="Heure à laquelle le livreur commence sa journée"
+    )
+    heure_fin_shift = models.TimeField(  # ✨ AJOUTER CETTE LIGNE SI ELLE N'EXISTE PAS
+        null=True, 
+        blank=True,
+        verbose_name="Heure de fin de shift",
+        help_text="Heure à laquelle le livreur termine sa journée"
+    )
     
     notes = models.TextField(blank=True)
     

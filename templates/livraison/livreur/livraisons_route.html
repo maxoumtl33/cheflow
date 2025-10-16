@@ -70,17 +70,20 @@
             <div class="space-y-3">
                 {% for livraison_route in livraisons %}
                 <div class="bg-white rounded-2xl shadow-lg overflow-hidden border-l-4
-                    {% if livraison_route.livraison.status == 'livree' %}border-green-500
+                    {% if livraison_route.livraison.est_recuperation %}border-[#ed78b2]
+                    {% elif livraison_route.livraison.status == 'livree' %}border-green-500
                     {% elif livraison_route.livraison.status == 'en_cours' %}border-blue-500
                     {% elif livraison_route.livraison.status == 'en_attente' %}border-orange-500
-                    {% else %}border-slate-300{% endif %}">
+                    {% else %}border-slate-300{% endif %}"
+                    {% if livraison_route.livraison.est_recuperation %}style="background: #ec74c6 !important;"{% endif %}>
                     
                     <div class="p-5">
                         <!-- En-tête livraison -->
                         <div class="flex items-start justify-between mb-4">
                             <div class="flex items-center gap-3">
                                 <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full 
-                                    {% if livraison_route.livraison.status == 'livree' %}bg-green-500
+                                    {% if livraison_route.livraison.est_recuperation %}bg-[#ed78b2]
+                                    {% elif livraison_route.livraison.status == 'livree' %}bg-green-500
                                     {% elif livraison_route.livraison.status == 'en_cours' %}bg-blue-500
                                     {% elif livraison_route.livraison.status == 'en_attente' %}bg-orange-500
                                     {% else %}bg-slate-300{% endif %} 
@@ -88,7 +91,7 @@
                                     {{ livraison_route.ordre|default:forloop.counter }}
                                 </span>
                                 <div>
-                                    <h3 class="font-bold text-slate-900">
+                                    <h3 class="font-bold {% if livraison_route.livraison.est_recuperation %}text-white{% else %}text-slate-900{% endif %}">
                                         {% if livraison_route.livraison.nom_evenement %}
                                             {{ livraison_route.livraison.nom_evenement }}
                                         {% else %}
@@ -107,7 +110,9 @@
                             </div>
                             
                             <span class="flex-shrink-0">
-                                {% if livraison_route.livraison.status == 'livree' %}
+                                {% if livraison_route.livraison.est_recuperation %}
+                                    <i class="fas fa-undo text-white text-2xl"></i>
+                                {% elif livraison_route.livraison.status == 'livree' %}
                                     <i class="fas fa-check-circle text-green-500 text-2xl"></i>
                                 {% elif livraison_route.livraison.status == 'en_cours' %}
                                     <i class="fas fa-shipping-fast text-blue-500 text-2xl"></i>
@@ -122,10 +127,10 @@
                             
                             <!-- Adresse -->
                             <div class="flex items-start gap-2">
-                                <i class="fas fa-map-marker-alt text-slate-400 mt-1 flex-shrink-0"></i>
+                                <i class="fas fa-map-marker-alt {% if livraison_route.livraison.est_recuperation %}text-white{% else %}text-slate-400{% endif %} mt-1 flex-shrink-0"></i>
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-xs text-slate-600">Adresse</p>
-                                    <p class="text-sm font-medium text-slate-900">
+                                    <p class="text-xs {% if livraison_route.livraison.est_recuperation %}text-white/80{% else %}text-slate-600{% endif %}">Adresse</p>
+                                    <p class="text-sm font-medium {% if livraison_route.livraison.est_recuperation %}text-white{% else %}text-slate-900{% endif %}">
                                         {{ livraison_route.livraison.adresse_complete|default:"Adresse non définie" }}
                                     </p>
                                 </div>
@@ -134,10 +139,10 @@
                             <!-- Heure estimée -->
                             {% if livraison_route.livraison.heure_souhaitee %}
                             <div class="flex items-start gap-2">
-                                <i class="fas fa-clock text-slate-400 mt-1 flex-shrink-0"></i>
+                                <i class="fas fa-clock {% if livraison_route.livraison.est_recuperation %}text-white{% else %}text-slate-400{% endif %} mt-1 flex-shrink-0"></i>
                                 <div class="flex-1">
-                                    <p class="text-xs text-slate-600">Heure estimée</p>
-                                    <p class="text-sm font-medium text-slate-900">
+                                    <p class="text-xs {% if livraison_route.livraison.est_recuperation %}text-white/80{% else %}text-slate-600{% endif %}">Heure estimée</p>
+                                    <p class="text-sm font-medium {% if livraison_route.livraison.est_recuperation %}text-white{% else %}text-slate-900{% endif %}">
                                         {{ livraison_route.livraison.heure_souhaitee|time:"H:i" }}
                                     </p>
                                 </div>
@@ -147,11 +152,11 @@
                             <!-- Contact -->
                             {% if livraison_route.livraison.client_telephone %}
                             <div class="flex items-start gap-2">
-                                <i class="fas fa-phone text-slate-400 mt-1 flex-shrink-0"></i>
+                                <i class="fas fa-phone {% if livraison_route.livraison.est_recuperation %}text-white{% else %}text-slate-400{% endif %} mt-1 flex-shrink-0"></i>
                                 <div class="flex-1">
-                                    <p class="text-xs text-slate-600">Contact</p>
+                                    <p class="text-xs {% if livraison_route.livraison.est_recuperation %}text-white/80{% else %}text-slate-600{% endif %}">Contact</p>
                                     <a href="tel:{{ livraison_route.livraison.client_telephone }}" 
-                                       class="text-sm font-medium text-blue-600 hover:underline">
+                                       class="text-sm font-medium {% if livraison_route.livraison.est_recuperation %}text-white underline{% else %}text-blue-600{% endif %} hover:underline">
                                         {{ livraison_route.livraison.client_telephone }}
                                     </a>
                                 </div>
@@ -161,9 +166,9 @@
                             <!-- Besoins spécifiques + Checklist -->
                             {% if livraison_route.livraison.besoin_cafe or livraison_route.livraison.besoin_the or livraison_route.livraison.besoin_sac_glace or livraison_route.livraison.besoin_part_chaud or livraison_route.livraison.checklist %}
                             <div class="flex items-start gap-2">
-                                <i class="fas fa-exclamation-circle text-slate-400 mt-1 flex-shrink-0"></i>
+                                <i class="fas fa-exclamation-circle {% if livraison_route.livraison.est_recuperation %}text-white{% else %}text-slate-400{% endif %} mt-1 flex-shrink-0"></i>
                                 <div class="flex-1">
-                                    <p class="text-xs text-slate-600 mb-1">Besoins</p>
+                                    <p class="text-xs {% if livraison_route.livraison.est_recuperation %}text-white/80{% else %}text-slate-600{% endif %} mb-1">Besoins</p>
                                     <div class="flex flex-wrap gap-2">
                                         {% if livraison_route.livraison.besoin_cafe %}
                                         <span class="px-2 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-medium">
